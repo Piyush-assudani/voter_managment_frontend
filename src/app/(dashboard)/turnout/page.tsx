@@ -1,0 +1,203 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Check, Download, LoaderCircle, Phone, RefreshCw } from 'lucide-react';
+import { apiFetch, getApiError } from '@/lib/api';
+
+interface Voter {
+  _id: string;
+  nameHi: string;
+  nameEn: string;
+  wardNo: string;
+  partNo: string;
+  serialNo: number;
+  gender: string;
+  voted: boolean;
+  phone: string;
+  supportStatus: string;
+}
+
+interface WardSummary {
+  name: string;
+  total: number;
+  voted: number;
+}
+
+export default function TurnoutPage() {
+  const [voters, setVoters] = useState<Voter[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
+  const [savingId, setSavingId] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [pendingWard, setPendingWard] = useState('');
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await apiFetch('/voters/all', { cache: 'no-store' });
+      if (!response.ok) throw new Error(await getApiError(response, 'मतदान आँकड़े लोड नहीं हुए।'));
+      const result: unknown = await response.json();
+      if (!Array.isArray(result)) throw new Error('सर्वर से आँकड़ों का सही उत्तर नहीं मिला।');
+      setVoters(result as Voter[]);
+      setUpdatedAt(new Date());
+    } catch (loadError) {
+      setVoters([]);
+      setError(loadError instanceof Error ? loadError.message : 'मतदान आँकड़े लोड नहीं हुए।');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void Promise.resolve().then(() => loadData());
+  }, [loadData]);
+
+  const totalVoters = voters.length;
+  const votedVoters = voters.filter((voter) => voter.voted);
+  const totalVoted = votedVoters.length;
+  const remaining = totalVoters - totalVoted;
+  const turnout = totalVoters ? Math.round((totalVoted / totalVoters) * 100) : 0;
+  const maleVoted = votedVoters.filter((voter) => ['पुरुष', 'Male'].includes(voter.gender)).length;
+  const femaleVoted = votedVoters.filter((voter) => ['स्त्री', 'Female'].includes(voter.gender)).length;
+
+  const wardSummaries = useMemo(() => {
+    const summary = new Map<string, WardSummary>();
+    voters.forEach((voter) => {
+      const wardName = voter.wardNo || 'अन्य';
+      const current = summary.get(wardName) ?? { name: wardName, total: 0, voted: 0 };
+      current.total += 1;
+      if (voter.voted) current.voted += 1;
+      summary.set(wardName, current);
+    });
+    return [...summary.values()].sort((a, b) => {
+      const number = (value: string) => Number(value.match(/\d+/)?.[0] || 0);
+      return number(a.name) - number(b.name);
+    });
+  }, [voters]);
+
+  const pending = useMemo(() => voters
+    .filter((voter) => !voter.voted && (!pendingWard || voter.wardNo === pendingWard))
+    .slice(0, 250), [pendingWard, voters]);
+
+  const markVoted = async (voter: Voter) => {
+    setSavingId(voter._id);
+    setError('');
+    try {
+      const response = await apiFetch(`/voters/${encodeURIComponent(voter._id)}/vote`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voted: true }),
+      });
+      if (!response.ok) throw new Error(await getApiError(response, 'मतदान स्थिति अपडेट नहीं हुई।'));
+      setVoters((current) => current.map((item) => item._id === voter._id ? { ...item, voted: true } : item));
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : 'मतदान स्थिति अपडेट नहीं हुई।');
+    } finally {
+      setSavingId('');
+    }
+  };
+
+  const exportPending = async () => {
+    setExporting(true);
+    setError('');
+    try {
+      const params = new URLSearchParams({ dataset: 'turnout' });
+      if (pendingWard) params.set('ward', pendingWard);
+      const response = await apiFetch(`/features/export.xlsx?${params}`);
+      if (!response.ok) throw new Error(await getApiError(response, 'Excel एक्सपोर्ट नहीं हो सका।'));
+      const url = URL.createObjectURL(await response.blob());
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'pending-voters.xlsx';
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (exportError) {
+      setError(exportError instanceof Error ? exportError.message : 'Excel एक्सपोर्ट नहीं हो सका।');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <div className="work-page">
+      <div className="page-intro">
+        <div>
+          <div className="eyebrow-label"><span className="eyebrow-mark" /> TURNOUT OVERVIEW</div>
+          <h1>मतदान स्थिति</h1>
+          <p>मतदान की स्थिति का डेटाबेस-आधारित सारांश। डेटा रियल-टाइम नहीं है—आख़िरी अपडेट का समय नीचे है।</p>
+        </div>
+        <button className="button-secondary" type="button" onClick={() => void loadData()} disabled={loading}>
+          {loading ? <LoaderCircle size={15} className="spin" /> : <RefreshCw size={15} />}
+          रिफ्रेश
+        </button>
+      </div>
+
+      {error && <div className="inline-notice error-notice" role="alert">{error}</div>}
+
+      {loading && !voters.length ? (
+        <div className="records-panel empty-state"><LoaderCircle size={21} className="spin" /><p>डेटाबेस से मतदान रिकॉर्ड लोड हो रहे हैं…</p></div>
+      ) : error && !voters.length ? (
+        <div className="records-panel empty-state error-state"><strong>आँकड़े उपलब्ध नहीं हैं</strong><p>{error}</p><button className="button-secondary" type="button" onClick={() => void loadData()}>फिर से कोशिश करें</button></div>
+      ) : (
+        <>
+          <section className="turnout-overview">
+            <div className="turnout-main">
+              <div className="turnout-main-heading"><span>कुल मतदान प्रगति</span><span>{updatedAt ? `अपडेट ${updatedAt.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit' })}` : '—'}</span></div>
+              <div className="turnout-number">{loading ? '—' : `${turnout}%`}</div>
+              <div className="progress-track"><div className="progress-fill" style={{ width: `${turnout}%` }} /></div>
+              <div className="turnout-caption"><span>{totalVoted.toLocaleString('hi-IN')} मतदान दर्ज</span><span>{remaining.toLocaleString('hi-IN')} शेष</span></div>
+            </div>
+            <div className="turnout-side-metrics">
+              <div><span>कुल मतदाता</span><strong>{totalVoters.toLocaleString('hi-IN')}</strong></div>
+              <div><span>पुरुष मतदाता · मतदान किया</span><strong>{maleVoted.toLocaleString('hi-IN')}</strong></div>
+              <div><span>महिला मतदाता · मतदान किया</span><strong>{femaleVoted.toLocaleString('hi-IN')}</strong></div>
+            </div>
+          </section>
+
+          <div className="section-title-row"><div><h2>वार्ड के अनुसार</h2><p>दर्ज रिकॉर्ड पर आधारित तुलना</p></div><span className="panel-count">{wardSummaries.length} वार्ड</span></div>
+          <section className="ward-grid">
+            {wardSummaries.map((ward) => {
+              const percent = ward.total ? Math.round((ward.voted / ward.total) * 100) : 0;
+              return (
+                <article className="ward-card" key={ward.name}>
+                  <div className="ward-card-heading"><strong>{ward.name}</strong><span>{percent}%</span></div>
+                  <div className="progress-track"><div className="progress-fill" style={{ width: `${percent}%` }} /></div>
+                  <div className="ward-card-caption"><span>{ward.voted} मतदान दर्ज</span><span>{ward.total} मतदाता</span></div>
+                </article>
+              );
+            })}
+            {!wardSummaries.length && <div className="records-panel empty-state"><strong>कोई रिकॉर्ड नहीं</strong><p>डेटाबेस में अभी मतदाता रिकॉर्ड नहीं हैं।</p></div>}
+          </section>
+
+          <section className="records-panel turnout-pending">
+            <div className="records-toolbar">
+              <div><h2>बाकी मतदाता · संपर्क सूची</h2><p>{pending.length} रिकॉर्ड दिखाए गए; कुल {remaining} शेष।</p></div>
+              <div className="feature-actions">
+                <select aria-label="शेष मतदाता का वार्ड फ़िल्टर" value={pendingWard} onChange={(event) => setPendingWard(event.target.value)}><option value="">सभी वार्ड</option>{wardSummaries.map((ward) => <option key={ward.name} value={ward.name}>{ward.name}</option>)}</select>
+                <button className="button-secondary" type="button" onClick={() => void exportPending()} disabled={!pending.length || exporting}>{exporting ? <LoaderCircle size={14} className="spin" /> : <Download size={14} />} सूची Excel</button>
+              </div>
+            </div>
+            {pending.length ? (
+              <div className="table-scroll">
+                <table className="voter-table desk-table">
+                  <thead><tr><th>मतदाता</th><th>क्षेत्र</th><th>क्रमांक</th><th>संपर्क</th><th>कार्य</th></tr></thead>
+                  <tbody>{pending.map((voter) => (
+                    <tr key={voter._id}>
+                      <td><div className="voter-name">{voter.nameHi || voter.nameEn || '—'}</div></td>
+                      <td className="voter-code">{voter.wardNo || '—'} · {voter.partNo || '—'}</td>
+                      <td className="voter-code">{voter.serialNo || '—'}</td>
+                      <td>{voter.phone ? <a className="button-quiet" href={`tel:${voter.phone}`}><Phone size={14} /> {voter.phone}</a> : 'फोन दर्ज नहीं'}</td>
+                      <td><button className="button-secondary vote-button is-checked" type="button" onClick={() => void markVoted(voter)} disabled={savingId === voter._id}>{savingId === voter._id ? <LoaderCircle size={14} className="spin" /> : <Check size={14} />} मतदान दर्ज करें</button></td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            ) : <div className="empty-state"><strong>सभी उपलब्ध रिकॉर्ड अपडेट हैं</strong><p>इस समय मतदान के लिए शेष मतदाता नहीं हैं।</p></div>}
+          </section>
+        </>
+      )}
+    </div>
+  );
+}

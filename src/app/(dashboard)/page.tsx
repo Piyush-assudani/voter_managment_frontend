@@ -1,0 +1,457 @@
+'use client';
+
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Check,
+  FileText,
+  LoaderCircle,
+  MapPin,
+  Printer,
+  Search,
+  Send,
+  UsersRound,
+  X,
+} from 'lucide-react';
+import { apiFetch, getApiError } from '@/lib/api';
+
+interface Voter {
+  _id: string;
+  epic: string;
+  nameEn: string;
+  nameHi: string;
+  relativeNameEn: string;
+  relativeNameHi: string;
+  relationType: string;
+  age: number;
+  gender: string;
+  houseNo: string;
+  wardNo: string;
+  partNo: string;
+  serialNo: number;
+  phone: string;
+  caste: string;
+  surety: string;
+  supportStatus: string;
+  isMigrant: boolean;
+  migrantLocation: string;
+  assignedWorker: string;
+  notes: string;
+  voted: boolean;
+}
+
+export default function DashboardPage() {
+  const [voters, setVoters] = useState<Voter[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [houseQuery, setHouseQuery] = useState('');
+  const [wardFilter, setWardFilter] = useState('');
+  const [supportFilter, setSupportFilter] = useState('');
+  const [migrantFilter, setMigrantFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const pageSizeRef = useRef(25);
+  const filtersRef = useRef({ ward: '', supportStatus: '', isMigrant: '' });
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [familyHouse, setFamilyHouse] = useState('');
+  const [editVoter, setEditVoter] = useState<Voter | null>(null);
+  const [slipVoter, setSlipVoter] = useState<Voter | null>(null);
+  const [editValues, setEditValues] = useState({
+    phone: '',
+    caste: '',
+    surety: '',
+    supportStatus: 'unmarked',
+    assignedWorker: '',
+    isMigrant: false,
+    migrantLocation: '',
+    notes: '',
+  });
+  const [slipPhone, setSlipPhone] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [actionMessage, setActionMessage] = useState('');
+
+  const loadVoters = useCallback(async (
+    search = '',
+    house = '',
+    nextPage = 1,
+    householdWard = '',
+    householdPart = '',
+  ) => {
+    setLoading(true);
+    setError('');
+    setSelectedIds([]);
+    setFamilyHouse(house);
+    setPage(nextPage);
+
+    const path = house
+      ? `/voters/family/${encodeURIComponent(house)}?${new URLSearchParams({ ward: householdWard, part: householdPart })}`
+      : `/voters?${new URLSearchParams({
+          ...(search ? { search } : {}),
+          ...(filtersRef.current.ward ? { ward: filtersRef.current.ward } : {}),
+          ...(filtersRef.current.supportStatus ? { supportStatus: filtersRef.current.supportStatus } : {}),
+          ...(filtersRef.current.isMigrant ? { isMigrant: filtersRef.current.isMigrant } : {}),
+          page: String(nextPage),
+          pageSize: String(pageSizeRef.current),
+        })}`;
+
+    try {
+      const response = await apiFetch(path, { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error(await getApiError(response, 'मतदाता सूची लोड नहीं हो सकी।'));
+      }
+      const result: unknown = await response.json();
+      const records = Array.isArray(result)
+        ? result
+        : result && typeof result === 'object' && 'data' in result && Array.isArray(result.data)
+          ? result.data
+          : null;
+      if (!records) {
+        throw new Error('सर्वर से सूची का सही उत्तर नहीं मिला।');
+      }
+      setVoters(records as Voter[]);
+      setTotalRecords(
+        result && typeof result === 'object' && 'total' in result && typeof result.total === 'number'
+          ? result.total
+          : records.length,
+      );
+    } catch (loadError) {
+      setVoters([]);
+      setTotalRecords(0);
+      setError(loadError instanceof Error ? loadError.message : 'मतदाता सूची लोड नहीं हो सकी।');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void Promise.resolve().then(() => loadVoters());
+  }, [loadVoters]);
+
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    filtersRef.current = {
+      ward: wardFilter.trim(),
+      supportStatus: supportFilter,
+      isMigrant: migrantFilter,
+    };
+    void loadVoters(searchQuery.trim(), houseQuery.trim());
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((current) => current.includes(id)
+      ? current.filter((selectedId) => selectedId !== id)
+      : [...current, id]);
+  };
+
+  const selectAll = () => {
+    setSelectedIds((current) => current.length === voters.length ? [] : voters.map((voter) => voter._id));
+  };
+
+  const openEditor = (voter: Voter) => {
+    setActionMessage('');
+    setEditValues({
+      phone: voter.phone || '',
+      caste: voter.caste || '',
+      surety: voter.surety || '',
+      supportStatus: voter.supportStatus || 'unmarked',
+      assignedWorker: voter.assignedWorker || '',
+      isMigrant: Boolean(voter.isMigrant),
+      migrantLocation: voter.migrantLocation || '',
+      notes: voter.notes || '',
+    });
+    setEditVoter(voter);
+  };
+
+  const saveVoter = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editVoter) return;
+    setSaving(true);
+    setActionMessage('');
+    try {
+      const response = await apiFetch(`/voters/${encodeURIComponent(editVoter._id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editValues),
+      });
+      if (!response.ok) {
+        throw new Error(await getApiError(response, 'मतदाता विवरण सेव नहीं हुए।'));
+      }
+      setVoters((current) => current.map((voter) => voter._id === editVoter._id ? { ...voter, ...editValues } : voter));
+      setEditVoter(null);
+      setActionMessage('मतदाता विवरण सेव हो गए।');
+    } catch (saveError) {
+      setActionMessage(saveError instanceof Error ? saveError.message : 'मतदाता विवरण सेव नहीं हुए।');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const sendSlip = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!slipVoter) return;
+    setSending(true);
+    setActionMessage('');
+    try {
+      const response = await apiFetch('/whatsapp/send-slip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voterId: slipVoter._id, phoneNumber: slipPhone }),
+      });
+      if (!response.ok) {
+        throw new Error(await getApiError(response, 'WhatsApp पर्ची नहीं भेजी जा सकी।'));
+      }
+      setSlipVoter(null);
+      setActionMessage('Meta API ने पर्ची भेजने का अनुरोध स्वीकार किया। डिलीवरी की पुष्टि उपलब्ध नहीं है।');
+    } catch (sendError) {
+      setActionMessage(sendError instanceof Error ? sendError.message : 'WhatsApp पर्ची नहीं भेजी जा सकी।');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="directory-page">
+      <div className="page-intro">
+        <div>
+          <div className="eyebrow-label"><span className="eyebrow-mark" /> DIRECTORY</div>
+          <h1>मतदाता सूची</h1>
+          <p>अपनी क्षेत्रीय मतदाता जानकारी खोजें और अपडेट करें।</p>
+        </div>
+        <div className="location-chip"><MapPin size={14} /> ग्राम पंचायत जैलातरा</div>
+      </div>
+
+      <section className="directory-summary">
+        <div className="summary-copy">
+          <span className="summary-icon"><UsersRound size={17} /></span>
+          <span><strong>{loading ? '—' : totalRecords}</strong><small>{familyHouse ? `मकान ${familyHouse} · परिवार` : 'मिलते रिकॉर्ड'}</small></span>
+        </div>
+        <span className="summary-separator" />
+        <div className="summary-copy">
+          <span className="summary-icon summary-icon-neutral"><Check size={17} /></span>
+          <span><strong>{selectedIds.length}</strong><small>चुने गए मतदाता</small></span>
+        </div>
+        <span className="summary-note">{familyHouse ? 'परिवार · मकान, वार्ड और भाग' : `${voters.length} दिखाए गए · प्रति पृष्ठ ${pageSize}`}</span>
+      </section>
+
+      <section className="directory-panel">
+        <div className="panel-heading">
+          <div>
+            <h2>रिकॉर्ड खोजें</h2>
+            <p>नाम, EPIC नंबर या मकान नंबर से खोजें।</p>
+          </div>
+          <span className="panel-count">{voters.length} रिकॉर्ड</span>
+        </div>
+        <form className="search-form" onSubmit={handleSearch}>
+          <label className="search-field">
+            <Search size={17} />
+            <input
+              aria-label="मतदाता का नाम या EPIC"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="नाम या EPIC नंबर"
+            />
+          </label>
+          <label className="search-field house-search-field">
+            <MapPin size={16} />
+            <input
+              aria-label="मकान नंबर"
+              value={houseQuery}
+              onChange={(event) => setHouseQuery(event.target.value)}
+              placeholder="मकान नंबर"
+            />
+          </label>
+          <label className="search-field directory-filter-field">
+            <MapPin size={15} />
+            <input aria-label="वार्ड फ़िल्टर" value={wardFilter} onChange={(event) => setWardFilter(event.target.value)} placeholder="वार्ड फ़िल्टर" />
+          </label>
+          <select className="directory-select-filter" aria-label="समर्थन वर्ग फ़िल्टर" value={supportFilter} onChange={(event) => setSupportFilter(event.target.value)}>
+            <option value="">सभी support tags</option><option value="core">समर्थन चिह्नित</option><option value="swing">अनिर्णीत चिह्नित</option><option value="opposition">विरोध चिह्नित</option><option value="unmarked">अवर्गीकृत</option>
+          </select>
+          <select className="directory-select-filter" aria-label="प्रवासी फ़िल्टर" value={migrantFilter} onChange={(event) => setMigrantFilter(event.target.value)}>
+            <option value="">सभी मतदाता</option><option value="true">प्रवासी</option><option value="false">गैर-प्रवासी</option>
+          </select>
+          <button className="button-primary search-submit" type="submit" disabled={loading}>
+            {loading ? <LoaderCircle size={16} className="spin" /> : <Search size={16} />}
+            खोजें
+          </button>
+          {(searchQuery || houseQuery || familyHouse || wardFilter || supportFilter || migrantFilter) && (
+            <button
+              className="button-quiet"
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setHouseQuery('');
+                setWardFilter('');
+                setSupportFilter('');
+                setMigrantFilter('');
+                filtersRef.current = { ward: '', supportStatus: '', isMigrant: '' };
+                void loadVoters();
+              }}
+            >
+              साफ़ करें
+            </button>
+          )}
+        </form>
+      </section>
+
+      {actionMessage && <div className="inline-notice" role="status">{actionMessage}</div>}
+
+      <section className="records-panel">
+        <div className="records-toolbar">
+          <div>
+            <h2>{familyHouse ? `मकान ${familyHouse} का परिवार` : searchQuery ? 'खोज परिणाम' : 'सभी मतदाता'}</h2>
+            <p>{loading ? 'रिकॉर्ड लोड हो रहे हैं…' : `${voters.length} रिकॉर्ड`}</p>
+          </div>
+          <div className="records-toolbar-actions">
+            <button className="button-secondary" type="button" onClick={selectAll} disabled={loading || !voters.length}>
+              {selectedIds.length === voters.length ? 'चयन हटाएँ' : 'सभी चुनें'}
+            </button>
+            <button className="button-secondary" type="button" onClick={() => window.print()} disabled={!voters.length}>
+              <Printer size={15} /> प्रिंट
+            </button>
+          </div>
+        </div>
+
+        {error ? (
+          <div className="empty-state error-state">
+            <span className="empty-icon"><X size={20} /></span>
+            <strong>डेटा लोड नहीं हो पाया</strong>
+            <p>{error}</p>
+            <button className="button-secondary" onClick={() => void loadVoters()} type="button">फिर से कोशिश करें</button>
+          </div>
+        ) : loading ? (
+          <div className="empty-state"><LoaderCircle size={22} className="spin" /><p>मतदाता रिकॉर्ड लोड हो रहे हैं…</p></div>
+        ) : voters.length === 0 ? (
+          <div className="empty-state">
+            <span className="empty-icon"><FileText size={20} /></span>
+            <strong>कोई रिकॉर्ड नहीं मिला</strong>
+            <p>खोज बदलकर दोबारा कोशिश करें।</p>
+          </div>
+        ) : (
+          <div className="voter-cards-grid">
+            {voters.map((voter) => (
+              <div key={voter._id} className="voter-card">
+                <div className="vc-header">
+                  <div className="vc-header-left">
+                    <input aria-label={`${voter.nameHi || voter.nameEn} चुनें`} type="checkbox" className="vc-checkbox" checked={selectedIds.includes(voter._id)} onChange={() => toggleSelected(voter._id)} />
+                    <span className="vc-badge vc-ward">वार्ड {voter.wardNo || '—'}</span>
+                    <span className="vc-badge vc-part">भाग {voter.partNo || '—'} • क्र. {voter.serialNo || '—'}</span>
+                  </div>
+                  <div className="vc-header-meta">
+                    <span>मकान <strong>{voter.houseNo || '—'}</strong></span>
+                    {voter.age ? <span><strong>{voter.age}</strong> वर्ष</span> : null}
+                  </div>
+                </div>
+                
+                <div className="vc-body">
+                  <h3 className="vc-name">{voter.nameHi || voter.nameEn || '—'}</h3>
+                  {voter.nameHi && voter.nameEn && <p className="vc-name-latin">{voter.nameEn}</p>}
+                  <p className="vc-relative">{voter.relationType || 'पिता'}: {voter.relativeNameEn || voter.relativeNameHi || '—'}{voter.relativeNameEn && voter.relativeNameHi ? ` / ${voter.relativeNameHi}` : ''}</p>
+                  <p className="vc-epic">EPIC <strong>{voter.epic || '—'}</strong></p>
+                </div>
+
+                <div className="vc-tags">
+                  <span className={`vc-tag vc-tag-support vc-tag-${voter.supportStatus || 'unmarked'}`}>
+                    <span className="vc-status-dot" aria-hidden="true" />
+                    {voter.supportStatus === 'core' ? 'समर्थन चिह्नित' :
+                     voter.supportStatus === 'swing' ? 'अनिर्णीत' :
+                     voter.supportStatus === 'opposition' ? 'विरोध चिह्नित' : 'अवर्गीकृत'}
+                  </span>
+                  {voter.caste && <span className="vc-tag vc-tag-caste">समुदाय · {voter.caste}</span>}
+                  {voter.phone && <span className="vc-tag vc-tag-phone">फ़ोन · {voter.phone}</span>}
+                  {voter.isMigrant ? <span className="vc-tag vc-tag-migrant">प्रवासी</span> : null}
+                  {voter.assignedWorker && <span className="vc-tag vc-tag-worker">कार्यकर्ता · {voter.assignedWorker}</span>}
+                </div>
+
+                <div className="vc-footer">
+                  <button className="vc-btn-edit" onClick={() => openEditor(voter)}>✏️ टैग / एडिट</button>
+                  <div className="vc-footer-right">
+                    <button className="vc-btn-family" onClick={() => {
+                      setHouseQuery(voter.houseNo || '');
+                      setSearchQuery('');
+                      void loadVoters('', voter.houseNo || '', 1, voter.wardNo || '', voter.partNo || '');
+                    }} title="परिवार देखें"><UsersRound size={16} /></button>
+                    <button className="vc-btn-slip" onClick={() => { setSlipPhone(voter.phone || ''); setSlipVoter(voter); setActionMessage(''); }}>💬 पर्ची</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {!loading && !familyHouse && totalRecords > pageSize && (
+          <div className="pagination-bar">
+            <span>{(page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalRecords)} / {totalRecords}</span>
+            <label>प्रति पृष्ठ<select value={pageSize} onChange={(event) => { const size = Number(event.target.value); pageSizeRef.current = size; setPageSize(size); void loadVoters(searchQuery.trim(), '', 1); }}><option value={25}>25</option><option value={50}>50</option><option value={100}>100</option><option value={250}>250</option></select></label>
+            <button className="button-secondary" type="button" onClick={() => void loadVoters(searchQuery.trim(), '', page - 1)} disabled={page <= 1}>पिछला</button>
+            <button className="button-secondary" type="button" onClick={() => void loadVoters(searchQuery.trim(), '', page + 1)} disabled={page * pageSize >= totalRecords}>अगला</button>
+          </div>
+        )}
+        <div className="records-footnote">रिकॉर्ड और अपडेट आपके कॉन्फ़िगर किए गए डेटाबेस से आते हैं।</div>
+      </section>
+
+      {editVoter && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setEditVoter(null); }}>
+          <section className="form-modal" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+            <div className="modal-heading">
+              <div><span className="eyebrow-label">VOTER DETAILS</span><h2 id="edit-title">मतदाता जानकारी संपादित करें</h2><p>{editVoter.nameHi || editVoter.nameEn} · {editVoter.epic}</p></div>
+              <button className="icon-button" onClick={() => setEditVoter(null)} aria-label="बंद करें"><X size={18} /></button>
+            </div>
+            <form onSubmit={saveVoter} className="modal-form">
+              <label>फोन नंबर<input value={editValues.phone} onChange={(event) => setEditValues({ ...editValues, phone: event.target.value })} /></label>
+              <label>जाति / समुदाय<input value={editValues.caste} onChange={(event) => setEditValues({ ...editValues, caste: event.target.value })} /></label>
+              <label>समर्थन वर्ग
+                <select value={editValues.supportStatus} onChange={(event) => setEditValues({ ...editValues, supportStatus: event.target.value })}>
+                  <option value="unmarked">अवर्गीकृत</option><option value="core">समर्थन चिह्नित</option><option value="swing">अनिर्णीत चिह्नित</option><option value="opposition">विरोध चिह्नित</option>
+                </select>
+              </label>
+              <label>मतदाता स्थिति
+                <select value={editValues.surety} onChange={(event) => setEditValues({ ...editValues, surety: event.target.value })}>
+                  <option value="">चुनें</option><option value="100% पक्का">100% पक्का</option><option value="50-50">50-50</option><option value="विरोधी">विरोधी</option><option value="सामान्य">सामान्य</option>
+                </select>
+              </label>
+              <label>जिम्मेदार कार्यकर्ता<input value={editValues.assignedWorker} onChange={(event) => setEditValues({ ...editValues, assignedWorker: event.target.value })} /></label>
+              <label className="checkbox-label"><input type="checkbox" checked={editValues.isMigrant} onChange={(event) => setEditValues({ ...editValues, isMigrant: event.target.checked })} /> प्रवासी मतदाता</label>
+              {editValues.isMigrant && <label>वर्तमान स्थान<input value={editValues.migrantLocation} onChange={(event) => setEditValues({ ...editValues, migrantLocation: event.target.value })} placeholder="वैकल्पिक स्थान" /></label>}
+              <label className="notes-field">नोट्स<textarea value={editValues.notes} onChange={(event) => setEditValues({ ...editValues, notes: event.target.value })} rows={3} /></label>
+              {actionMessage && <p className="form-error" role="alert">{actionMessage}</p>}
+              <div className="modal-actions">
+                <button className="button-secondary" type="button" onClick={() => setEditVoter(null)}>रद्द करें</button>
+                <button className="button-primary" type="submit" disabled={saving}>{saving ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />} सेव करें</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+
+      {slipVoter && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSlipVoter(null); }}>
+          <section className="form-modal slip-modal" role="dialog" aria-modal="true" aria-labelledby="slip-title">
+            <div className="modal-heading">
+              <div><span className="eyebrow-label">VOTER SLIP</span><h2 id="slip-title">डिजिटल मतदाता पर्ची</h2><p>भेजने से पहले नीचे दी गई जानकारी जाँचें।</p></div>
+              <button className="icon-button" onClick={() => setSlipVoter(null)} aria-label="बंद करें"><X size={18} /></button>
+            </div>
+            <div className="slip-preview">
+              <div className="slip-preview-title"><strong>{slipVoter.nameHi || slipVoter.nameEn}</strong><span>{slipVoter.epic}</span></div>
+              <div className="slip-details">
+                <span>वार्ड<strong>{slipVoter.wardNo || '—'}</strong></span>
+                <span>मकान<strong>{slipVoter.houseNo || '—'}</strong></span>
+                <span>भाग / क्रम<strong>{slipVoter.partNo || '—'} · {slipVoter.serialNo || '—'}</strong></span>
+                <span>आयु / लिंग<strong>{slipVoter.age || '—'} · {slipVoter.gender || '—'}</strong></span>
+              </div>
+            </div>
+            <form onSubmit={sendSlip} className="modal-form">
+              <label>WhatsApp नंबर<input required inputMode="tel" value={slipPhone} onChange={(event) => setSlipPhone(event.target.value)} placeholder="+91 98765 43210" /></label>
+              {actionMessage && <p className="form-error" role="alert">{actionMessage}</p>}
+              <div className="modal-actions">
+                <button className="button-secondary" type="button" onClick={() => window.print()}><Printer size={15} /> प्रिंट</button>
+                <button className="button-primary" type="submit" disabled={sending}>{sending ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />} WhatsApp पर भेजें</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}
