@@ -294,6 +294,33 @@ export default function AdminPanel() {
       setUploadingPdf(false);
     }
   };
+  const bulkDeleteVoters = async () => {
+    if (!organizationId) {
+      setError('डिलीट करने के लिए पहले क्लाइंट चुनें।');
+      return;
+    }
+    const message = wardFilter 
+      ? `क्या आप क्लाइंट के वार्ड ${wardFilter} का सारा डेटा डिलीट करना चाहते हैं?` 
+      : 'क्या आप इस क्लाइंट का सारा वोटर डेटा डिलीट करना चाहते हैं?';
+    
+    if (!window.confirm(message)) return;
+
+    setLoading(true);
+    setError('');
+    setNotice('');
+    try {
+      const query = `organizationId=${encodeURIComponent(organizationId)}&wardNo=${encodeURIComponent(wardFilter)}`;
+      const response = await apiFetch(`/admin/master-data?${query}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error(await getApiError(response, 'डेटा डिलीट नहीं हुआ।'));
+      const result = await response.json() as { deletedCount: number };
+      setNotice(`${result.deletedCount} रिकॉर्ड्स सफलतापूर्वक डिलीट हो गए।`);
+      await loadVoters();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'डेटा डिलीट नहीं हुआ।');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleModule = (module: string) => {
     setTenantModules((current) => current.includes(module)
@@ -401,6 +428,15 @@ export default function AdminPanel() {
                     <option value="">सभी वार्ड</option>{wards.map((ward) => <option value={ward} key={ward}>{ward}</option>)}
                   </select>
                 </label>
+                <button 
+                  type="button" 
+                  className="button-secondary" 
+                  style={{ color: '#d93025', borderColor: '#d93025', marginLeft: 'auto' }}
+                  onClick={() => void bulkDeleteVoters()}
+                  disabled={!organizationId || loading}
+                >
+                  <AlertCircle size={15} /> डेटा डिलीट करें
+                </button>
               </div>
               {loading ? <div className="empty-state"><LoaderCircle size={21} className="spin" /><p>मास्टर डेटा लोड हो रहा है…</p></div> : voters.length ? (
                 <div className="table-scroll"><table className="voter-table desk-table"><thead><tr><th>मतदाता</th><th>EPIC</th><th>क्लाइंट</th><th>वार्ड</th><th>भाग</th><th>क्रमांक</th><th>फ़ोन</th></tr></thead><tbody>
