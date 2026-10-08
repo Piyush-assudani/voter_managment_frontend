@@ -233,8 +233,8 @@ export default function AdminPanel() {
     event.preventDefault();
     const form = event.currentTarget;
     const file = form.querySelector<HTMLInputElement>('input[type="file"]')?.files?.[0];
-    if (!file) {
-      setError('कृपया एक PDF फाइल चुनें।');
+    if (!file || !organizationId) {
+      setError('कृपया एक PDF फाइल चुनें और क्लाइंट चुनें।');
       return;
     }
     setImporting(true);
@@ -242,6 +242,7 @@ export default function AdminPanel() {
     setNotice('');
     try {
       const body = new FormData();
+      body.set('organizationId', organizationId);
       body.set('pdf', file);
       const response = await apiFetch('/admin/pdf/upload', { method: 'POST', body });
       if (!response.ok) throw new Error(await getApiError(response, 'PDF अपलोड नहीं हुई।'));
@@ -429,10 +430,13 @@ export default function AdminPanel() {
               </div>
               <form className="modal-form" onSubmit={uploadPdf}>
                 <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                  <label>क्लाइंट
+                    <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}><option value="">क्लाइंट चुनें</option>{organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}</select>
+                  </label>
                   <label>PDF फाइल (.pdf)<input type="file" accept=".pdf,application/pdf" required /></label>
                 </div>
                 <div className="admin-form-actions" style={{ marginTop: '20px' }}>
-                  <button className="button-primary" type="submit" disabled={importing}>{importing ? <LoaderCircle size={15} className="spin" /> : <Upload size={15} />} PDF अपलोड करें</button>
+                  <button className="button-primary" type="submit" disabled={importing || !organizationId}>{importing ? <LoaderCircle size={15} className="spin" /> : <Upload size={15} />} PDF अपलोड करें</button>
                 </div>
               </form>
             </section>
