@@ -1,6 +1,6 @@
 const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
 
-export const API_BASE_URL = (configuredApiUrl || 'http://localhost:5001/api').replace(/\/+$/, '');
+export const API_BASE_URL = (configuredApiUrl || 'http://vijaysetu.piyushassudani.in/api').replace(/\/+$/, '');
 
 export function apiUrl(path: string) {
   return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
