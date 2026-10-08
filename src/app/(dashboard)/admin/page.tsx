@@ -70,6 +70,7 @@ export default function AdminPanel() {
   const [tenantWards, setTenantWards] = useState('');
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [importing, setImporting] = useState(false);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
 
   const loadOrganizations = useCallback(async () => {
     const response = await apiFetch('/admin/organizations', { cache: 'no-store' });
@@ -237,7 +238,7 @@ export default function AdminPanel() {
       setError('कृपया एक PDF फाइल चुनें और क्लाइंट चुनें।');
       return;
     }
-    setImporting(true);
+    setUploadingPdf(true);
     setError('');
     setNotice('');
     try {
@@ -252,7 +253,7 @@ export default function AdminPanel() {
     } catch (importError) {
       setError(importError instanceof Error ? importError.message : 'PDF अपलोड नहीं हुई।');
     } finally {
-      setImporting(false);
+      setUploadingPdf(false);
     }
   };
 
@@ -436,7 +437,7 @@ export default function AdminPanel() {
                   <label>PDF फाइल (.pdf)<input type="file" accept=".pdf,application/pdf" required /></label>
                 </div>
                 <div className="admin-form-actions" style={{ marginTop: '20px' }}>
-                  <button className="button-primary" type="submit" disabled={importing || !organizationId}>{importing ? <LoaderCircle size={15} className="spin" /> : <Upload size={15} />} PDF अपलोड करें</button>
+                  <button className="button-primary" type="submit" disabled={uploadingPdf || !organizationId}>{uploadingPdf ? <LoaderCircle size={15} className="spin" /> : <Upload size={15} />} PDF अपलोड करें</button>
                 </div>
               </form>
             </section>
