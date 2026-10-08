@@ -234,7 +234,7 @@ export default function AdminPanel() {
   };
 
   return (
-    <DashboardShell>
+    <>
       <div className="work-page">
         <div className="page-intro">
           <div>
@@ -388,7 +388,7 @@ export default function AdminPanel() {
           </div>
         )}
       </div>
-    </DashboardShell>
+    </>
   );
 }
 

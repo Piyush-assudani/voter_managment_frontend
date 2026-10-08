@@ -102,6 +102,15 @@ export default function PollDeskPage() {
     }
   }, []);
 
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300); // 300ms debounce
+    return () => clearTimeout(handler);
+  }, [search]);
+
   useEffect(() => {
     if (selectedWard) void loadVoters(selectedWard);
   }, [selectedWard, loadVoters]);
@@ -109,13 +118,13 @@ export default function PollDeskPage() {
   const visibleVoters = useMemo(() => voters.filter((voter) => {
     const matchesPart = !selectedPart || voter.partNo === selectedPart;
     const matchesStatus = filter === 'all' || (filter === 'voted' ? voter.voted : !voter.voted);
-    const query = search.trim().toLowerCase();
+    const query = debouncedSearch.trim().toLowerCase();
     const matchesSearch = !query
       || String(voter.serialNo).includes(query)
       || (voter.nameHi || '').toLowerCase().includes(query)
       || (voter.nameEn || '').toLowerCase().includes(query);
     return matchesPart && matchesStatus && matchesSearch;
-  }), [filter, search, selectedPart, voters]);
+  }), [filter, debouncedSearch, selectedPart, voters]);
 
   const parts = useMemo(() => [...new Set(voters.map((voter) => voter.partNo).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [voters]);
   const partVoters = useMemo(() => voters.filter((voter) => !selectedPart || voter.partNo === selectedPart), [voters, selectedPart]);

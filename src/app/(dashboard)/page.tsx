@@ -6,6 +6,7 @@ import {
   FileText,
   LoaderCircle,
   MapPin,
+  Mic,
   Printer,
   Search,
   Send,
@@ -13,6 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
+import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
 
 interface Voter {
   _id: string;
@@ -43,6 +45,10 @@ export default function DashboardPage() {
   const [voters, setVoters] = useState<Voter[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [relativeNameQuery, setRelativeNameQuery] = useState('');
+  const [voiceError, setVoiceError] = useState('');
+  const [voiceActive, setVoiceActive] = useState(false);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const [houseQuery, setHouseQuery] = useState('');
   const [wardFilter, setWardFilter] = useState('');
   const [supportFilter, setSupportFilter] = useState('');
@@ -78,6 +84,7 @@ export default function DashboardPage() {
     nextPage = 1,
     householdWard = '',
     householdPart = '',
+    relative = '',
   ) => {
     setLoading(true);
     setError('');
@@ -89,6 +96,7 @@ export default function DashboardPage() {
       ? `/voters/family/${encodeURIComponent(house)}?${new URLSearchParams({ ward: householdWard, part: householdPart })}`
       : `/voters?${new URLSearchParams({
           ...(search ? { search } : {}),
+          ...(relative ? { relative } : {}),
           ...(filtersRef.current.ward ? { ward: filtersRef.current.ward } : {}),
           ...(filtersRef.current.supportStatus ? { supportStatus: filtersRef.current.supportStatus } : {}),
           ...(filtersRef.current.isMigrant ? { isMigrant: filtersRef.current.isMigrant } : {}),
@@ -129,6 +137,8 @@ export default function DashboardPage() {
     void Promise.resolve().then(() => loadVoters());
   }, [loadVoters]);
 
+  useEffect(() => () => recognitionRef.current?.stop(), []);
+
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     filtersRef.current = {
@@ -136,7 +146,38 @@ export default function DashboardPage() {
       supportStatus: supportFilter,
       isMigrant: migrantFilter,
     };
-    void loadVoters(searchQuery.trim(), houseQuery.trim());
+    setVoiceError('');
+    void loadVoters(searchQuery.trim(), houseQuery.trim(), 1, '', '', relativeNameQuery.trim());
+  };
+
+  const startVoiceSearch = () => {
+    recognitionRef.current?.stop();
+    const recognition = createSpeechRecognition();
+    if (!recognition) {
+      setVoiceError('इस browser में voice search उपलब्ध नहीं है।');
+      return;
+    }
+    setVoiceError('');
+    recognition.lang = 'hi-IN';
+    recognition.interimResults = false;
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript?.trim();
+      if (transcript) setSearchQuery(transcript);
+    };
+    recognition.onerror = () => setVoiceError('आवाज़ पहचानी नहीं गई। माइक्रोफ़ोन अनुमति जाँचकर फिर बोलें।');
+    recognition.onend = () => {
+      setVoiceActive(false);
+      recognitionRef.current = null;
+    };
+    recognitionRef.current = recognition;
+    setVoiceActive(true);
+    try {
+      recognition.start();
+    } catch {
+      recognitionRef.current = null;
+      setVoiceActive(false);
+      setVoiceError('Voice search शुरू नहीं हो सकी। कृपया फिर कोशिश करें।');
+    }
   };
 
   const toggleSelected = (id: string) => {
@@ -253,6 +294,15 @@ export default function DashboardPage() {
               placeholder="नाम या EPIC नंबर"
             />
           </label>
+          <label className="search-field">
+            <UsersRound size={16} />
+            <input
+              aria-label="पिता या संबंधी का नाम"
+              value={relativeNameQuery}
+              onChange={(event) => setRelativeNameQuery(event.target.value)}
+              placeholder="पिता / संबंधी का नाम"
+            />
+          </label>
           <label className="search-field house-search-field">
             <MapPin size={16} />
             <input
@@ -276,13 +326,18 @@ export default function DashboardPage() {
             {loading ? <LoaderCircle size={16} className="spin" /> : <Search size={16} />}
             खोजें
           </button>
-          {(searchQuery || houseQuery || familyHouse || wardFilter || supportFilter || migrantFilter) && (
+          <button className="button-secondary" type="button" onClick={startVoiceSearch} disabled={voiceActive} aria-label="बोलकर खोजें" title="बोलकर खोजें">
+            <Mic size={15} /> {voiceActive ? 'सुन रहे हैं…' : 'बोलकर खोजें'}
+          </button>
+          {(searchQuery || relativeNameQuery || houseQuery || familyHouse || wardFilter || supportFilter || migrantFilter) && (
             <button
               className="button-quiet"
               type="button"
               onClick={() => {
                 setSearchQuery('');
+                setRelativeNameQuery('');
                 setHouseQuery('');
+                setVoiceError('');
                 setWardFilter('');
                 setSupportFilter('');
                 setMigrantFilter('');
@@ -294,6 +349,7 @@ export default function DashboardPage() {
             </button>
           )}
         </form>
+        {voiceError && <p className="inline-notice error-notice" role="status">{voiceError}</p>}
       </section>
 
       {actionMessage && <div className="inline-notice" role="status">{actionMessage}</div>}
@@ -383,9 +439,9 @@ export default function DashboardPage() {
         {!loading && !familyHouse && totalRecords > pageSize && (
           <div className="pagination-bar">
             <span>{(page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalRecords)} / {totalRecords}</span>
-            <label>प्रति पृष्ठ<select value={pageSize} onChange={(event) => { const size = Number(event.target.value); pageSizeRef.current = size; setPageSize(size); void loadVoters(searchQuery.trim(), '', 1); }}><option value={25}>25</option><option value={50}>50</option><option value={100}>100</option><option value={250}>250</option></select></label>
-            <button className="button-secondary" type="button" onClick={() => void loadVoters(searchQuery.trim(), '', page - 1)} disabled={page <= 1}>पिछला</button>
-            <button className="button-secondary" type="button" onClick={() => void loadVoters(searchQuery.trim(), '', page + 1)} disabled={page * pageSize >= totalRecords}>अगला</button>
+            <label>प्रति पृष्ठ<select value={pageSize} onChange={(event) => { const size = Number(event.target.value); pageSizeRef.current = size; setPageSize(size); void loadVoters(searchQuery.trim(), '', 1, '', '', relativeNameQuery.trim()); }}><option value={25}>25</option><option value={50}>50</option><option value={100}>100</option><option value={250}>250</option></select></label>
+            <button className="button-secondary" type="button" onClick={() => void loadVoters(searchQuery.trim(), '', page - 1, '', '', relativeNameQuery.trim())} disabled={page <= 1}>पिछला</button>
+            <button className="button-secondary" type="button" onClick={() => void loadVoters(searchQuery.trim(), '', page + 1, '', '', relativeNameQuery.trim())} disabled={page * pageSize >= totalRecords}>अगला</button>
           </div>
         )}
         <div className="records-footnote">रिकॉर्ड और अपडेट आपके कॉन्फ़िगर किए गए डेटाबेस से आते हैं।</div>
