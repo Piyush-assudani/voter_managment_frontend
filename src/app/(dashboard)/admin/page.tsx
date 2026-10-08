@@ -49,6 +49,15 @@ interface SystemHealth {
   checkedAt: string;
 }
 
+interface UploadJob {
+  id: string;
+  filename: string;
+  organizationId: string;
+  status: 'processing' | 'completed' | 'failed';
+  extractedCount: number;
+  uploadedAt: string;
+}
+
 type AdminView = 'tenants' | 'records' | 'users' | 'import' | 'system';
 
 export default function AdminPanel() {
@@ -71,6 +80,7 @@ export default function AdminPanel() {
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [importing, setImporting] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [pdfJobs, setPdfJobs] = useState<UploadJob[]>([]);
 
   const loadOrganizations = useCallback(async () => {
     const response = await apiFetch('/admin/organizations', { cache: 'no-store' });
@@ -102,21 +112,44 @@ export default function AdminPanel() {
     setHealth(await response.json() as SystemHealth);
   }, []);
 
+  const loadPdfJobs = useCallback(async () => {
+    if (!organizationId || activeView !== 'import') return;
+    try {
+      const response = await apiFetch(`/admin/pdf/jobs?organizationId=${organizationId}`, { cache: 'no-store' });
+      if (response.ok) {
+        setPdfJobs(await response.json() as UploadJob[]);
+      }
+    } catch {
+      // ignore silently
+    }
+  }, [organizationId, activeView]);
+
   const loadPageData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       if (activeView === 'records') await Promise.all([loadOrganizations(), loadVoters()]);
-      else if (activeView === 'tenants' || activeView === 'users' || activeView === 'import') await loadOrganizations();
+      else if (activeView === 'tenants' || activeView === 'users' || activeView === 'import') {
+        await loadOrganizations();
+        await loadPdfJobs();
+      }
       else await loadHealth();
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'एडमिन जानकारी लोड नहीं हुई।');
     } finally {
       setLoading(false);
     }
-  }, [activeView, loadHealth, loadOrganizations, loadVoters]);
+  }, [activeView, loadHealth, loadOrganizations, loadVoters, loadPdfJobs]);
 
   useEffect(() => { void Promise.resolve().then(() => loadPageData()); }, [loadPageData]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (activeView === 'import' && organizationId) {
+      interval = setInterval(() => void loadPdfJobs(), 3000);
+    }
+    return () => clearInterval(interval);
+  }, [activeView, organizationId, loadPdfJobs]);
 
   const wards = useMemo(
     () => [...new Set(voters.map((voter) => voter.wardNo).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
@@ -254,6 +287,7 @@ export default function AdminPanel() {
         setNotice(`${result.extractedCount ?? 0} Voter IDs सफलता पूर्वक PDF से निकाले गए।`);
       }
       form.reset();
+      void loadPdfJobs();
     } catch (importError) {
       setError(importError instanceof Error ? importError.message : 'PDF अपलोड नहीं हुई।');
     } finally {
@@ -444,6 +478,35 @@ export default function AdminPanel() {
                   <button className="button-primary" type="submit" disabled={uploadingPdf || !organizationId}>{uploadingPdf ? <LoaderCircle size={15} className="spin" /> : <Upload size={15} />} PDF अपलोड करें</button>
                 </div>
               </form>
+
+              {pdfJobs.length > 0 && (
+                <div style={{ marginTop: '32px', borderTop: '1px solid #e4eae5', paddingTop: '20px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: '600', marginBottom: '12px' }}>हाल ही में अपलोड की गई PDF फाइलें (पिछले 2 घंटे)</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {pdfJobs.map((job) => (
+                      <div key={job.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f9faf9', padding: '12px 16px', borderRadius: '6px', border: '1px solid #e4eae5' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          {job.status === 'processing' && <LoaderCircle size={16} className="spin" style={{ color: '#00875a' }} />}
+                          {job.status === 'completed' && <Check size={16} style={{ color: '#00875a' }} />}
+                          {job.status === 'failed' && <AlertCircle size={16} style={{ color: '#d93025' }} />}
+                          <div>
+                            <div style={{ fontSize: '14px', fontWeight: '500', color: '#1a2620' }}>{job.filename}</div>
+                            <div style={{ fontSize: '12px', color: '#7d8981' }}>
+                              {new Date(job.uploadedAt).toLocaleTimeString('hi-IN')} 
+                              {job.status === 'completed' && ` • ${job.extractedCount} रिकॉर्ड्स`}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '13px', fontWeight: '500', color: job.status === 'failed' ? '#d93025' : '#00875a' }}>
+                          {job.status === 'processing' && 'Extracting...'}
+                          {job.status === 'completed' && 'Done'}
+                          {job.status === 'failed' && 'Error'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
           </>
         )}
