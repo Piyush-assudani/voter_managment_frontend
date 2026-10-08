@@ -12,9 +12,11 @@ import {
   Send,
   UsersRound,
   X,
+  Download
 } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
+import { downloadSlip } from '@/lib/downloadSlip';
 
 interface Voter {
   _id: string;
@@ -76,6 +78,7 @@ export default function DashboardPage() {
   const [slipPhone, setSlipPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
 
   const loadVoters = useCallback(async (
@@ -252,6 +255,22 @@ export default function DashboardPage() {
     }
   };
 
+  const handleBulkDownload = async () => {
+    if (selectedIds.length === 0) return;
+    setIsDownloading(true);
+    setActionMessage('पर्चियां डाउनलोड हो रही हैं, कृपया प्रतीक्षा करें...');
+    const selectedVoters = voters.filter(v => selectedIds.includes(v._id));
+    
+    for (const voter of selectedVoters) {
+      await downloadSlip(voter);
+      await new Promise(r => setTimeout(r, 400));
+    }
+    
+    setIsDownloading(false);
+    setActionMessage(`${selectedVoters.length} पर्चियां सफलतापूर्वक डाउनलोड की गईं।`);
+    setSelectedIds([]);
+  };
+
   return (
     <div className="directory-page">
       <div className="page-intro">
@@ -361,6 +380,11 @@ export default function DashboardPage() {
             <p>{loading ? 'रिकॉर्ड लोड हो रहे हैं…' : `${voters.length} रिकॉर्ड`}</p>
           </div>
           <div className="records-toolbar-actions">
+            {selectedIds.length > 0 && (
+              <button className="button-secondary" type="button" onClick={() => void handleBulkDownload()} disabled={isDownloading}>
+                {isDownloading ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />} पर्चियां डाउनलोड ({selectedIds.length})
+              </button>
+            )}
             <button className="button-secondary" type="button" onClick={selectAll} disabled={loading || !voters.length}>
               {selectedIds.length === voters.length ? 'चयन हटाएँ' : 'सभी चुनें'}
             </button>
@@ -429,7 +453,8 @@ export default function DashboardPage() {
                       setSearchQuery('');
                       void loadVoters('', voter.houseNo || '', 1, voter.wardNo || '', voter.partNo || '');
                     }} title="परिवार देखें"><UsersRound size={16} /></button>
-                    <button className="vc-btn-slip" onClick={() => { setSlipPhone(voter.phone || ''); setSlipVoter(voter); setActionMessage(''); }}>💬 पर्ची</button>
+                    <button className="vc-btn-slip" onClick={() => { setSlipPhone(voter.phone || ''); setSlipVoter(voter); setActionMessage(''); }} title="WhatsApp पर्ची">💬</button>
+                    <button className="vc-btn-slip" style={{ marginLeft: '4px', background: '#eff6ff', color: '#1e3a8a', borderColor: '#bfdbfe' }} onClick={() => void downloadSlip(voter)} title="पर्ची डाउनलोड करें">⬇️</button>
                   </div>
                 </div>
               </div>
