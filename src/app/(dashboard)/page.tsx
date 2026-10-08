@@ -66,6 +66,18 @@ export default function DashboardPage() {
   const [editVoter, setEditVoter] = useState<Voter | null>(null);
   const [slipVoter, setSlipVoter] = useState<Voter | null>(null);
   const [editValues, setEditValues] = useState({
+    nameEn: '',
+    nameHi: '',
+    relativeNameEn: '',
+    relativeNameHi: '',
+    relationType: '',
+    age: '',
+    gender: '',
+    epic: '',
+    houseNo: '',
+    wardNo: '',
+    partNo: '',
+    serialNo: '',
     phone: '',
     caste: '',
     surety: '',
@@ -196,6 +208,18 @@ export default function DashboardPage() {
   const openEditor = (voter: Voter) => {
     setActionMessage('');
     setEditValues({
+      nameEn: voter.nameEn || '',
+      nameHi: voter.nameHi || '',
+      relativeNameEn: voter.relativeNameEn || '',
+      relativeNameHi: voter.relativeNameHi || '',
+      relationType: voter.relationType || '',
+      age: voter.age?.toString() || '',
+      gender: voter.gender || '',
+      epic: voter.epic || '',
+      houseNo: voter.houseNo || '',
+      wardNo: voter.wardNo || '',
+      partNo: voter.partNo || '',
+      serialNo: voter.serialNo?.toString() || '',
       phone: voter.phone || '',
       caste: voter.caste || '',
       surety: voter.surety || '',
@@ -480,22 +504,49 @@ export default function DashboardPage() {
               <button className="icon-button" onClick={() => setEditVoter(null)} aria-label="बंद करें"><X size={18} /></button>
             </div>
             <form onSubmit={saveVoter} className="modal-form">
-              <label>फोन नंबर<input value={editValues.phone} onChange={(event) => setEditValues({ ...editValues, phone: event.target.value })} /></label>
-              <label>जाति / समुदाय<input value={editValues.caste} onChange={(event) => setEditValues({ ...editValues, caste: event.target.value })} /></label>
-              <label>समर्थन वर्ग
-                <select value={editValues.supportStatus} onChange={(event) => setEditValues({ ...editValues, supportStatus: event.target.value })}>
-                  <option value="unmarked">अवर्गीकृत</option><option value="core">समर्थन चिह्नित</option><option value="swing">अनिर्णीत चिह्नित</option><option value="opposition">विरोध चिह्नित</option>
-                </select>
-              </label>
-              <label>मतदाता स्थिति
-                <select value={editValues.surety} onChange={(event) => setEditValues({ ...editValues, surety: event.target.value })}>
-                  <option value="">चुनें</option><option value="100% पक्का">100% पक्का</option><option value="50-50">50-50</option><option value="विरोधी">विरोधी</option><option value="सामान्य">सामान्य</option>
-                </select>
-              </label>
-              <label>जिम्मेदार कार्यकर्ता<input value={editValues.assignedWorker} onChange={(event) => setEditValues({ ...editValues, assignedWorker: event.target.value })} /></label>
-              <label className="checkbox-label"><input type="checkbox" checked={editValues.isMigrant} onChange={(event) => setEditValues({ ...editValues, isMigrant: event.target.checked })} /> प्रवासी मतदाता</label>
-              {editValues.isMigrant && <label>वर्तमान स्थान<input value={editValues.migrantLocation} onChange={(event) => setEditValues({ ...editValues, migrantLocation: event.target.value })} placeholder="वैकल्पिक स्थान" /></label>}
-              <label className="notes-field">नोट्स<textarea value={editValues.notes} onChange={(event) => setEditValues({ ...editValues, notes: event.target.value })} rows={3} /></label>
+              <div className="feature-form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '16px', maxHeight: '60vh', overflowY: 'auto', paddingRight: '8px' }}>
+                <label>EPIC (Voter ID)<input value={editValues.epic} onChange={(event) => setEditValues({ ...editValues, epic: event.target.value })} /></label>
+                <label>वार्ड नं<input value={editValues.wardNo} onChange={(event) => setEditValues({ ...editValues, wardNo: event.target.value })} /></label>
+                <label>भाग (Part) नं<input value={editValues.partNo} onChange={(event) => setEditValues({ ...editValues, partNo: event.target.value })} /></label>
+                <label>क्रम (Serial) नं<input type="number" value={editValues.serialNo} onChange={(event) => setEditValues({ ...editValues, serialNo: event.target.value })} /></label>
+                <label>नाम (English)<input value={editValues.nameEn} onChange={(event) => setEditValues({ ...editValues, nameEn: event.target.value })} /></label>
+                <label>नाम (हिंदी)<input value={editValues.nameHi} onChange={(event) => setEditValues({ ...editValues, nameHi: event.target.value })} /></label>
+                <label>संबंध प्रकार
+                  <select value={editValues.relationType} onChange={(event) => setEditValues({ ...editValues, relationType: event.target.value })}>
+                    <option value="">चुनें</option><option value="पिता">पिता</option><option value="पति">पति</option><option value="माता">माता</option><option value="पत्नी">पत्नी</option><option value="अन्य">अन्य</option>
+                  </select>
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <label style={{ flex: 1 }}>रिश्तेदार का नाम (En)<input value={editValues.relativeNameEn} onChange={(event) => setEditValues({ ...editValues, relativeNameEn: event.target.value })} /></label>
+                  <label style={{ flex: 1 }}>रिश्तेदार का नाम (Hi)<input value={editValues.relativeNameHi} onChange={(event) => setEditValues({ ...editValues, relativeNameHi: event.target.value })} /></label>
+                </div>
+                <label>उम्र<input type="number" value={editValues.age} onChange={(event) => setEditValues({ ...editValues, age: event.target.value })} /></label>
+                <label>लिंग
+                  <select value={editValues.gender} onChange={(event) => setEditValues({ ...editValues, gender: event.target.value })}>
+                    <option value="">चुनें</option><option value="पुरुष">पुरुष</option><option value="स्त्री">स्त्री</option><option value="अन्य">अन्य</option>
+                  </select>
+                </label>
+                <label>मकान नंबर<input value={editValues.houseNo} onChange={(event) => setEditValues({ ...editValues, houseNo: event.target.value })} /></label>
+                <label>फोन नंबर<input value={editValues.phone} onChange={(event) => setEditValues({ ...editValues, phone: event.target.value })} /></label>
+                <label>जाति / समुदाय<input value={editValues.caste} onChange={(event) => setEditValues({ ...editValues, caste: event.target.value })} /></label>
+                <label>जिम्मेदार कार्यकर्ता<input value={editValues.assignedWorker} onChange={(event) => setEditValues({ ...editValues, assignedWorker: event.target.value })} /></label>
+                <label>समर्थन वर्ग
+                  <select value={editValues.supportStatus} onChange={(event) => setEditValues({ ...editValues, supportStatus: event.target.value })}>
+                    <option value="unmarked">अवर्गीकृत</option><option value="core">समर्थन चिह्नित</option><option value="swing">अनिर्णीत चिह्नित</option><option value="opposition">विरोध चिह्नित</option>
+                  </select>
+                </label>
+                <label>मतदाता स्थिति
+                  <select value={editValues.surety} onChange={(event) => setEditValues({ ...editValues, surety: event.target.value })}>
+                    <option value="">चुनें</option><option value="100% पक्का">100% पक्का</option><option value="50-50">50-50</option><option value="विरोधी">विरोधी</option><option value="सामान्य">सामान्य</option>
+                  </select>
+                </label>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label className="checkbox-label"><input type="checkbox" checked={editValues.isMigrant} onChange={(event) => setEditValues({ ...editValues, isMigrant: event.target.checked })} /> प्रवासी मतदाता</label>
+                  {editValues.isMigrant && <label style={{ marginTop: '8px' }}>वर्तमान स्थान<input value={editValues.migrantLocation} onChange={(event) => setEditValues({ ...editValues, migrantLocation: event.target.value })} placeholder="वैकल्पिक स्थान" /></label>}
+                </div>
+                <label className="notes-field" style={{ gridColumn: '1 / -1' }}>नोट्स<textarea value={editValues.notes} onChange={(event) => setEditValues({ ...editValues, notes: event.target.value })} rows={3} /></label>
+              </div>
+
               {actionMessage && <p className="form-error" role="alert">{actionMessage}</p>}
               <div className="modal-actions">
                 <button className="button-secondary" type="button" onClick={() => setEditVoter(null)}>रद्द करें</button>
