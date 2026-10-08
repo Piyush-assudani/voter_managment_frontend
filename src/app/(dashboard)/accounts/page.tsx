@@ -92,7 +92,7 @@ export default function AccountsPage() {
     setError('');
     try {
       const query = organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : '';
-      const response = await apiFetch(`/users/accounts${query}`, { cache: 'no-store' });
+      const response = await apiFetch(`/users${query}`, { cache: 'no-store' });
       if (!response.ok) throw new Error(await getApiError(response, 'खाता सूची लोड नहीं हुई।'));
       setAccounts(await response.json() as Account[]);
     } catch (loadError) {
@@ -171,7 +171,7 @@ export default function AccountsPage() {
     setError('');
     setNotice('');
     try {
-      const path = editing ? `/users/accounts/${editing.id}` : '/users/accounts';
+      const path = editing ? `/users/${editing.id}` : '/users';
       const method = editing ? 'PUT' : 'POST';
       const payload = !editing
         ? {
@@ -236,7 +236,11 @@ export default function AccountsPage() {
     setError('');
     setNotice('');
     try {
-      const response = await apiFetch(`/users/accounts/${account.id}`, { method: 'DELETE' });
+      const response = await apiFetch(`/users/${account.id}/active`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: false }),
+      });
       if (!response.ok) throw new Error(await getApiError(response, 'खाता बंद नहीं हुआ।'));
       setNotice('खाता बंद कर दिया गया।');
       await load();

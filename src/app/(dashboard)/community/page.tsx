@@ -73,7 +73,7 @@ export default function CommunityPage() {
     try {
       const params = new URLSearchParams({ q: query.trim(), includeFamily: String(includeFamily) });
       if (ward.trim()) params.set('ward', ward.trim());
-      const response = await apiFetch(`/features/communities?${params}`, { cache: 'no-store' });
+      const response = await apiFetch(`/features/community?${params}`, { cache: 'no-store' });
       if (!response.ok) throw new Error(await getApiError(response, 'समुदाय खोज पूरी नहीं हो सकी।'));
       setVoters(await response.json() as Voter[]);
       rememberSearch(query.trim());

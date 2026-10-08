@@ -43,7 +43,7 @@ interface AdminVoter {
 
 interface SystemHealth {
   database: string;
-  whatsapp: string;
+  metaReady: boolean;
   platform: string;
   checkedAt: string;
 }
@@ -214,7 +214,7 @@ export default function AdminPanel() {
       const body = new FormData();
       body.set('organizationId', organizationId);
       body.set('file', file);
-      const response = await apiFetch('/admin/import.xlsx', { method: 'POST', body });
+      const response = await apiFetch('/admin/upload-voters', { method: 'POST', body });
       if (!response.ok) throw new Error(await getApiError(response, 'मतदाता Excel import नहीं हुआ।'));
       const result = await response.json() as { inserted: number; updated: number };
       setNotice(`${result.inserted} नए और ${result.updated} अपडेटेड मतदाता Excel से सेव हुए।`);
@@ -246,7 +246,7 @@ export default function AdminPanel() {
             <button className="button-secondary" type="button" onClick={() => void loadPageData()} disabled={loading || saving}>
               {loading ? <LoaderCircle size={15} className="spin" /> : <RefreshCw size={15} />} रिफ्रेश
             </button>
-            <button className="button-primary" type="button" onClick={() => void downloadExcel(`/admin/export.xlsx${organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : ''}`, 'Excel export नहीं हुआ।', 'platform-data.xlsx')} disabled={saving}>
+            <button className="button-primary" type="button" onClick={() => void downloadExcel(`/admin/export-voters${organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : ''}`, 'Excel export नहीं हुआ।', 'platform-data.xlsx')} disabled={saving}>
               {saving ? <LoaderCircle size={15} className="spin" /> : <FileSpreadsheet size={15} />} Excel डेटा एक्सपोर्ट
             </button>
           </div>
@@ -365,7 +365,7 @@ export default function AdminPanel() {
         {activeView === 'system' && (
           <section className="feature-metrics">
             <article className="metric-card"><span><DatabaseIcon /> Database</span><strong>{health?.database ?? '—'}</strong><small>सर्वर कनेक्शन जाँच</small></article>
-            <article className="metric-card metric-card-green"><span><ShieldCheck size={15} /> WhatsApp / Meta</span><strong>{health?.whatsapp ?? '—'}</strong><small>Credentials configured status only</small></article>
+            <article className="metric-card metric-card-green"><span><ShieldCheck size={15} /> WhatsApp / Meta</span><strong>{health ? (health.metaReady ? 'Configured' : 'Not configured') : '—'}</strong><small>Credentials configured status only</small></article>
             <article className="metric-card"><span><Activity size={15} /> API</span><strong>{health?.platform ?? '—'}</strong><small>{health?.checkedAt ? new Date(health.checkedAt).toLocaleString('hi-IN') : 'सिस्टम चेक'}</small></article>
           </section>
         )}

@@ -5,7 +5,7 @@ import { Download, LoaderCircle, RefreshCw, Search } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
 
 interface Dispatch {
-  id: number;
+  id: string;
   voterName: string;
   epic: string;
   phone: string;
