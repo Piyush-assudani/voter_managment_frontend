@@ -54,6 +54,7 @@ interface UploadJob {
   filename: string;
   organizationId: string;
   status: 'processing' | 'completed' | 'failed';
+  progress?: number;
   extractedCount: number;
   uploadedAt: string;
 }
@@ -520,24 +521,31 @@ export default function AdminPanel() {
                   <h3 style={{ fontSize: '15px', fontWeight: '600', marginBottom: '12px' }}>हाल ही में अपलोड की गई PDF फाइलें (पिछले 2 घंटे)</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {pdfJobs.map((job) => (
-                      <div key={job.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f9faf9', padding: '12px 16px', borderRadius: '6px', border: '1px solid #e4eae5' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          {job.status === 'processing' && <LoaderCircle size={16} className="spin" style={{ color: '#00875a' }} />}
-                          {job.status === 'completed' && <Check size={16} style={{ color: '#00875a' }} />}
-                          {job.status === 'failed' && <AlertCircle size={16} style={{ color: '#d93025' }} />}
-                          <div>
-                            <div style={{ fontSize: '14px', fontWeight: '500', color: '#1a2620' }}>{job.filename}</div>
-                            <div style={{ fontSize: '12px', color: '#7d8981' }}>
-                              {new Date(job.uploadedAt).toLocaleTimeString('hi-IN')} 
-                              {job.status === 'completed' && ` • ${job.extractedCount} रिकॉर्ड्स`}
+                      <div key={job.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#f9faf9', padding: '12px 16px', borderRadius: '6px', border: '1px solid #e4eae5' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            {job.status === 'processing' && <LoaderCircle size={16} className="spin" style={{ color: '#00875a' }} />}
+                            {job.status === 'completed' && <Check size={16} style={{ color: '#00875a' }} />}
+                            {job.status === 'failed' && <AlertCircle size={16} style={{ color: '#d93025' }} />}
+                            <div>
+                              <div style={{ fontSize: '14px', fontWeight: '500', color: '#1a2620' }}>{job.filename}</div>
+                              <div style={{ fontSize: '12px', color: '#7d8981' }}>
+                                {new Date(job.uploadedAt).toLocaleTimeString('hi-IN')} 
+                                {job.status === 'completed' && ` • ${job.extractedCount} रिकॉर्ड्स`}
+                              </div>
                             </div>
                           </div>
+                          <div style={{ fontSize: '13px', fontWeight: '500', color: job.status === 'failed' ? '#d93025' : '#00875a' }}>
+                            {job.status === 'processing' && (job.progress ? `${job.progress}% Extracting...` : 'Extracting...')}
+                            {job.status === 'completed' && 'Done'}
+                            {job.status === 'failed' && 'Error'}
+                          </div>
                         </div>
-                        <div style={{ fontSize: '13px', fontWeight: '500', color: job.status === 'failed' ? '#d93025' : '#00875a' }}>
-                          {job.status === 'processing' && 'Extracting...'}
-                          {job.status === 'completed' && 'Done'}
-                          {job.status === 'failed' && 'Error'}
-                        </div>
+                        {job.status === 'processing' && (
+                          <div style={{ width: '100%', height: '6px', backgroundColor: '#e4eae5', borderRadius: '4px', overflow: 'hidden' }}>
+                            <div style={{ width: `${job.progress || 0}%`, height: '100%', backgroundColor: '#00875a', transition: 'width 0.3s ease' }} />
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
