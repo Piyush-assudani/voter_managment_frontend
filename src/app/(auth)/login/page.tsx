@@ -101,7 +101,9 @@ export default function LoginPage() {
           <span>आपके संगठन के सुरक्षित ऑपरेशन्स पोर्टल में प्रवेश</span>
         </div>
       </section>
-      <div className="auth-caption">मतदाता और बूथ प्रबंधन · एक व्यवस्थित कार्यक्षेत्र</div>
+      <div className="auth-caption">
+        ©️ 2026 MR PIPE. All Rights Reserved. | Powered by <a href="https://morihix.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'none' }}>Morihix Pvt. Ltd</a>
+      </div>
     </main>
   );
 }
