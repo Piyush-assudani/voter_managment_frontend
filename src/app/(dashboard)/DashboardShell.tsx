@@ -71,6 +71,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [mobileOpen, setMobileOpen] = useState(false);
   const [health, setHealth] = useState<Health>('checking');
   const [allowedModules, setAllowedModules] = useState<string[] | null>(null);
+  const [userInfo, setUserInfo] = useState<{ role?: string; name?: string; email?: string }>({});
 
   useEffect(() => {
     if (pathname === '/') return;
@@ -88,8 +89,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       }
       try {
         const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as {
-          user?: { role?: string; modules?: unknown };
+          user?: { role?: string; modules?: unknown; name?: string; email?: string };
         };
+        if (payload.user) {
+          setUserInfo(payload.user);
+        }
         if (payload.user?.role === 'admin') return;
         if (active) setAllowedModules(Array.isArray(payload.user?.modules)
           ? payload.user.modules.filter((module): module is string => typeof module === 'string')
@@ -189,13 +193,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         </nav>
 
         <div className="sidebar-spacer" />
-        <div className="sidebar-status">
-          <span className={`status-dot status-${health}`} />
-          <span className="status-copy">
-            <span>{health === 'connected' ? 'डेटाबेस कनेक्टेड' : health === 'offline' ? 'डेटाबेस उपलब्ध नहीं' : 'कनेक्शन जाँच रहे हैं'}</span>
-            <small>{health === 'connected' ? 'Live database' : health === 'offline' ? 'Check API / setup' : 'Please wait'}</small>
-          </span>
-          <ChevronRight className="status-chevron" size={14} />
+        <div className="sidebar-status" style={{ padding: '12px 16px', borderTop: '1px solid var(--border-color, #e2e8f0)', display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted, #64748b)', fontWeight: 600 }}>लॉगिन यूज़र</span>
+          <strong style={{ fontSize: '14px', color: 'var(--text-primary, #0f172a)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {userInfo.name || userInfo.email || (userInfo.role ? `Admin Access (${userInfo.role})` : 'User')}
+          </strong>
         </div>
         <button className="sign-out-button" onClick={signOut} title={collapsed ? 'लॉगआउट' : undefined}>
           <LogOut size={17} strokeWidth={1.8} />
