@@ -246,7 +246,8 @@ export default function DashboardPage() {
       if (!response.ok) {
         throw new Error(await getApiError(response, 'मतदाता विवरण सेव नहीं हुए।'));
       }
-      setVoters((current) => current.map((voter) => voter._id === editVoter._id ? { ...voter, ...editValues } : voter));
+      const updatedValues = { ...editValues, age: Number(editValues.age) || 0, serialNo: Number(editValues.serialNo) || 0 };
+      setVoters((current) => current.map((voter) => voter._id === editVoter._id ? { ...voter, ...updatedValues } : voter));
       setEditVoter(null);
       setActionMessage('मतदाता विवरण सेव हो गए।');
     } catch (saveError) {
