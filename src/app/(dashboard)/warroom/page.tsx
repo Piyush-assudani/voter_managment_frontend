@@ -85,15 +85,15 @@ export default function WarroomPage() {
 
   const supportTotals = useMemo(() => {
     const totals = { core: 0, swing: 0, opposition: 0, unmarked: 0 };
-    data?.support.forEach(({ status, count }) => {
+    data?.support?.forEach(({ status, count }) => {
       if (status in totals) totals[status] = count;
     });
     return totals;
   }, [data]);
   const total = Object.values(supportTotals).reduce((sum, value) => sum + value, 0);
-  const voted = data?.booths.reduce((sum, booth) => sum + booth.voted, 0) ?? 0;
+  const voted = data?.booths?.reduce((sum, booth) => sum + booth.voted, 0) ?? 0;
   const turnout = total ? Math.round((voted / total) * 100) : 0;
-  const wardCount = new Set(data?.booths.map((booth) => booth.ward).filter(Boolean)).size;
+  const wardCount = new Set(data?.booths?.map((booth) => booth.ward).filter(Boolean)).size;
   const forecast = Math.round(supportTotals.core + supportTotals.swing * 0.5 + supportTotals.unmarked * baseline / 100);
   const supportCards: SupportStatus[] = ['core', 'swing', 'opposition', 'unmarked'];
 
@@ -117,7 +117,7 @@ export default function WarroomPage() {
         <article className="metric-card"><span>कुल मतदाता</span><strong>{loading ? '—' : total.toLocaleString('hi-IN')}</strong><small>चुने हुए दायरे में</small></article>
         <article className="metric-card metric-card-green"><span>मतदान दर्ज</span><strong>{loading ? '—' : voted.toLocaleString('hi-IN')}</strong><small>डेटाबेस स्थिति</small></article>
         <article className="metric-card"><span>टर्नआउट</span><strong>{loading ? '—' : `${turnout}%`}</strong><small>दर्ज मतदाता / कुल</small></article>
-        <article className="metric-card"><span>बूथ / भाग</span><strong>{loading ? '—' : data?.booths.length ?? 0}</strong><small>डेटाबेस में उपलब्ध groups</small></article>
+        <article className="metric-card"><span>बूथ / भाग</span><strong>{loading ? '—' : data?.booths?.length ?? 0}</strong><small>डेटाबेस में उपलब्ध groups</small></article>
         <article className="metric-card"><span>अलग वार्ड</span><strong>{loading ? '—' : wardCount}</strong><small>चुने हुए दायरे में</small></article>
       </section>
 
@@ -142,9 +142,9 @@ export default function WarroomPage() {
         <div className="records-footnote">Baseline बदलने से केवल अनुमान बदलता है। विरोध चिह्नित रिकॉर्ड गणना में शामिल नहीं हैं; यह मॉडल planning के लिए है, चुनावी परिणाम का दावा नहीं।</div>
       </section>
 
-      <div className="section-title-row"><div><h2>बूथ क्षमता मैट्रिक्स</h2><p>प्रत्येक वार्ड/भाग में मौजूद records, मतदान और manual tags।</p></div><span className="panel-count">{data?.booths.length ?? 0} groups</span></div>
+      <div className="section-title-row"><div><h2>बूथ क्षमता मैट्रिक्स</h2><p>प्रत्येक वार्ड/भाग में मौजूद records, मतदान और manual tags।</p></div><span className="panel-count">{data?.booths?.length ?? 0} groups</span></div>
       <section className="records-panel">
-        {loading && !data ? <div className="empty-state"><LoaderCircle size={20} className="spin" /><p>बूथ सारांश लोड हो रहा है…</p></div> : data?.booths.length ? (
+        {loading && !data ? <div className="empty-state"><LoaderCircle size={20} className="spin" /><p>बूथ सारांश लोड हो रहा है…</p></div> : data?.booths?.length ? (
           <div className="table-scroll"><table className="voter-table desk-table"><thead><tr><th>वार्ड / भाग</th><th>कुल</th><th>मतदान</th><th>समर्थन चिह्नित</th><th>अनिर्णीत</th><th>विरोध चिह्नित</th><th>अवर्गीकृत</th><th>क्षमता स्थिति</th></tr></thead><tbody>
             {data.booths.map((booth) => {
               const taggedSupport = booth.total ? Math.round(((booth.core + booth.swing * 0.5) / booth.total) * 100) : 0;

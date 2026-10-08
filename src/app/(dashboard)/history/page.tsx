@@ -103,7 +103,7 @@ export default function DispatchHistoryPage() {
             </select>
           </form>
         </div>
-        {loading && !data ? <div className="empty-state"><LoaderCircle size={20} className="spin" /><p>इतिहास लोड हो रहा है…</p></div> : data?.dispatches.length ? (
+        {loading && !data ? <div className="empty-state"><LoaderCircle size={20} className="spin" /><p>इतिहास लोड हो रहा है…</p></div> : data?.dispatches?.length ? (
           <div className="table-scroll"><table className="voter-table desk-table"><thead><tr><th>समय</th><th>मतदाता</th><th>EPIC</th><th>फोन</th><th>पर्ची</th><th>स्थिति</th></tr></thead><tbody>
             {data.dispatches.map((item) => <tr key={item.id}><td>{new Date(item.createdAt).toLocaleString('hi-IN')}</td><td><div className="voter-name">{item.voterName || '—'}</div>{item.errorMessage && <div className="voter-subline">{item.errorMessage}</div>}</td><td className="voter-code">{item.epic || '—'}</td><td>{item.phone}</td><td>{item.slipType === 'family' ? 'परिवार' : 'व्यक्तिगत'}</td><td><span className={`record-status ${item.status === 'sent' ? 'status-voted' : item.status === 'failed' ? 'status-pending' : ''}`}>{item.status === 'sent' ? 'स्वीकारा गया' : item.status === 'failed' ? 'विफल' : 'भेजा जा रहा है'}</span></td></tr>)}
           </tbody></table></div>
