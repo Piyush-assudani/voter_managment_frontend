@@ -247,8 +247,12 @@ export default function AdminPanel() {
       body.set('pdf', file);
       const response = await apiFetch('/admin/pdf/upload', { method: 'POST', body });
       if (!response.ok) throw new Error(await getApiError(response, 'PDF अपलोड नहीं हुई।'));
-      const result = await response.json() as { extractedCount: number };
-      setNotice(`${result.extractedCount} Voter IDs सफलता पूर्वक PDF से निकाले और सेव किये गए। फाइल 2 घंटे में डिलीट हो जाएगी।`);
+      const result = await response.json() as { message?: string, extractedCount?: number, backgroundProcessing?: boolean };
+      if (result.backgroundProcessing) {
+        setNotice('PDF फाइल अपलोड हो गई है! डेटा बैकग्राउंड में प्रोसेस हो रहा है। बड़े PDF में 2-5 मिनट लग सकते हैं।');
+      } else {
+        setNotice(`${result.extractedCount ?? 0} Voter IDs सफलता पूर्वक PDF से निकाले गए।`);
+      }
       form.reset();
     } catch (importError) {
       setError(importError instanceof Error ? importError.message : 'PDF अपलोड नहीं हुई।');
