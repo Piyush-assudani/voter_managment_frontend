@@ -198,8 +198,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           <span>लॉगआउट</span>
         </button>
         <div className="sidebar-bottom">
-          <span className="profile-avatar">VS</span>
-          <span className="profile-copy"><strong>VijaySetu</strong><small>Operations desk</small></span>
+          <span className="profile-avatar">{userInfo.name ? userInfo.name.charAt(0).toUpperCase() : 'U'}</span>
+          <span className="profile-copy">
+            <strong>{userInfo.name || userInfo.email || 'User'}</strong>
+            <small>{userInfo.role === 'admin' ? 'System Admin' : 'Operations desk'}</small>
+          </span>
           <button
             className="collapse-button"
             onClick={() => setCollapsed((value) => !value)}
