@@ -193,12 +193,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         </nav>
 
         <div className="sidebar-spacer" />
-        <div className="sidebar-status" style={{ padding: '12px 16px', borderTop: '1px solid var(--border-color, #e2e8f0)', display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted, #64748b)', fontWeight: 600 }}>लॉगिन यूज़र</span>
-          <strong style={{ fontSize: '14px', color: 'var(--text-primary, #0f172a)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {userInfo.name || userInfo.email || (userInfo.role ? `Admin Access (${userInfo.role})` : 'User')}
-          </strong>
-        </div>
         <button className="sign-out-button" onClick={signOut} title={collapsed ? 'लॉगआउट' : undefined}>
           <LogOut size={17} strokeWidth={1.8} />
           <span>लॉगआउट</span>
