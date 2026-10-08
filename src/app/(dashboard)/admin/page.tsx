@@ -302,24 +302,27 @@ export default function AdminPanel() {
               <article className="metric-card metric-card-green"><span>सक्रिय कार्यकर्ता</span><strong>{organizations.reduce((sum, tenant) => sum + tenant.activeWorkers, 0).toLocaleString('hi-IN')}</strong><small>हर क्लाइंट में अधिकतम 10</small></article>
               <article className="metric-card"><span>मतदाता रिकॉर्ड</span><strong>{organizations.reduce((sum, tenant) => sum + tenant.voterCount, 0).toLocaleString('hi-IN')}</strong><small>सभी क्लाइंट का डेटा</small></article>
             </section>
-            <div className="section-title-row"><div><h2>नया क्लाइंट खाता</h2><p>एक ही login से क्लाइंट एडमिन अपना configurable workspace खोलेंगे।</p></div></div>
-            <section className="admin-form-panel" style={{ maxWidth: '800px' }}>
-              <form className="modal-form admin-user-form" style={{ maxWidth: '100%' }} onSubmit={createTenant}>
-                <div className="feature-form-grid">
+            <section className="records-panel" style={{ padding: '24px', marginBottom: '24px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', marginBottom: '4px' }}>नया क्लाइंट खाता</h2>
+                <p style={{ fontSize: '14px', color: '#7d8981' }}>एक ही login से क्लाइंट एडमिन अपना configurable workspace खोलेंगे।</p>
+              </div>
+              <form className="modal-form" onSubmit={createTenant}>
+                <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
                   <label>क्लाइंट / संगठन का नाम<input required value={tenantName} onChange={(event) => setTenantName(event.target.value)} /></label>
                   <label>क्लाइंट एडमिन ईमेल<input type="email" autoComplete="username" required value={tenantEmail} onChange={(event) => setTenantEmail(event.target.value)} /></label>
                   <label>शुरुआती पासवर्ड<input type="password" autoComplete="new-password" minLength={8} required value={tenantPassword} onChange={(event) => setTenantPassword(event.target.value)} /></label>
-                  <label>अनुमत वार्ड <span className="optional-label">कॉमा से अलग करें; खाली = पूरा संगठन</span><input value={tenantWards} onChange={(event) => setTenantWards(event.target.value)} placeholder="वार्ड 1, वार्ड 2" /></label>
+                  <label>अनुमत वार्ड <span className="optional-label">कॉमा से अलग; खाली = पूरा संगठन</span><input value={tenantWards} onChange={(event) => setTenantWards(event.target.value)} placeholder="वार्ड 1, वार्ड 2" /></label>
                 </div>
-                <fieldset className="feature-module-fieldset" style={{ marginTop: '20px' }}>
+                <fieldset className="feature-module-fieldset" style={{ marginTop: '24px' }}>
                   <legend>इस क्लाइंट के लिए फीचर</legend>
-                  <div className="feature-module-grid">
+                  <div className="feature-module-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '15px' }}>
                     {moduleOptions.map(([module, label]) => (
-                      <label key={module}><input type="checkbox" checked={tenantModules.includes(module)} onChange={() => toggleModule(module)} /> {label}</label>
+                      <label key={module} style={{ whiteSpace: 'nowrap' }}><input type="checkbox" checked={tenantModules.includes(module)} onChange={() => toggleModule(module)} /> {label}</label>
                     ))}
                   </div>
                 </fieldset>
-                <div className="admin-form-actions"><button className="button-primary" type="submit" disabled={saving}>{saving ? <LoaderCircle size={15} className="spin" /> : <UserPlus size={15} />} क्लाइंट बनाएँ</button></div>
+                <div className="admin-form-actions" style={{ marginTop: '20px' }}><button className="button-primary" type="submit" disabled={saving}>{saving ? <LoaderCircle size={15} className="spin" /> : <UserPlus size={15} />} क्लाइंट बनाएँ</button></div>
               </form>
             </section>
             <section className="records-panel">
@@ -378,24 +381,34 @@ export default function AdminPanel() {
 
         {activeView === 'import' && (
           <>
-            <section className="admin-form-panel" style={{ marginBottom: '2rem' }}>
-              <div className="panel-heading"><div><h2>मतदाता सूची Excel इम्पोर्ट</h2><p>EPIC के आधार पर उसी क्लाइंट के रिकॉर्ड सुरक्षित रूप से अपडेट या जोड़े जाएंगे। PDF से कोई अनुमानित/नकली डेटा नहीं बनाया जाता।</p></div></div>
-              <form className="modal-form admin-user-form" onSubmit={importWorkbook}>
-                <label>क्लाइंट
-                  <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}><option value="">क्लाइंट चुनें</option>{organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}</select>
-                </label>
-                <label>Excel workbook (.xlsx)<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required /></label>
-                <div className="admin-form-actions">
+            <section className="records-panel" style={{ padding: '24px', marginBottom: '24px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', marginBottom: '4px' }}>मतदाता सूची Excel इम्पोर्ट</h2>
+                <p style={{ fontSize: '14px', color: '#7d8981' }}>EPIC के आधार पर उसी क्लाइंट के रिकॉर्ड सुरक्षित रूप से अपडेट या जोड़े जाएंगे। PDF से कोई अनुमानित/नकली डेटा नहीं बनाया जाता।</p>
+              </div>
+              <form className="modal-form" onSubmit={importWorkbook}>
+                <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                  <label>क्लाइंट
+                    <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}><option value="">क्लाइंट चुनें</option>{organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}</select>
+                  </label>
+                  <label>Excel workbook (.xlsx)<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required /></label>
+                </div>
+                <div className="admin-form-actions" style={{ marginTop: '20px' }}>
                   <button className="button-secondary" type="button" onClick={() => void downloadExcel('/admin/import-template.xlsx', 'टेम्पलेट डाउनलोड नहीं हुआ।', 'voter-import-template.xlsx')} disabled={saving}><Download size={15} /> Template डाउनलोड</button>
                   <button className="button-primary" type="submit" disabled={importing || !organizationId}>{importing ? <LoaderCircle size={15} className="spin" /> : <Upload size={15} />} Excel इम्पोर्ट करें</button>
                 </div>
               </form>
             </section>
-            <section className="admin-form-panel">
-              <div className="panel-heading"><div><h2>PDF मतदाता सूची अपलोड</h2><p>मतदाता सूची की PDF अपलोड करें। Voter IDs (EPIC) एक्सट्रेक्ट कर के डेटाबेस में सेव किये जाएंगे। सुरक्षा के लिए PDF सर्वर से 2 घंटे में आटोमेटिक डिलीट हो जाएगी।</p></div></div>
-              <form className="modal-form admin-user-form" onSubmit={uploadPdf}>
-                <label>PDF फाइल (.pdf)<input type="file" accept=".pdf,application/pdf" required /></label>
-                <div className="admin-form-actions">
+            <section className="records-panel" style={{ padding: '24px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', marginBottom: '4px' }}>PDF मतदाता सूची अपलोड</h2>
+                <p style={{ fontSize: '14px', color: '#7d8981' }}>मतदाता सूची की PDF अपलोड करें। Voter IDs (EPIC) एक्सट्रेक्ट कर के डेटाबेस में सेव किये जाएंगे। सुरक्षा के लिए PDF सर्वर से 2 घंटे में आटोमेटिक डिलीट हो जाएगी।</p>
+              </div>
+              <form className="modal-form" onSubmit={uploadPdf}>
+                <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                  <label>PDF फाइल (.pdf)<input type="file" accept=".pdf,application/pdf" required /></label>
+                </div>
+                <div className="admin-form-actions" style={{ marginTop: '20px' }}>
                   <button className="button-primary" type="submit" disabled={importing}>{importing ? <LoaderCircle size={15} className="spin" /> : <Upload size={15} />} PDF अपलोड करें</button>
                 </div>
               </form>
