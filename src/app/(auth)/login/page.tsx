@@ -32,7 +32,7 @@ export default function LoginPage() {
         throw new Error('सर्वर से साइन इन टोकन नहीं मिला।');
       }
       window.localStorage.setItem('token', result.token);
-      router.push(result.user?.role === 'admin' ? '/admin' : '/');
+      router.push('/');
     } catch (loginError) {
       setError(loginError instanceof Error
         ? loginError.message

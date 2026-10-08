@@ -227,6 +227,32 @@ export default function AdminPanel() {
     }
   };
 
+  const uploadPdf = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const file = form.querySelector<HTMLInputElement>('input[type="file"]')?.files?.[0];
+    if (!file) {
+      setError('कृपया एक PDF फाइल चुनें।');
+      return;
+    }
+    setImporting(true);
+    setError('');
+    setNotice('');
+    try {
+      const body = new FormData();
+      body.set('pdf', file);
+      const response = await apiFetch('/admin/pdf/upload', { method: 'POST', body });
+      if (!response.ok) throw new Error(await getApiError(response, 'PDF अपलोड नहीं हुई।'));
+      const result = await response.json() as { extractedCount: number };
+      setNotice(`${result.extractedCount} Voter IDs सफलता पूर्वक PDF से निकाले और सेव किये गए। फाइल 2 घंटे में डिलीट हो जाएगी।`);
+      form.reset();
+    } catch (importError) {
+      setError(importError instanceof Error ? importError.message : 'PDF अपलोड नहीं हुई।');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const toggleModule = (module: string) => {
     setTenantModules((current) => current.includes(module)
       ? current.filter((item) => item !== module)
@@ -347,19 +373,30 @@ export default function AdminPanel() {
         )}
 
         {activeView === 'import' && (
-          <section className="admin-form-panel">
-            <div className="panel-heading"><div><h2>मतदाता सूची Excel इम्पोर्ट</h2><p>EPIC के आधार पर उसी क्लाइंट के रिकॉर्ड सुरक्षित रूप से अपडेट या जोड़े जाएंगे। PDF से कोई अनुमानित/नकली डेटा नहीं बनाया जाता।</p></div></div>
-            <form className="modal-form admin-user-form" onSubmit={importWorkbook}>
-              <label>क्लाइंट
-                <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}><option value="">क्लाइंट चुनें</option>{organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}</select>
-              </label>
-              <label>Excel workbook (.xlsx)<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required /></label>
-              <div className="admin-form-actions">
-                <button className="button-secondary" type="button" onClick={() => void downloadExcel('/admin/import-template.xlsx', 'टेम्पलेट डाउनलोड नहीं हुआ।', 'voter-import-template.xlsx')} disabled={saving}><Download size={15} /> Template डाउनलोड</button>
-                <button className="button-primary" type="submit" disabled={importing || !organizationId}>{importing ? <LoaderCircle size={15} className="spin" /> : <Upload size={15} />} Excel इम्पोर्ट करें</button>
-              </div>
-            </form>
-          </section>
+          <>
+            <section className="admin-form-panel" style={{ marginBottom: '2rem' }}>
+              <div className="panel-heading"><div><h2>मतदाता सूची Excel इम्पोर्ट</h2><p>EPIC के आधार पर उसी क्लाइंट के रिकॉर्ड सुरक्षित रूप से अपडेट या जोड़े जाएंगे। PDF से कोई अनुमानित/नकली डेटा नहीं बनाया जाता।</p></div></div>
+              <form className="modal-form admin-user-form" onSubmit={importWorkbook}>
+                <label>क्लाइंट
+                  <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}><option value="">क्लाइंट चुनें</option>{organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}</select>
+                </label>
+                <label>Excel workbook (.xlsx)<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required /></label>
+                <div className="admin-form-actions">
+                  <button className="button-secondary" type="button" onClick={() => void downloadExcel('/admin/import-template.xlsx', 'टेम्पलेट डाउनलोड नहीं हुआ।', 'voter-import-template.xlsx')} disabled={saving}><Download size={15} /> Template डाउनलोड</button>
+                  <button className="button-primary" type="submit" disabled={importing || !organizationId}>{importing ? <LoaderCircle size={15} className="spin" /> : <Upload size={15} />} Excel इम्पोर्ट करें</button>
+                </div>
+              </form>
+            </section>
+            <section className="admin-form-panel">
+              <div className="panel-heading"><div><h2>PDF मतदाता सूची अपलोड</h2><p>मतदाता सूची की PDF अपलोड करें। Voter IDs (EPIC) एक्सट्रेक्ट कर के डेटाबेस में सेव किये जाएंगे। सुरक्षा के लिए PDF सर्वर से 2 घंटे में आटोमेटिक डिलीट हो जाएगी।</p></div></div>
+              <form className="modal-form admin-user-form" onSubmit={uploadPdf}>
+                <label>PDF फाइल (.pdf)<input type="file" accept=".pdf,application/pdf" required /></label>
+                <div className="admin-form-actions">
+                  <button className="button-primary" type="submit" disabled={importing}>{importing ? <LoaderCircle size={15} className="spin" /> : <Upload size={15} />} PDF अपलोड करें</button>
+                </div>
+              </form>
+            </section>
+          </>
         )}
 
         {activeView === 'system' && (
