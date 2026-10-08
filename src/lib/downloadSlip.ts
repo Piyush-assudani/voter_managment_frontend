@@ -13,7 +13,7 @@ export const generateSlipImage = async (voter: any): Promise<string> => {
     document.body.appendChild(container);
     
     const root = createRoot(container);
-    const ref = React.createRef<HTMLDivElement>();
+    const ref: any = React.createRef<HTMLDivElement>();
     
     root.render(React.createElement(VoterSlipTemplate, { voter, forwardedRef: ref }));
     

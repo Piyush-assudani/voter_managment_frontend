@@ -1,11 +1,12 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Activity, AlertCircle, Check, Download, FileSpreadsheet, LoaderCircle, RefreshCw,
+  Activity, AlertCircle, Check, ChevronDown, ChevronRight, Download, FileSpreadsheet, LoaderCircle, RefreshCw,
   Settings2, ShieldCheck, Upload, UserPlus, UsersRound, X,
 } from 'lucide-react';
 import DashboardShell from '@/app/(dashboard)/DashboardShell';
+import AccountsManager from '@/components/AccountsManager';
 import { apiFetch, getApiError } from '@/lib/api';
 
 const moduleOptions = [
@@ -55,6 +56,7 @@ export default function AdminPanel() {
   const [organizations, setOrganizations] = useState<Tenant[]>([]);
   const [voters, setVoters] = useState<AdminVoter[]>([]);
   const [health, setHealth] = useState<SystemHealth | null>(null);
+  const [expandedOrgId, setExpandedOrgId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -374,7 +376,28 @@ export default function AdminPanel() {
           <section className="records-panel">
             <div className="records-toolbar"><div><h2>सभी टीम अकाउंट</h2><p>Worker accounts, tenant और access सेटिंग देखने/बदलने के लिए अकाउंट प्रबंधन खोलें।</p></div><a className="button-secondary" href="/accounts"><UsersRound size={15} /> अकाउंट प्रबंधन</a></div>
             {loading ? <div className="empty-state"><LoaderCircle size={20} className="spin" /><p>क्लाइंट खाते लोड हो रहे हैं…</p></div> : <div className="table-scroll"><table className="voter-table desk-table"><thead><tr><th>क्लाइंट</th><th>सक्रिय कार्यकर्ता</th><th>मतदाता</th><th>अवस्था</th></tr></thead><tbody>
-              {organizations.map((tenant) => <tr key={tenant.id}><td>{tenant.name}</td><td>{tenant.activeWorkers} / 10</td><td>{tenant.voterCount.toLocaleString('hi-IN')}</td><td>{tenant.isActive ? 'सक्रिय' : 'बंद'}</td></tr>)}
+              {organizations.map((tenant) => (
+                <Fragment key={tenant.id}>
+                  <tr style={{ cursor: 'pointer', transition: 'background-color 0.2s' }} onClick={() => setExpandedOrgId(expandedOrgId === tenant.id ? null : tenant.id)}>
+                    <td style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {expandedOrgId === tenant.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                      <strong className="voter-name">{tenant.name}</strong>
+                    </td>
+                    <td>{tenant.activeWorkers} / 10</td>
+                    <td>{tenant.voterCount.toLocaleString('hi-IN')}</td>
+                    <td><span className={`record-status ${tenant.isActive ? 'status-voted' : 'status-pending'}`}>{tenant.isActive ? 'सक्रिय' : 'बंद'}</span></td>
+                  </tr>
+                  {expandedOrgId === tenant.id && (
+                    <tr style={{ background: '#fcfcfc' }}>
+                      <td colSpan={4} style={{ padding: '0', borderBottom: '2px solid #e4eae5' }}>
+                        <div style={{ padding: '16px 24px', borderLeft: '3px solid #00875a' }}>
+                          <AccountsManager embeddedOrganizationId={tenant.id} />
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              ))}
             </tbody></table></div>}
           </section>
         )}
