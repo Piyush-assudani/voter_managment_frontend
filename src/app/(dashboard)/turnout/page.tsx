@@ -54,6 +54,14 @@ export default function TurnoutPage() {
     void Promise.resolve().then(() => loadData());
   }, [loadData]);
 
+  useEffect(() => {
+    const handleClientChange = () => {
+      void loadData();
+    };
+    window.addEventListener('client-changed', handleClientChange);
+    return () => window.removeEventListener('client-changed', handleClientChange);
+  }, [loadData]);
+
   const totalVoters = voters.length;
   const votedVoters = voters.filter((voter) => voter.voted);
   const totalVoted = votedVoters.length;

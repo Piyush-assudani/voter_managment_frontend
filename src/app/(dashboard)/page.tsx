@@ -166,6 +166,14 @@ export default function DashboardPage() {
     void Promise.resolve().then(() => loadVoters());
   }, [loadVoters]);
 
+  useEffect(() => {
+    const handleClientChange = () => {
+      void loadVoters();
+    };
+    window.addEventListener('client-changed', handleClientChange);
+    return () => window.removeEventListener('client-changed', handleClientChange);
+  }, [loadVoters]);
+
   useEffect(() => () => recognitionRef.current?.stop(), []);
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {

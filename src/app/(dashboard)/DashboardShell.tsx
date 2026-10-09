@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Activity,
+  Building2,
   ChevronLeft,
   ChevronRight,
   Command,
@@ -71,7 +72,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [mobileOpen, setMobileOpen] = useState(false);
   const [health, setHealth] = useState<Health>('checking');
   const [allowedModules, setAllowedModules] = useState<string[] | null>(null);
-  const [userInfo, setUserInfo] = useState<{ role?: string; name?: string; email?: string }>({});
+  const [userInfo, setUserInfo] = useState<{ role?: string; name?: string; email?: string; organizationId?: string; organizationName?: string }>({});
+  const [clients, setClients] = useState<Array<{ id: string; name: string; candidateName?: string; voterCount?: number }>>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
 
   useEffect(() => {
     if (pathname === '/') return;
@@ -89,10 +92,14 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       }
       try {
         const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as {
-          user?: { role?: string; modules?: unknown; name?: string; email?: string };
+          user?: { role?: string; modules?: unknown; name?: string; email?: string; organizationId?: string; organizationName?: string };
         };
         if (payload.user) {
           setUserInfo(payload.user);
+          if (payload.user.role !== 'admin') {
+            window.localStorage.removeItem('selectedClientOrgId');
+            setSelectedClientId('');
+          }
         }
         if (payload.user?.role === 'admin') return;
         if (active) setAllowedModules(Array.isArray(payload.user?.modules)
@@ -104,6 +111,34 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? window.localStorage.getItem('selectedClientOrgId') || '' : '';
+    setSelectedClientId(saved);
+
+    const loadClients = async () => {
+      try {
+        const res = await apiFetch('/auth/clients', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) setClients(data);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    void loadClients();
+  }, []);
+
+  const handleClientSwitch = (newId: string) => {
+    setSelectedClientId(newId);
+    if (!newId || newId === 'all') {
+      window.localStorage.removeItem('selectedClientOrgId');
+    } else {
+      window.localStorage.setItem('selectedClientOrgId', newId);
+    }
+    window.dispatchEvent(new CustomEvent('client-changed', { detail: { organizationId: newId } }));
+  };
 
   useEffect(() => {
     if (!allowedModules) return;
@@ -234,6 +269,49 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               <span className="topbar-title">{activePage}</span>
             </div>
           </div>
+
+          {/* TOPBAR CLIENT SELECTOR (Admin) OR BADGE (Client) */}
+          <div className="topbar-client-container">
+            {userInfo.role === 'admin' ? (
+              <div className="topbar-client-selector-box" title="सक्रिय क्लाइंट चुनें (डेटा केवल इस क्लाइंट का दिखेगा)">
+                <Building2 size={15} className="text-emerald-700 shrink-0" />
+                <span className="client-select-label">क्लाइंट:</span>
+                <select
+                  value={selectedClientId}
+                  onChange={(e) => handleClientSwitch(e.target.value)}
+                  className="topbar-client-select"
+                  aria-label="क्लाइंट चुनें"
+                >
+                  <option value="">🌐 सभी क्लाइंट्स ({clients.length} सक्रिय)</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      🏢 {c.name} {c.candidateName ? `(${c.candidateName})` : ''} • {c.voterCount ? `${c.voterCount.toLocaleString('hi-IN')} वोटर` : '0 वोटर'}
+                    </option>
+                  ))}
+                </select>
+                {selectedClientId && (
+                  <button
+                    type="button"
+                    className="client-clear-btn"
+                    onClick={() => handleClientSwitch('')}
+                    title="सभी क्लाइंट्स देखें"
+                    aria-label="फिल्टर हटाएं"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="topbar-client-fixed-badge" title="आप केवल अपने अधिकृत क्लाइंट का डेटा देख सकते हैं">
+                <Building2 size={14} className="text-emerald-600 shrink-0" />
+                <span className="fixed-client-name">
+                  {userInfo.organizationName || 'आपका चुनावी क्षेत्र'}
+                </span>
+                <span className="fixed-client-tag">क्लाइंट डेटा</span>
+              </div>
+            )}
+          </div>
+
           <div className="topbar-meta">
             <span className={`connection-pill ${health}`}>
               <span className={`status-dot status-${health}`} />
@@ -246,7 +324,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             <ChevronLeft size={18} />
           </button>
         </header>
-        <main className="page-content">{children}</main>
+        <main className="page-content" key={selectedClientId || 'all'}>{children}</main>
         <footer className="app-footer" style={{ justifyContent: 'center' }}>
           <span>©️ 2026 MR PIPE. All Rights Reserved. | Powered by <a href="https://morihix.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'none' }}>Morihix Pvt. Ltd</a></span>
         </footer>

@@ -68,6 +68,14 @@ export default function WarroomPage() {
   useEffect(() => { void Promise.resolve().then(() => loadData()); }, [loadData]);
 
   useEffect(() => {
+    const handleClientChange = () => {
+      void loadData();
+    };
+    window.addEventListener('client-changed', handleClientChange);
+    return () => window.removeEventListener('client-changed', handleClientChange);
+  }, [loadData]);
+
+  useEffect(() => {
     void Promise.resolve().then(async () => {
       try {
         const token = window.localStorage.getItem('token');

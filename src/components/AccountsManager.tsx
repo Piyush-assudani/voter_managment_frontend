@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { KeyRound, LoaderCircle, Pencil, Plus, RefreshCw, Search, ShieldCheck, UserRoundX, X } from 'lucide-react';
+import { Eye, EyeOff, KeyRound, LoaderCircle, Pencil, Plus, RefreshCw, Search, ShieldCheck, UserRoundX, X } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
 
 const accessModules = [
@@ -324,6 +324,8 @@ function AccountForm({
   toggleModule: (module: string) => void;
   allowedModules?: string[];
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <form className="feature-account-form" onSubmit={onSubmit}>
       <div className="feature-form-grid">
@@ -332,7 +334,32 @@ function AccountForm({
           <label>Email<input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} required={mode === 'create'} disabled={mode === 'edit'} /></label>
           <label>फोन<input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} /></label>
         </>}
-        {(mode === 'create' || mode === 'edit' || mode === 'password') && <label>{mode === 'password' ? 'नया पासवर्ड' : mode === 'edit' ? 'नया पासवर्ड (वैकल्पिक)' : 'पासवर्ड'}<span className="feature-password-field"><KeyRound size={14} /><input type="password" autoComplete="new-password" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} minLength={8} required={mode === 'create' || mode === 'password'} placeholder={mode === 'edit' ? 'खाली छोड़ें तो वही रहेगा' : 'कम-से-कम 8 अक्षर'} /></span></label>}
+        {(mode === 'create' || mode === 'edit' || mode === 'password') && (
+          <label>
+            {mode === 'password' ? 'नया पासवर्ड' : mode === 'edit' ? 'नया पासवर्ड (वैकल्पिक)' : 'पासवर्ड'}
+            <span className="feature-password-field">
+              <KeyRound size={14} />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                value={form.password}
+                onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+                minLength={8}
+                required={mode === 'create' || mode === 'password'}
+                placeholder={mode === 'edit' ? 'खाली छोड़ें तो वही रहेगा' : 'कम-से-कम 8 अक्षर'}
+              />
+              <button
+                type="button"
+                className="password-eye-btn"
+                onClick={() => setShowPassword((prev) => !prev)}
+                title={showPassword ? 'पासवर्ड छिपाएं' : 'पासवर्ड देखें'}
+                aria-label={showPassword ? 'पासवर्ड छिपाएं' : 'पासवर्ड देखें'}
+              >
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </span>
+          </label>
+        )}
         {(mode === 'create' || mode === 'edit' || mode === 'permissions') && <>
           <label>भूमिका<select value={form.role} onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))}>{roles.map((role) => <option key={role}>{role}</option>)}</select></label>
           <label>दायरा<select value={form.scope} onChange={(event) => setForm((current) => ({ ...current, scope: event.target.value }))}>{scopes.map((scope) => <option key={scope}>{scope}</option>)}</select></label>

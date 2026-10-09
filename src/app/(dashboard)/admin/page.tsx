@@ -2,8 +2,8 @@
 
 import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Activity, AlertCircle, Check, ChevronDown, ChevronRight, Download, FileSpreadsheet,
-  FileText, Layers, LoaderCircle, MapPin, MessageCircle, Phone, Plus, RefreshCw,
+  Activity, AlertCircle, Check, ChevronDown, ChevronRight, Download, Eye, EyeOff, FileSpreadsheet,
+  FileText, KeyRound, Layers, LoaderCircle, MapPin, MessageCircle, Phone, Plus, RefreshCw,
   Settings2, ShieldCheck, Tag, Trash2, Upload, User, UserPlus, UsersRound, X,
 } from 'lucide-react';
 import DashboardShell from '@/app/(dashboard)/DashboardShell';
@@ -96,6 +96,7 @@ export default function AdminPanel() {
   const [tenantName, setTenantName] = useState('');
   const [tenantEmail, setTenantEmail] = useState('');
   const [tenantPassword, setTenantPassword] = useState('');
+  const [showTenantPassword, setShowTenantPassword] = useState(false);
   const [tenantModules, setTenantModules] = useState<string[]>(moduleOptions.map(([key]) => key));
   const [tenantWards, setTenantWards] = useState('');
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
@@ -571,7 +572,30 @@ export default function AdminPanel() {
                 <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
                   <label>क्लाइंट / संगठन का नाम<input required value={tenantName} onChange={(event) => setTenantName(event.target.value)} /></label>
                   <label>क्लाइंट एडमिन ईमेल<input type="email" autoComplete="username" required value={tenantEmail} onChange={(event) => setTenantEmail(event.target.value)} /></label>
-                  <label>शुरुआती पासवर्ड<input type="password" autoComplete="new-password" minLength={8} required value={tenantPassword} onChange={(event) => setTenantPassword(event.target.value)} /></label>
+                  <label>
+                    शुरुआती पासवर्ड
+                    <span className="feature-password-field" style={{ marginTop: '4px' }}>
+                      <KeyRound size={14} />
+                      <input
+                        type={showTenantPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        minLength={8}
+                        required
+                        value={tenantPassword}
+                        onChange={(event) => setTenantPassword(event.target.value)}
+                        placeholder="कम-से-कम 8 अक्षर"
+                      />
+                      <button
+                        type="button"
+                        className="password-eye-btn"
+                        onClick={() => setShowTenantPassword((prev) => !prev)}
+                        title={showTenantPassword ? 'पासवर्ड छिपाएं' : 'पासवर्ड देखें'}
+                        aria-label={showTenantPassword ? 'पासवर्ड छिपाएं' : 'पासवर्ड देखें'}
+                      >
+                        {showTenantPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </span>
+                  </label>
                   <label>अनुमत वार्ड <span className="optional-label">कॉमा से अलग; खाली = पूरा संगठन</span><input value={tenantWards} onChange={(event) => setTenantWards(event.target.value)} placeholder="वार्ड 1, वार्ड 2" /></label>
                 </div>
                 <fieldset className="feature-module-fieldset" style={{ marginTop: '24px' }}>

@@ -22,6 +22,11 @@ export function apiFetch(path: string, options: RequestInit = {}) {
     headers.set('Authorization', `Bearer ${token}`);
   }
 
+  const selectedOrgId = typeof window === 'undefined' ? null : window.localStorage.getItem('selectedClientOrgId');
+  if (selectedOrgId && selectedOrgId !== 'all' && !headers.has('x-organization-id')) {
+    headers.set('x-organization-id', selectedOrgId);
+  }
+
   return fetch(apiUrl(path), { ...options, headers });
 }
 
