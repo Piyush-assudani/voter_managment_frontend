@@ -170,6 +170,15 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   }, []);
 
   const activePage = pageTitles.get(pathname) ?? 'Workspace';
+  const selectedClient = clients.find((c) => c.id === selectedClientId);
+  const activeWorkspaceTitle = selectedClient
+    ? `${selectedClient.name.toUpperCase()} · FIELD WORKSPACE`
+    : userInfo.organizationName
+    ? `${userInfo.organizationName.toUpperCase()} · FIELD WORKSPACE`
+    : userInfo.role === 'admin'
+    ? 'ALL CLIENTS · CENTRAL WORKSPACE'
+    : 'VIJAYSETU · FIELD WORKSPACE';
+
   const signOut = () => {
     window.localStorage.removeItem('token');
     router.push('/login');
@@ -265,7 +274,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               {collapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
             </button>
             <div className="topbar-heading">
-              <span className="topbar-eyebrow">JAIPUR · FIELD WORKSPACE</span>
+              <span className="topbar-eyebrow">{activeWorkspaceTitle}</span>
               <span className="topbar-title">{activePage}</span>
             </div>
           </div>
