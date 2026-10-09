@@ -22,9 +22,9 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'https://vijaysetu.piyushassudani.in/api/:path*',
+        destination: process.env.BACKEND_API_URL || 'http://127.0.0.1:5002/api/:path*',
       },
-    ]
+    ];
   }
 };
 

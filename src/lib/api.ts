@@ -35,7 +35,7 @@ export async function getApiError(response: Response, fallback: string) {
   }
 
   if (response.status === 413) {
-    return 'फाइल का आकार बहुत बड़ा है (HTTP 413 Payload Too Large)। फाइल 50MB की सीमा से अधिक है। कृपया छोटी या कंप्रेस्ड PDF अपलोड करें।';
+    return 'फाइल का आकार बहुत बड़ा है (HTTP 413 Payload Too Large)। फाइल 100MB की सीमा से अधिक है। कृपया छोटी या कंप्रेस्ड PDF अपलोड करें।';
   }
 
   if (response.status === 504 || response.status === 502) {

@@ -1,14 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const TARGET_API = 'https://vijaysetu.piyushassudani.in/api';
+const LOCAL_API = 'http://127.0.0.1:5002/api';
+const REMOTE_API = 'https://vijaysetu.piyushassudani.in/api';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
+async function resolveTargetApi(): Promise<{ base: string; host?: string }> {
+  if (process.env.BACKEND_API_URL) {
+    return { base: process.env.BACKEND_API_URL.replace(/\/+$/, '') };
+  }
+  try {
+    const ping = await fetch('http://127.0.0.1:5002/', { method: 'HEAD', signal: AbortSignal.timeout(250) });
+    if (ping.ok || ping.status === 200 || ping.status === 404) {
+      return { base: LOCAL_API, host: '127.0.0.1:5002' };
+    }
+  } catch {
+    // local backend not reachable
+  }
+  return { base: REMOTE_API, host: 'vijaysetu.piyushassudani.in' };
+}
+
 async function handler(req: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
   const pathString = Array.isArray(path) ? path.join('/') : path || '';
-  const url = new URL(`${TARGET_API}/${pathString}`);
+  const target = await resolveTargetApi();
+  const url = new URL(`${target.base}/${pathString}`);
 
   req.nextUrl.searchParams.forEach((value, key) => {
     url.searchParams.set(key, value);
@@ -16,7 +33,9 @@ async function handler(req: NextRequest, context: { params: Promise<{ path: stri
 
   const requestHeaders = new Headers(req.headers);
   requestHeaders.delete('host');
-  requestHeaders.set('host', 'vijaysetu.piyushassudani.in');
+  if (target.host) {
+    requestHeaders.set('host', target.host);
+  }
 
   const options: RequestInit = {
     method: req.method,

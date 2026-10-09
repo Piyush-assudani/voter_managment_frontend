@@ -94,7 +94,6 @@ export default function AdminPanel() {
   const [excelCustomWard, setExcelCustomWard] = useState('');
   const [excelIsNewWard, setExcelIsNewWard] = useState(false);
   const [excelBooth, setExcelBooth] = useState('');
-  const [excelIncharge, setExcelIncharge] = useState('');
   const [excelDescription, setExcelDescription] = useState('');
 
   // Form states for PDF import
@@ -102,7 +101,6 @@ export default function AdminPanel() {
   const [pdfCustomWard, setPdfCustomWard] = useState('');
   const [pdfIsNewWard, setPdfIsNewWard] = useState(false);
   const [pdfBooth, setPdfBooth] = useState('');
-  const [pdfIncharge, setPdfIncharge] = useState('');
   const [pdfDescription, setPdfDescription] = useState('');
 
   const loadOrganizations = useCallback(async () => {
@@ -298,9 +296,9 @@ export default function AdminPanel() {
       return;
     }
     const targetWard = (excelIsNewWard ? excelCustomWard : excelWard).trim();
-    const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+    const MAX_SIZE = 100 * 1024 * 1024; // 100MB
     if (file.size > MAX_SIZE) {
-      setError(`चयनित Excel फाइल (${(file.size / (1024 * 1024)).toFixed(1)}MB) 50MB की सीमा से बड़ी है। कृपया 50MB से छोटी फाइल अपलोड करें।`);
+      setError(`चयनित Excel फाइल (${(file.size / (1024 * 1024)).toFixed(1)}MB) 100MB की सीमा से बड़ी है। कृपया 100MB से छोटी फाइल अपलोड करें।`);
       return;
     }
     setImporting(true);
@@ -312,7 +310,6 @@ export default function AdminPanel() {
       body.set('file', file);
       if (targetWard) body.set('wardNo', targetWard);
       if (excelBooth.trim()) body.set('boothNo', excelBooth.trim());
-      if (excelIncharge.trim()) body.set('uploadedBy', excelIncharge.trim());
       if (excelDescription.trim()) body.set('listDescription', excelDescription.trim());
 
       const response = await apiFetch('/admin/upload-voters', { method: 'POST', body });
@@ -322,7 +319,6 @@ export default function AdminPanel() {
       form.reset();
       setExcelDescription('');
       setExcelBooth('');
-      setExcelIncharge('');
       if (excelIsNewWard) {
         setExcelIsNewWard(false);
         setExcelCustomWard('');
@@ -347,9 +343,9 @@ export default function AdminPanel() {
       return;
     }
     const targetWard = (pdfIsNewWard ? pdfCustomWard : pdfWard).trim();
-    const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+    const MAX_SIZE = 100 * 1024 * 1024; // 100MB
     if (file.size > MAX_SIZE) {
-      setError(`चयनित PDF फाइल (${(file.size / (1024 * 1024)).toFixed(1)}MB) 50MB की सीमा से बड़ी है। कृपया फाइल कंप्रेस करें या 50MB से छोटी PDF चुनें।`);
+      setError(`चयनित PDF फाइल (${(file.size / (1024 * 1024)).toFixed(1)}MB) 100MB की सीमा से बड़ी है। कृपया फाइल कंप्रेस करें या 100MB से छोटी PDF चुनें।`);
       return;
     }
     setUploadingPdf(true);
@@ -361,7 +357,6 @@ export default function AdminPanel() {
       body.set('pdf', file);
       if (targetWard) body.set('wardNo', targetWard);
       if (pdfBooth.trim()) body.set('boothNo', pdfBooth.trim());
-      if (pdfIncharge.trim()) body.set('uploadedBy', pdfIncharge.trim());
       if (pdfDescription.trim()) body.set('listDescription', pdfDescription.trim());
       
       const useOcrCheckbox = form.querySelector<HTMLInputElement>('input[name="useOcr"]');
@@ -380,7 +375,6 @@ export default function AdminPanel() {
       form.reset();
       setPdfDescription('');
       setPdfBooth('');
-      setPdfIncharge('');
       if (pdfIsNewWard) {
         setPdfIsNewWard(false);
         setPdfCustomWard('');
@@ -682,15 +676,6 @@ export default function AdminPanel() {
                     />
                   </label>
 
-                  <label>यूजर / प्रभारी का नाम <span style={{ fontSize: '11px', color: '#7d8981' }}>(किस यूजर की लिस्ट है)</span>
-                    <input
-                      type="text"
-                      placeholder="उदा. अमित शर्मा (वार्ड प्रमुख), राहुल वर्मा"
-                      value={excelIncharge}
-                      onChange={(e) => setExcelIncharge(e.target.value)}
-                    />
-                  </label>
-
                   <label>सूची का शीर्षक / विवरण <span style={{ fontSize: '11px', color: '#7d8981' }}>(पहचान के लिए)</span>
                     <input
                       type="text"
@@ -797,15 +782,6 @@ export default function AdminPanel() {
                       placeholder="उदा. बूथ 42 या भाग 10"
                       value={pdfBooth}
                       onChange={(e) => setPdfBooth(e.target.value)}
-                    />
-                  </label>
-
-                  <label>यूजर / प्रभारी का नाम <span style={{ fontSize: '11px', color: '#7d8981' }}>(किस यूजर की लिस्ट है)</span>
-                    <input
-                      type="text"
-                      placeholder="उदा. अमित शर्मा (वार्ड प्रमुख), राहुल वर्मा"
-                      value={pdfIncharge}
-                      onChange={(e) => setPdfIncharge(e.target.value)}
                     />
                   </label>
 
@@ -942,13 +918,9 @@ export default function AdminPanel() {
                             </span>
                           )}
 
-                          {job.uploadedBy ? (
+                          {job.uploadedBy && (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f3e8fd', color: '#7627bb', padding: '3px 8px', borderRadius: '5px', fontWeight: '500' }}>
-                              👤 यूजर/प्रभारी: <strong>{job.uploadedBy}</strong>
-                            </span>
-                          ) : (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f1f3f4', color: '#5f6368', padding: '3px 8px', borderRadius: '5px' }}>
-                              👤 यूजर: एडमिन
+                              👤 प्रभारी: <strong>{job.uploadedBy}</strong>
                             </span>
                           )}
 
