@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import React from 'react';
 import { VoterSlipTemplate } from '../components/VoterSlipTemplate';
 
-export const generateSlipImage = async (voter: any): Promise<string> => {
+export const generateSlipImage = async (voter: Record<string, unknown>): Promise<string> => {
   return new Promise((resolve, reject) => {
     const container = document.createElement('div');
     container.style.position = 'fixed';
@@ -13,7 +13,7 @@ export const generateSlipImage = async (voter: any): Promise<string> => {
     document.body.appendChild(container);
     
     const root = createRoot(container);
-    const ref: any = React.createRef<HTMLDivElement>();
+    const ref = React.createRef<HTMLDivElement>();
     
     root.render(React.createElement(VoterSlipTemplate, { voter, forwardedRef: ref }));
     
@@ -41,7 +41,7 @@ export const generateSlipImage = async (voter: any): Promise<string> => {
   });
 };
 
-export const downloadSlip = async (voter: any) => {
+export const downloadSlip = async (voter: Record<string, unknown>) => {
   try {
     const dataUrl = await generateSlipImage(voter);
     const link = document.createElement('a');
