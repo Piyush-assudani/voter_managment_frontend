@@ -10,8 +10,20 @@ async function resolveTargetApi(): Promise<{ base: string; host?: string }> {
   if (process.env.BACKEND_API_URL) {
     return { base: process.env.BACKEND_API_URL.replace(/\/+$/, '') };
   }
+  // In development, prefer local backend
+  if (process.env.NODE_ENV === 'development') {
+    try {
+      const ping = await fetch('http://127.0.0.1:5002/', { method: 'HEAD', signal: AbortSignal.timeout(1500) });
+      if (ping.ok || ping.status === 200 || ping.status === 404) {
+        return { base: LOCAL_API, host: '127.0.0.1:5002' };
+      }
+    } catch {
+      // local backend may be booting
+      return { base: LOCAL_API, host: '127.0.0.1:5002' };
+    }
+  }
   try {
-    const ping = await fetch('http://127.0.0.1:5002/', { method: 'HEAD', signal: AbortSignal.timeout(250) });
+    const ping = await fetch('http://127.0.0.1:5002/', { method: 'HEAD', signal: AbortSignal.timeout(1000) });
     if (ping.ok || ping.status === 200 || ping.status === 404) {
       return { base: LOCAL_API, host: '127.0.0.1:5002' };
     }
@@ -49,8 +61,31 @@ async function handler(req: NextRequest, context: { params: Promise<{ path: stri
     requestHeaders.set('content-length', body.byteLength.toString());
   }
 
+  let upstreamRes: Response | null = null;
+  let lastError: unknown = null;
+
+  // Up to 2 retries for transient dev restarts
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      upstreamRes = await fetch(url.toString(), options);
+      break;
+    } catch (err) {
+      lastError = err;
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 350));
+      }
+    }
+  }
+
+  if (!upstreamRes) {
+    console.error('API Proxy error:', lastError);
+    return NextResponse.json(
+      { message: 'API connection failed', error: lastError instanceof Error ? lastError.message : String(lastError) },
+      { status: 502 }
+    );
+  }
+
   try {
-    const upstreamRes = await fetch(url.toString(), options);
     const data = await upstreamRes.arrayBuffer();
 
     const responseHeaders = new Headers(upstreamRes.headers);
@@ -68,7 +103,7 @@ async function handler(req: NextRequest, context: { params: Promise<{ path: stri
       headers: responseHeaders,
     });
   } catch (error) {
-    console.error('API Proxy error:', error);
+    console.error('API Proxy response parsing error:', error);
     return NextResponse.json(
       { message: 'Live API proxy error', error: error instanceof Error ? error.message : String(error) },
       { status: 502 }

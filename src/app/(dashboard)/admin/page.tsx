@@ -453,8 +453,26 @@ export default function AdminPanel() {
           ))}
         </nav>
 
-        {notice && <div className="inline-notice" role="status"><Check size={15} /> {notice}</div>}
-        {error && <div className="inline-notice error-notice" role="alert"><AlertCircle size={15} /> {error}</div>}
+        {notice && (
+          <div className="inline-notice" role="status" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Check size={15} /> {notice}
+            </div>
+            <button type="button" onClick={() => setNotice('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit' }} title="हटाएं">
+              <X size={14} />
+            </button>
+          </div>
+        )}
+        {error && (
+          <div className="inline-notice error-notice" role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertCircle size={15} /> {error}
+            </div>
+            <button type="button" onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit' }} title="हटाएं">
+              <X size={14} />
+            </button>
+          </div>
+        )}
 
         {activeView === 'tenants' && (
           <>
@@ -594,10 +612,12 @@ export default function AdminPanel() {
                   <FileSpreadsheet size={20} style={{ color: '#00875a' }} />
                   <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', margin: 0 }}>मतदाता सूची Excel इम्पोर्ट</h2>
                 </div>
-                <p style={{ fontSize: '14px', color: '#7d8981', margin: 0 }}>EPIC के आधार पर उसी क्लाइंट के रिकॉर्ड सुरक्षित रूप से अपडेट या जोड़े जाएंगे। वार्ड, बूथ और प्रभारी यूजर टैग करें।</p>
+                <p style={{ fontSize: '14px', color: '#7d8981', margin: 0 }}>EPIC के आधार पर उसी क्लाइंट के रिकॉर्ड सुरक्षित रूप से अपडेट या जोड़े जाएंगे। वार्ड, बूथ और विवरण टैग करें।</p>
               </div>
+
               <form className="modal-form" onSubmit={importWorkbook}>
-                <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+                {/* Balanced 2x2 Grid for Metadata */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
                   <label>क्लाइंट (संगठन) <span style={{ color: '#d93025' }}>*</span>
                     <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
                       <option value="">क्लाइंट चुनें</option>
@@ -632,7 +652,7 @@ export default function AdminPanel() {
                         <button
                           type="button"
                           className="button-secondary"
-                          style={{ padding: '0 10px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                          style={{ padding: '0 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                           onClick={() => {
                             setExcelIsNewWard(true);
                             setExcelWard('');
@@ -655,7 +675,7 @@ export default function AdminPanel() {
                         <button
                           type="button"
                           className="button-secondary"
-                          style={{ padding: '0 10px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                          style={{ padding: '0 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                           onClick={() => {
                             setExcelIsNewWard(false);
                             setExcelCustomWard('');
@@ -684,13 +704,28 @@ export default function AdminPanel() {
                       onChange={(e) => setExcelDescription(e.target.value)}
                     />
                   </label>
-
-                  <label>Excel workbook (.xlsx) <span style={{ color: '#d93025' }}>*</span>
-                    <input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required />
-                  </label>
                 </div>
 
-                <div className="admin-form-actions" style={{ marginTop: '20px' }}>
+                {/* Full-width file dropzone */}
+                <div style={{ background: '#f8faf9', border: '1.5px dashed #c0d3c5', borderRadius: '10px', padding: '16px 20px', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#1a2620' }}>
+                      Excel फाइल (.xlsx) <span style={{ color: '#d93025' }}>*</span>
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#00875a', background: '#e3f7ed', padding: '2px 8px', borderRadius: '4px', fontWeight: '500' }}>
+                      अधिकतम 100MB
+                    </span>
+                  </div>
+                  <input 
+                    type="file" 
+                    accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+                    required 
+                    style={{ width: '100%', fontSize: '13px' }}
+                  />
+                  <p style={{ fontSize: '12px', color: '#7d8981', margin: '6px 0 0 0' }}>मानक टेम्पलेट फॉर्मेट में तैयार की गई Excel वर्कबुक चुनें।</p>
+                </div>
+
+                <div className="admin-form-actions" style={{ marginTop: '16px' }}>
                   <button className="button-secondary" type="button" onClick={() => void downloadExcel('/admin/import-template.xlsx', 'टेम्पलेट डाउनलोड नहीं हुआ।', 'voter-import-template.xlsx')} disabled={saving}><Download size={15} /> Template डाउनलोड</button>
                   <button className="button-primary" type="submit" disabled={importing || !organizationId}>{importing ? <LoaderCircle size={15} className="spin" /> : <Upload size={15} />} Excel इम्पोर्ट करें</button>
                 </div>
@@ -703,10 +738,12 @@ export default function AdminPanel() {
                   <FileText size={20} style={{ color: '#c5221f' }} />
                   <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', margin: 0 }}>PDF मतदाता सूची अपलोड</h2>
                 </div>
-                <p style={{ fontSize: '14px', color: '#7d8981', margin: 0 }}>मतदाता सूची की PDF अपलोड करें। Voter IDs (EPIC) एक्सट्रेक्ट कर के डेटाबेस में सेव किये जाएंगे। सुरक्षा के लिए PDF सर्वर से 2 घंटे में आटोमेटिक डिलीट हो जाएगी।</p>
+                <p style={{ fontSize: '14px', color: '#7d8981', margin: 0 }}>मतदाता सूची की PDF अपलोड करें। Voter IDs (EPIC) और हिंदी नाम एक्सट्रेक्ट कर के डेटाबेस में सेव किये जाएंगे। सुरक्षा के लिए PDF सर्वर से 2 घंटे में आटोमेटिक डिलीट हो जाएगी।</p>
               </div>
+
               <form className="modal-form" onSubmit={uploadPdf}>
-                <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+                {/* Balanced 2x2 Grid for Metadata */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
                   <label>क्लाइंट (संगठन) <span style={{ color: '#d93025' }}>*</span>
                     <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
                       <option value="">क्लाइंट चुनें</option>
@@ -741,7 +778,7 @@ export default function AdminPanel() {
                         <button
                           type="button"
                           className="button-secondary"
-                          style={{ padding: '0 10px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                          style={{ padding: '0 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                           onClick={() => {
                             setPdfIsNewWard(true);
                             setPdfWard('');
@@ -764,7 +801,7 @@ export default function AdminPanel() {
                         <button
                           type="button"
                           className="button-secondary"
-                          style={{ padding: '0 10px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                          style={{ padding: '0 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                           onClick={() => {
                             setPdfIsNewWard(false);
                             setPdfCustomWard('');
@@ -793,20 +830,46 @@ export default function AdminPanel() {
                       onChange={(e) => setPdfDescription(e.target.value)}
                     />
                   </label>
+                </div>
 
-                  <label>PDF फाइल (.pdf) <span style={{ color: '#d93025' }}>*</span>
-                    <input type="file" accept=".pdf,application/pdf" required />
+                {/* Full-width file dropzone */}
+                <div style={{ background: '#f8faf9', border: '1.5px dashed #c0d3c5', borderRadius: '10px', padding: '16px 20px', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#1a2620' }}>
+                      PDF मतदाता सूची (.pdf) <span style={{ color: '#d93025' }}>*</span>
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#c5221f', background: '#fce8e6', padding: '2px 8px', borderRadius: '4px', fontWeight: '500' }}>
+                      अधिकतम 100MB
+                    </span>
+                  </div>
+                  <input 
+                    type="file" 
+                    accept=".pdf,application/pdf" 
+                    required 
+                    style={{ width: '100%', fontSize: '13px' }}
+                  />
+                  <p style={{ fontSize: '12px', color: '#7d8981', margin: '6px 0 0 0' }}>निर्वाचन आयोग (ECI/राज्य निर्वाचन आयोग) की आधिकारिक पीडीएफ फाइल चुनें।</p>
+                </div>
+
+                {/* High Precision OCR Mode Card */}
+                <div style={{ background: '#f0f9f4', border: '1px solid #b8e2cd', borderRadius: '10px', padding: '14px 18px', marginBottom: '20px' }}>
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', margin: 0 }}>
+                    <input type="checkbox" name="useOcr" defaultChecked style={{ marginTop: '3px', accentColor: '#00875a', width: '16px', height: '16px' }} />
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#006644' }}>
+                        ✓ स्मार्ट OCR इंजन (Smart Visual OCR - सभी भारतीय व ECI फॉन्ट के लिए अनुशंसित)
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#2d5743', marginTop: '2px', lineHeight: '1.4' }}>
+                        यह राजस्थान/ECI जैसी पीडीएफ में करप्टेड/अनसपोर्टेड फॉन्ट (KrutiDev, DevLys, Subset Arial) को सीधे इमेज से 100% सही हिंदी में पढ़ता है।
+                      </div>
+                    </div>
                   </label>
                 </div>
 
-                <div style={{ marginTop: '16px' }}>
-                  <label className="checkbox-label" style={{ fontWeight: '500' }}>
-                    <input type="checkbox" name="useOcr" />
-                    करप्टेड/हिंदी फॉन्ट के लिए Local OCR इस्तेमाल करें (धीमा लेकिन 100% सटीक)
-                  </label>
-                </div>
-                <div className="admin-form-actions" style={{ marginTop: '20px' }}>
-                  <button className="button-primary" type="submit" disabled={uploadingPdf || !organizationId}>{uploadingPdf ? <LoaderCircle size={15} className="spin" /> : <Upload size={15} />} PDF अपलोड करें</button>
+                <div className="admin-form-actions">
+                  <button className="button-primary" type="submit" disabled={uploadingPdf || !organizationId}>
+                    {uploadingPdf ? <LoaderCircle size={15} className="spin" /> : <Upload size={15} />} PDF अपलोड करें
+                  </button>
                 </div>
               </form>
 
