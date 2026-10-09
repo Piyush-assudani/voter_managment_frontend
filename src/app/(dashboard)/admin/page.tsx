@@ -2,8 +2,9 @@
 
 import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Activity, AlertCircle, Check, ChevronDown, ChevronRight, Download, FileSpreadsheet, LoaderCircle, RefreshCw,
-  Settings2, ShieldCheck, Upload, UserPlus, UsersRound, X,
+  Activity, AlertCircle, Check, ChevronDown, ChevronRight, Download, FileSpreadsheet,
+  FileText, Layers, LoaderCircle, MapPin, Plus, RefreshCw,
+  Settings2, ShieldCheck, Tag, Upload, User, UserPlus, UsersRound, X,
 } from 'lucide-react';
 import DashboardShell from '@/app/(dashboard)/DashboardShell';
 import AccountsManager from '@/components/AccountsManager';
@@ -52,7 +53,12 @@ interface SystemHealth {
 interface UploadJob {
   id: string;
   filename: string;
+  fileType?: 'excel' | 'pdf';
   organizationId: string;
+  wardNo?: string;
+  boothNo?: string;
+  uploadedBy?: string;
+  listDescription?: string;
   status: 'processing' | 'completed' | 'failed';
   progress?: number;
   extractedCount: number;
@@ -82,6 +88,22 @@ export default function AdminPanel() {
   const [importing, setImporting] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [pdfJobs, setPdfJobs] = useState<UploadJob[]>([]);
+
+  // Form states for Excel import
+  const [excelWard, setExcelWard] = useState('');
+  const [excelCustomWard, setExcelCustomWard] = useState('');
+  const [excelIsNewWard, setExcelIsNewWard] = useState(false);
+  const [excelBooth, setExcelBooth] = useState('');
+  const [excelIncharge, setExcelIncharge] = useState('');
+  const [excelDescription, setExcelDescription] = useState('');
+
+  // Form states for PDF import
+  const [pdfWard, setPdfWard] = useState('');
+  const [pdfCustomWard, setPdfCustomWard] = useState('');
+  const [pdfIsNewWard, setPdfIsNewWard] = useState(false);
+  const [pdfBooth, setPdfBooth] = useState('');
+  const [pdfIncharge, setPdfIncharge] = useState('');
+  const [pdfDescription, setPdfDescription] = useState('');
 
   const loadOrganizations = useCallback(async () => {
     const response = await apiFetch('/admin/organizations', { cache: 'no-store' });
@@ -127,9 +149,12 @@ export default function AdminPanel() {
   }, []);
 
   const loadPdfJobs = useCallback(async () => {
-    if (!organizationId || activeView !== 'import') return;
+    if (activeView !== 'import') return;
     try {
-      const response = await apiFetch(`/admin/pdf/jobs?organizationId=${organizationId}`, { cache: 'no-store' });
+      const url = organizationId 
+        ? `/admin/pdf/jobs?organizationId=${encodeURIComponent(organizationId)}`
+        : '/admin/pdf/jobs';
+      const response = await apiFetch(url, { cache: 'no-store' });
       if (response.ok) {
         setPdfJobs(await response.json() as UploadJob[]);
       }
@@ -159,11 +184,26 @@ export default function AdminPanel() {
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (activeView === 'import' && organizationId) {
+    if (activeView === 'import') {
       interval = setInterval(() => void loadPdfJobs(), 3000);
     }
     return () => clearInterval(interval);
-  }, [activeView, organizationId, loadPdfJobs]);
+  }, [activeView, loadPdfJobs]);
+
+  const selectedTenant = useMemo(
+    () => organizations.find((t) => t.id === organizationId),
+    [organizations, organizationId],
+  );
+
+  const availableWards = useMemo(() => {
+    const orgWards = selectedTenant?.wards || [];
+    const voterWards = voters
+      .filter((voter) => !organizationId || voter.organizationId === organizationId)
+      .map((voter) => voter.wardNo)
+      .filter(Boolean);
+    const set = new Set([...orgWards, ...voterWards]);
+    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [selectedTenant, voters, organizationId]);
 
   const wards = useMemo(
     () => [...new Set(voters.map((voter) => voter.wardNo).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
@@ -257,6 +297,7 @@ export default function AdminPanel() {
       setError('क्लाइंट चुनें और Excel workbook अपलोड करें।');
       return;
     }
+    const targetWard = (excelIsNewWard ? excelCustomWard : excelWard).trim();
     const MAX_SIZE = 50 * 1024 * 1024; // 50MB
     if (file.size > MAX_SIZE) {
       setError(`चयनित Excel फाइल (${(file.size / (1024 * 1024)).toFixed(1)}MB) 50MB की सीमा से बड़ी है। कृपया 50MB से छोटी फाइल अपलोड करें।`);
@@ -269,11 +310,25 @@ export default function AdminPanel() {
       const body = new FormData();
       body.set('organizationId', organizationId);
       body.set('file', file);
+      if (targetWard) body.set('wardNo', targetWard);
+      if (excelBooth.trim()) body.set('boothNo', excelBooth.trim());
+      if (excelIncharge.trim()) body.set('uploadedBy', excelIncharge.trim());
+      if (excelDescription.trim()) body.set('listDescription', excelDescription.trim());
+
       const response = await apiFetch('/admin/upload-voters', { method: 'POST', body });
       if (!response.ok) throw new Error(await getApiError(response, 'मतदाता Excel import नहीं हुआ।'));
       const result = await response.json() as { inserted: number; updated: number };
-      setNotice(`${result.inserted} नए और ${result.updated} अपडेटेड मतदाता Excel से सेव हुए।`);
+      setNotice(`${result.inserted} नए और ${result.updated} अपडेटेड मतदाता Excel से सेव हुए।` + (targetWard ? ` (वार्ड: ${targetWard})` : ''));
       form.reset();
+      setExcelDescription('');
+      setExcelBooth('');
+      setExcelIncharge('');
+      if (excelIsNewWard) {
+        setExcelIsNewWard(false);
+        setExcelCustomWard('');
+      }
+      await loadOrganizations();
+      await loadPdfJobs();
       if (activeView === 'records') await loadVoters();
     } catch (importError) {
       setError(importError instanceof Error ? importError.message : 'मतदाता Excel import नहीं हुआ।');
@@ -291,6 +346,7 @@ export default function AdminPanel() {
       setError('कृपया एक PDF फाइल चुनें और क्लाइंट चुनें।');
       return;
     }
+    const targetWard = (pdfIsNewWard ? pdfCustomWard : pdfWard).trim();
     const MAX_SIZE = 50 * 1024 * 1024; // 50MB
     if (file.size > MAX_SIZE) {
       setError(`चयनित PDF फाइल (${(file.size / (1024 * 1024)).toFixed(1)}MB) 50MB की सीमा से बड़ी है। कृपया फाइल कंप्रेस करें या 50MB से छोटी PDF चुनें।`);
@@ -303,6 +359,10 @@ export default function AdminPanel() {
       const body = new FormData();
       body.set('organizationId', organizationId);
       body.set('pdf', file);
+      if (targetWard) body.set('wardNo', targetWard);
+      if (pdfBooth.trim()) body.set('boothNo', pdfBooth.trim());
+      if (pdfIncharge.trim()) body.set('uploadedBy', pdfIncharge.trim());
+      if (pdfDescription.trim()) body.set('listDescription', pdfDescription.trim());
       
       const useOcrCheckbox = form.querySelector<HTMLInputElement>('input[name="useOcr"]');
       if (useOcrCheckbox?.checked) {
@@ -313,12 +373,20 @@ export default function AdminPanel() {
       if (!response.ok) throw new Error(await getApiError(response, 'PDF अपलोड नहीं हुई।'));
       const result = await response.json() as { message?: string, extractedCount?: number, backgroundProcessing?: boolean };
       if (result.backgroundProcessing) {
-        setNotice('PDF फाइल अपलोड हो गई है! डेटा बैकग्राउंड में प्रोसेस हो रहा है। बड़े PDF में 2-5 मिनट लग सकते हैं।');
+        setNotice('PDF फाइल अपलोड हो गई है! डेटा बैकग्राउंड में प्रोसेस हो रहा है।' + (targetWard ? ` (वार्ड: ${targetWard})` : ''));
       } else {
         setNotice(`${result.extractedCount ?? 0} Voter IDs सफलता पूर्वक PDF से निकाले गए।`);
       }
       form.reset();
-      void loadPdfJobs();
+      setPdfDescription('');
+      setPdfBooth('');
+      setPdfIncharge('');
+      if (pdfIsNewWard) {
+        setPdfIsNewWard(false);
+        setPdfCustomWard('');
+      }
+      await loadOrganizations();
+      await loadPdfJobs();
     } catch (importError) {
       setError(importError instanceof Error ? importError.message : 'PDF अपलोड नहीं हुई।');
       setNotice('');
@@ -528,34 +596,233 @@ export default function AdminPanel() {
           <>
             <section className="records-panel" style={{ padding: '24px', marginBottom: '24px' }}>
               <div style={{ marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', marginBottom: '4px' }}>मतदाता सूची Excel इम्पोर्ट</h2>
-                <p style={{ fontSize: '14px', color: '#7d8981' }}>EPIC के आधार पर उसी क्लाइंट के रिकॉर्ड सुरक्षित रूप से अपडेट या जोड़े जाएंगे। PDF से कोई अनुमानित/नकली डेटा नहीं बनाया जाता।</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <FileSpreadsheet size={20} style={{ color: '#00875a' }} />
+                  <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', margin: 0 }}>मतदाता सूची Excel इम्पोर्ट</h2>
+                </div>
+                <p style={{ fontSize: '14px', color: '#7d8981', margin: 0 }}>EPIC के आधार पर उसी क्लाइंट के रिकॉर्ड सुरक्षित रूप से अपडेट या जोड़े जाएंगे। वार्ड, बूथ और प्रभारी यूजर टैग करें।</p>
               </div>
               <form className="modal-form" onSubmit={importWorkbook}>
-                <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                  <label>क्लाइंट
-                    <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}><option value="">क्लाइंट चुनें</option>{organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}</select>
+                <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+                  <label>क्लाइंट (संगठन) <span style={{ color: '#d93025' }}>*</span>
+                    <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
+                      <option value="">क्लाइंट चुनें</option>
+                      {organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}
+                    </select>
                   </label>
-                  <label>Excel workbook (.xlsx)<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required /></label>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: '500', color: '#1a2620' }}>
+                      वार्ड (Ward) <span style={{ fontSize: '11px', color: '#7d8981' }}>(चुनें या नया बनाएं)</span>
+                    </label>
+                    {!excelIsNewWard ? (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <select
+                          value={excelWard}
+                          onChange={(e) => {
+                            if (e.target.value === '__NEW__') {
+                              setExcelIsNewWard(true);
+                              setExcelWard('');
+                            } else {
+                              setExcelWard(e.target.value);
+                            }
+                          }}
+                          style={{ flex: 1 }}
+                        >
+                          <option value="">वार्ड चुनें (वैकल्पिक)</option>
+                          {availableWards.map((w) => (
+                            <option key={w} value={w}>वार्ड {w}</option>
+                          ))}
+                          <option value="__NEW__">➕ नया वार्ड बनाएं...</option>
+                        </select>
+                        <button
+                          type="button"
+                          className="button-secondary"
+                          style={{ padding: '0 10px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                          onClick={() => {
+                            setExcelIsNewWard(true);
+                            setExcelWard('');
+                          }}
+                          title="नया वार्ड जोड़ें"
+                        >
+                          <Plus size={14} /> नया
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder="नया वार्ड दर्ज करें (उदा. 14 या वार्ड 14)"
+                          value={excelCustomWard}
+                          onChange={(e) => setExcelCustomWard(e.target.value)}
+                          autoFocus
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          className="button-secondary"
+                          style={{ padding: '0 10px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                          onClick={() => {
+                            setExcelIsNewWard(false);
+                            setExcelCustomWard('');
+                          }}
+                        >
+                          सूची से
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <label>बूथ / भाग संख्या <span style={{ fontSize: '11px', color: '#7d8981' }}>(वैकल्पिक)</span>
+                    <input
+                      type="text"
+                      placeholder="उदा. बूथ 42 या भाग 10"
+                      value={excelBooth}
+                      onChange={(e) => setExcelBooth(e.target.value)}
+                    />
+                  </label>
+
+                  <label>यूजर / प्रभारी का नाम <span style={{ fontSize: '11px', color: '#7d8981' }}>(किस यूजर की लिस्ट है)</span>
+                    <input
+                      type="text"
+                      placeholder="उदा. अमित शर्मा (वार्ड प्रमुख), राहुल वर्मा"
+                      value={excelIncharge}
+                      onChange={(e) => setExcelIncharge(e.target.value)}
+                    />
+                  </label>
+
+                  <label>सूची का शीर्षक / विवरण <span style={{ fontSize: '11px', color: '#7d8981' }}>(पहचान के लिए)</span>
+                    <input
+                      type="text"
+                      placeholder="उदा. वार्ड 14 अंतिम वोटर सूची 2024"
+                      value={excelDescription}
+                      onChange={(e) => setExcelDescription(e.target.value)}
+                    />
+                  </label>
+
+                  <label>Excel workbook (.xlsx) <span style={{ color: '#d93025' }}>*</span>
+                    <input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required />
+                  </label>
                 </div>
+
                 <div className="admin-form-actions" style={{ marginTop: '20px' }}>
                   <button className="button-secondary" type="button" onClick={() => void downloadExcel('/admin/import-template.xlsx', 'टेम्पलेट डाउनलोड नहीं हुआ।', 'voter-import-template.xlsx')} disabled={saving}><Download size={15} /> Template डाउनलोड</button>
                   <button className="button-primary" type="submit" disabled={importing || !organizationId}>{importing ? <LoaderCircle size={15} className="spin" /> : <Upload size={15} />} Excel इम्पोर्ट करें</button>
                 </div>
               </form>
             </section>
+
             <section className="records-panel" style={{ padding: '24px' }}>
               <div style={{ marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', marginBottom: '4px' }}>PDF मतदाता सूची अपलोड</h2>
-                <p style={{ fontSize: '14px', color: '#7d8981' }}>मतदाता सूची की PDF अपलोड करें। Voter IDs (EPIC) एक्सट्रेक्ट कर के डेटाबेस में सेव किये जाएंगे। सुरक्षा के लिए PDF सर्वर से 2 घंटे में आटोमेटिक डिलीट हो जाएगी।</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <FileText size={20} style={{ color: '#c5221f' }} />
+                  <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', margin: 0 }}>PDF मतदाता सूची अपलोड</h2>
+                </div>
+                <p style={{ fontSize: '14px', color: '#7d8981', margin: 0 }}>मतदाता सूची की PDF अपलोड करें। Voter IDs (EPIC) एक्सट्रेक्ट कर के डेटाबेस में सेव किये जाएंगे। सुरक्षा के लिए PDF सर्वर से 2 घंटे में आटोमेटिक डिलीट हो जाएगी।</p>
               </div>
               <form className="modal-form" onSubmit={uploadPdf}>
-                <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                  <label>क्लाइंट
-                    <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}><option value="">क्लाइंट चुनें</option>{organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}</select>
+                <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+                  <label>क्लाइंट (संगठन) <span style={{ color: '#d93025' }}>*</span>
+                    <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
+                      <option value="">क्लाइंट चुनें</option>
+                      {organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}
+                    </select>
                   </label>
-                  <label>PDF फाइल (.pdf)<input type="file" accept=".pdf,application/pdf" required /></label>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: '500', color: '#1a2620' }}>
+                      वार्ड (Ward) <span style={{ fontSize: '11px', color: '#7d8981' }}>(चुनें या नया बनाएं)</span>
+                    </label>
+                    {!pdfIsNewWard ? (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <select
+                          value={pdfWard}
+                          onChange={(e) => {
+                            if (e.target.value === '__NEW__') {
+                              setPdfIsNewWard(true);
+                              setPdfWard('');
+                            } else {
+                              setPdfWard(e.target.value);
+                            }
+                          }}
+                          style={{ flex: 1 }}
+                        >
+                          <option value="">वार्ड चुनें (वैकल्पिक)</option>
+                          {availableWards.map((w) => (
+                            <option key={w} value={w}>वार्ड {w}</option>
+                          ))}
+                          <option value="__NEW__">➕ नया वार्ड बनाएं...</option>
+                        </select>
+                        <button
+                          type="button"
+                          className="button-secondary"
+                          style={{ padding: '0 10px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                          onClick={() => {
+                            setPdfIsNewWard(true);
+                            setPdfWard('');
+                          }}
+                          title="नया वार्ड जोड़ें"
+                        >
+                          <Plus size={14} /> नया
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder="नया वार्ड दर्ज करें (उदा. 14 या वार्ड 14)"
+                          value={pdfCustomWard}
+                          onChange={(e) => setPdfCustomWard(e.target.value)}
+                          autoFocus
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          className="button-secondary"
+                          style={{ padding: '0 10px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                          onClick={() => {
+                            setPdfIsNewWard(false);
+                            setPdfCustomWard('');
+                          }}
+                        >
+                          सूची से
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <label>बूथ / भाग संख्या <span style={{ fontSize: '11px', color: '#7d8981' }}>(वैकल्पिक)</span>
+                    <input
+                      type="text"
+                      placeholder="उदा. बूथ 42 या भाग 10"
+                      value={pdfBooth}
+                      onChange={(e) => setPdfBooth(e.target.value)}
+                    />
+                  </label>
+
+                  <label>यूजर / प्रभारी का नाम <span style={{ fontSize: '11px', color: '#7d8981' }}>(किस यूजर की लिस्ट है)</span>
+                    <input
+                      type="text"
+                      placeholder="उदा. अमित शर्मा (वार्ड प्रमुख), राहुल वर्मा"
+                      value={pdfIncharge}
+                      onChange={(e) => setPdfIncharge(e.target.value)}
+                    />
+                  </label>
+
+                  <label>सूची का शीर्षक / विवरण <span style={{ fontSize: '11px', color: '#7d8981' }}>(पहचान के लिए)</span>
+                    <input
+                      type="text"
+                      placeholder="उदा. वार्ड 14 अंतिम वोटर सूची 2024"
+                      value={pdfDescription}
+                      onChange={(e) => setPdfDescription(e.target.value)}
+                    />
+                  </label>
+
+                  <label>PDF फाइल (.pdf) <span style={{ color: '#d93025' }}>*</span>
+                    <input type="file" accept=".pdf,application/pdf" required />
+                  </label>
                 </div>
+
                 <div style={{ marginTop: '16px' }}>
                   <label className="checkbox-label" style={{ fontWeight: '500' }}>
                     <input type="checkbox" name="useOcr" />
@@ -568,35 +835,127 @@ export default function AdminPanel() {
               </form>
 
               {pdfJobs.length > 0 && (
-                <div style={{ marginTop: '32px', borderTop: '1px solid #e4eae5', paddingTop: '20px' }}>
-                  <h3 style={{ fontSize: '15px', fontWeight: '600', marginBottom: '12px' }}>हाल ही में अपलोड की गई PDF फाइलें (पिछले 2 घंटे)</h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ marginTop: '36px', borderTop: '1px solid #e4eae5', paddingTop: '24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div>
+                      <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1a2620', margin: 0 }}>हाल ही में अपलोड की गई सूचियां (Recent Uploads & Extraction)</h3>
+                      <p style={{ fontSize: '13px', color: '#7d8981', margin: '4px 0 0 0' }}>वार्ड, बूथ, प्रभारी यूजर और एक्सट्रैक्शन स्टेटस की लाइव जानकारी</p>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => void loadPdfJobs()} 
+                      className="button-secondary"
+                      style={{ padding: '6px 12px', fontSize: '12px' }}
+                    >
+                      <RefreshCw size={13} /> रिफ्रेश करें
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gap: '12px' }}>
                     {pdfJobs.map((job) => (
-                      <div key={job.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#f9faf9', padding: '12px 16px', borderRadius: '6px', border: '1px solid #e4eae5' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            {job.status === 'processing' && <LoaderCircle size={16} className="spin" style={{ color: '#00875a' }} />}
-                            {job.status === 'completed' && <Check size={16} style={{ color: '#00875a' }} />}
-                            {job.status === 'failed' && <AlertCircle size={16} style={{ color: '#d93025' }} />}
+                      <div 
+                        key={job.id} 
+                        style={{ 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          gap: '12px', 
+                          background: '#ffffff', 
+                          padding: '16px 20px', 
+                          borderRadius: '10px', 
+                          border: '1px solid #e4eae5',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                        }}
+                      >
+                        {/* Header row */}
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                            {/* Type Badge */}
+                            <span 
+                              style={{
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                letterSpacing: '0.5px',
+                                background: job.fileType === 'excel' ? '#e6f4ea' : '#fce8e6',
+                                color: job.fileType === 'excel' ? '#137333' : '#c5221f'
+                              }}
+                            >
+                              {job.fileType === 'excel' ? 'EXCEL' : 'PDF'}
+                            </span>
+
                             <div>
-                              <div style={{ fontSize: '14px', fontWeight: '500', color: '#1a2620' }}>{job.filename}</div>
-                              <div style={{ fontSize: '12px', color: '#7d8981' }}>
-                                {new Date(job.uploadedAt).toLocaleTimeString('hi-IN')} 
-                                {job.status === 'completed' && ` • ${job.extractedCount} रिकॉर्ड्स`}
+                              <div style={{ fontSize: '15px', fontWeight: '600', color: '#1a2620' }}>
+                                {job.listDescription ? job.listDescription : job.filename}
                               </div>
+                              {job.listDescription && (
+                                <div style={{ fontSize: '12px', color: '#7d8981', marginTop: '2px' }}>
+                                  फ़ाइल: {job.filename}
+                                </div>
+                              )}
                             </div>
                           </div>
-                          <div style={{ fontSize: '13px', fontWeight: '500', color: job.status === 'failed' ? '#d93025' : '#00875a' }}>
-                            {job.status === 'processing' && (job.progress ? `${job.progress}% Extracting...` : 'Extracting...')}
-                            {job.status === 'completed' && 'Done'}
-                            {job.status === 'failed' && 'Error'}
+
+                          {/* Status indicator */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {job.status === 'processing' && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: '#00875a', background: '#e6f4ea', padding: '4px 10px', borderRadius: '20px' }}>
+                                <LoaderCircle size={14} className="spin" />
+                                {job.progress ? `${job.progress}% एक्सट्रेक्ट हो रहा है...` : 'प्रोसेसिंग चालू है...'}
+                              </span>
+                            )}
+                            {job.status === 'completed' && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: '#137333', background: '#e6f4ea', padding: '4px 10px', borderRadius: '20px' }}>
+                                <Check size={14} /> पूर्ण ({job.extractedCount.toLocaleString('hi-IN')} रिकॉर्ड्स)
+                              </span>
+                            )}
+                            {job.status === 'failed' && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: '#c5221f', background: '#fce8e6', padding: '4px 10px', borderRadius: '20px' }}>
+                                <AlertCircle size={14} /> त्रुटि
+                              </span>
+                            )}
                           </div>
                         </div>
+
+                        {/* Progress bar if processing */}
                         {job.status === 'processing' && (
                           <div style={{ width: '100%', height: '6px', backgroundColor: '#e4eae5', borderRadius: '4px', overflow: 'hidden' }}>
                             <div style={{ width: `${job.progress || 0}%`, height: '100%', backgroundColor: '#00875a', transition: 'width 0.3s ease' }} />
                           </div>
                         )}
+
+                        {/* Meta chips row */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', paddingTop: '8px', borderTop: '1px solid #f0f3f1', fontSize: '12px', color: '#4a5568' }}>
+                          {job.wardNo ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#e8f0fe', color: '#1967d2', padding: '3px 8px', borderRadius: '5px', fontWeight: '500' }}>
+                              🏛️ वार्ड: <strong>{job.wardNo}</strong>
+                            </span>
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f1f3f4', color: '#5f6368', padding: '3px 8px', borderRadius: '5px' }}>
+                              🏛️ वार्ड: सामान्य / सभी
+                            </span>
+                          )}
+
+                          {job.boothNo && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fef7e0', color: '#b06000', padding: '3px 8px', borderRadius: '5px', fontWeight: '500' }}>
+                              🗳️ बूथ/भाग: <strong>{job.boothNo}</strong>
+                            </span>
+                          )}
+
+                          {job.uploadedBy ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f3e8fd', color: '#7627bb', padding: '3px 8px', borderRadius: '5px', fontWeight: '500' }}>
+                              👤 यूजर/प्रभारी: <strong>{job.uploadedBy}</strong>
+                            </span>
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f1f3f4', color: '#5f6368', padding: '3px 8px', borderRadius: '5px' }}>
+                              👤 यूजर: एडमिन
+                            </span>
+                          )}
+
+                          <span style={{ marginLeft: 'auto', color: '#9aa0a6', fontSize: '11px' }}>
+                            🕒 {new Date(job.uploadedAt).toLocaleString('hi-IN', { dateStyle: 'short', timeStyle: 'short' })}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -608,33 +967,6 @@ export default function AdminPanel() {
 
         {activeView === 'export' && (
           <section className="records-panel" style={{ padding: '24px' }}>
-            <div style={{ marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', marginBottom: '4px' }}>मतदाता सूची डेटा एक्सपोर्ट</h2>
-              <p style={{ fontSize: '14px', color: '#7d8981' }}>किसी भी क्लाइंट (Organization) का मतदाता डेटा Excel फॉर्मेट में डाउनलोड करें।</p>
-            </div>
-            <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', maxWidth: '400px' }}>
-              <label>क्लाइंट
-                <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
-                  <option value="">सभी क्लाइंट (All Data)</option>
-                  {organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}
-                </select>
-              </label>
-            </div>
-            <div className="admin-form-actions" style={{ marginTop: '20px', justifyContent: 'flex-start', display: 'flex' }}>
-              <button 
-                className="button-primary" 
-                type="button" 
-                onClick={() => void downloadExcel(`/admin/export-voters${organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : ''}`, 'Excel export नहीं हुआ।', 'platform-data.xlsx')} 
-                disabled={saving}
-              >
-                {saving ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />} Excel डेटा डाउनलोड करें
-              </button>
-            </div>
-          </section>
-        )}
-
-        {activeView === 'export' && (
-          <section className="records-panel" style={{ padding: '24px', marginBottom: '24px' }}>
             <div style={{ marginBottom: '20px' }}>
               <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', marginBottom: '4px' }}>मतदाता सूची डेटा एक्सपोर्ट</h2>
               <p style={{ fontSize: '14px', color: '#7d8981' }}>किसी भी क्लाइंट (Organization) का मतदाता डेटा Excel फॉर्मेट में डाउनलोड करें।</p>
