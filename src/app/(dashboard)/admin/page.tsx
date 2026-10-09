@@ -63,6 +63,8 @@ interface UploadJob {
   progress?: number;
   extractedCount: number;
   uploadedAt: string;
+  excelFilename?: string;
+  hasExcel?: boolean;
 }
 
 type AdminView = 'tenants' | 'records' | 'users' | 'import' | 'export' | 'system';
@@ -944,9 +946,32 @@ export default function AdminPanel() {
                               </span>
                             )}
                             {job.status === 'completed' && (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: '#137333', background: '#e6f4ea', padding: '4px 10px', borderRadius: '20px' }}>
-                                <Check size={14} /> पूर्ण ({job.extractedCount.toLocaleString('hi-IN')} रिकॉर्ड्स)
-                              </span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: '#137333', background: '#e6f4ea', padding: '4px 10px', borderRadius: '20px' }}>
+                                  <Check size={14} /> पूर्ण ({job.extractedCount.toLocaleString('hi-IN')} रिकॉर्ड्स)
+                                </span>
+                                <a
+                                  href={`/api/admin/pdf/download-excel/${job.id}`}
+                                  download={job.excelFilename || 'voters.xlsx'}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    color: '#00875a',
+                                    background: '#f0fdf4',
+                                    border: '1px solid #bbf7d0',
+                                    padding: '4px 10px',
+                                    borderRadius: '6px',
+                                    textDecoration: 'none',
+                                    cursor: 'pointer'
+                                  }}
+                                  title="कन्वर्ट की गई Excel फाइल (.xlsx) डाउनलोड करें"
+                                >
+                                  <Download size={13} /> Excel डाउनलोड
+                                </a>
+                              </div>
                             )}
                             {job.status === 'failed' && (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: '#c5221f', background: '#fce8e6', padding: '4px 10px', borderRadius: '20px' }}>
