@@ -12,6 +12,14 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'https://vijaysetu.piyushassudani.in/api/:path*',
+      },
+    ]
+  }
 };
 
 export default nextConfig;

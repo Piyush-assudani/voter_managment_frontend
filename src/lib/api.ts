@@ -1,6 +1,14 @@
 const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
 
-export const API_BASE_URL = (configuredApiUrl || 'https://vijaysetu.piyushassudani.in/api').replace(/\/+$/, '');
+export const API_BASE_URL = (() => {
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    // When developing on localhost, route through local Next.js proxy to bypass CORS
+    if (!configuredApiUrl || configuredApiUrl.includes('vijaysetu.piyushassudani.in') || configuredApiUrl === '/api') {
+      return '/api';
+    }
+  }
+  return (configuredApiUrl || 'https://vijaysetu.piyushassudani.in/api').replace(/\/+$/, '');
+})();
 
 export function apiUrl(path: string) {
   return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;

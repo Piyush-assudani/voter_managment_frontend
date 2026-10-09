@@ -361,20 +361,18 @@ export default function AdminPanel() {
             <button className="button-secondary" type="button" onClick={() => void loadPageData()} disabled={loading || saving}>
               {loading ? <LoaderCircle size={15} className="spin" /> : <RefreshCw size={15} />} रिफ्रेश
             </button>
-            <button className="button-primary" type="button" onClick={() => void downloadExcel(`/admin/export-voters${organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : ''}`, 'Excel export नहीं हुआ।', 'platform-data.xlsx')} disabled={saving}>
-              {saving ? <LoaderCircle size={15} className="spin" /> : <FileSpreadsheet size={15} />} Excel डेटा एक्सपोर्ट
-            </button>
           </div>
         </div>
 
         <nav className="admin-tabs" aria-label="एडमिन सेक्शन">
           {([
-            ['tenants', 'क्लाइंट व फीचर', UsersRound],
-            ['records', 'वोटर डेटा', FileSpreadsheet],
-            ['users', 'सभी अकाउंट', UserPlus],
-            ['import', 'Excel इम्पोर्ट', Upload],
-            ['system', 'सिस्टम स्थिति', Activity],
-          ] as const).map(([key, label, Icon]) => (
+            { key: 'tenants', label: 'क्लाइंट व फीचर', Icon: UsersRound },
+            { key: 'records', label: 'वोटर डेटा', Icon: FileSpreadsheet },
+            { key: 'users', label: 'सभी अकाउंट', Icon: UserPlus },
+            { key: 'import', label: 'डेटा इम्पोर्ट', Icon: Upload },
+            { key: 'export', label: 'डेटा एक्सपोर्ट', Icon: Download },
+            { key: 'system', label: 'सिस्टम स्थिति', Icon: Activity },
+          ] as const).map(({ key, label, Icon }) => (
             <button className={`admin-tab ${activeView === key ? 'is-active' : ''}`} key={key} type="button" onClick={() => { setActiveView(key); setError(''); }}>
               <Icon size={15} /> {label}
             </button>
@@ -594,6 +592,60 @@ export default function AdminPanel() {
               )}
             </section>
           </>
+        )}
+
+        {activeView === 'export' && (
+          <section className="records-panel" style={{ padding: '24px' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', marginBottom: '4px' }}>मतदाता सूची डेटा एक्सपोर्ट</h2>
+              <p style={{ fontSize: '14px', color: '#7d8981' }}>किसी भी क्लाइंट (Organization) का मतदाता डेटा Excel फॉर्मेट में डाउनलोड करें।</p>
+            </div>
+            <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', maxWidth: '400px' }}>
+              <label>क्लाइंट
+                <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
+                  <option value="">सभी क्लाइंट (All Data)</option>
+                  {organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}
+                </select>
+              </label>
+            </div>
+            <div className="admin-form-actions" style={{ marginTop: '20px', justifyContent: 'flex-start', display: 'flex' }}>
+              <button 
+                className="button-primary" 
+                type="button" 
+                onClick={() => void downloadExcel(`/admin/export-voters${organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : ''}`, 'Excel export नहीं हुआ।', 'platform-data.xlsx')} 
+                disabled={saving}
+              >
+                {saving ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />} Excel डेटा डाउनलोड करें
+              </button>
+            </div>
+          </section>
+        )}
+
+        {activeView === 'export' && (
+          <section className="records-panel" style={{ padding: '24px', marginBottom: '24px' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', marginBottom: '4px' }}>मतदाता सूची डेटा एक्सपोर्ट</h2>
+              <p style={{ fontSize: '14px', color: '#7d8981' }}>किसी भी क्लाइंट (Organization) का मतदाता डेटा Excel फॉर्मेट में डाउनलोड करें।</p>
+            </div>
+            <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', maxWidth: '400px' }}>
+              <label>क्लाइंट
+                <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
+                  <option value="">सभी क्लाइंट (All Data)</option>
+                  {organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}
+                </select>
+              </label>
+            </div>
+            <div className="admin-form-actions" style={{ marginTop: '20px', justifyContent: 'flex-start', display: 'flex' }}>
+              <button 
+                className="button-primary" 
+                type="button" 
+                onClick={() => void downloadExcel(`/admin/export-voters${organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : ''}`, 'Excel export नहीं हुआ।', 'platform-data.xlsx')} 
+                disabled={saving}
+              >
+                {saving ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />} Excel डेटा डाउनलोड करें
+              </button>
+            </div>
+          </section>
         )}
 
         {activeView === 'system' && (
