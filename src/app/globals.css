@@ -3410,3 +3410,621 @@ a {
     font-size: 10px;
   }
 }
+/* ==========================================================================
+   WAR ROOM COMMAND CENTER STYLES
+   ========================================================================== */
+.warroom-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* TOP 5 KPIS */
+.warroom-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.warroom-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.warroom-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.warroom-kpi-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.warroom-kpi-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.kpi-icon-blue { background: #eff6ff; color: #2563eb; }
+.kpi-icon-green { background: #ecfdf5; color: #059669; }
+.kpi-icon-emerald { background: #f0fdf4; color: #16a34a; }
+.kpi-icon-purple { background: #faf5ff; color: #9333ea; }
+.kpi-icon-amber { background: #fffbeb; color: #d97706; }
+
+.warroom-kpi-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.kpi-badge-green {
+  color: #059669;
+}
+
+.warroom-kpi-val {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+  font-family: inherit;
+}
+
+.warroom-kpi-sub {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* SECTION HEADER */
+.warroom-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.warroom-section-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.warroom-section-header p {
+  font-size: 12px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+/* SUPPORT CLASSIFICATION GRID */
+.warroom-support-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.warroom-support-card {
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 180ms ease;
+  min-height: 140px;
+}
+
+.support-card-core {
+  background: linear-gradient(145deg, #ffffff 0%, #f0fdf4 100%);
+  border: 1.5px solid #86efac;
+}
+.support-card-swing {
+  background: linear-gradient(145deg, #ffffff 0%, #fffbeb 100%);
+  border: 1.5px solid #fde047;
+}
+.support-card-opposition {
+  background: linear-gradient(145deg, #ffffff 0%, #fff1f2 100%);
+  border: 1.5px solid #fca5a5;
+}
+.support-card-unmarked {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border: 1.5px solid #cbd5e1;
+}
+
+.support-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.support-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.support-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.support-card-core .support-icon-wrap { color: #16a34a; }
+.support-card-swing .support-icon-wrap { color: #d97706; }
+.support-card-opposition .support-icon-wrap { color: #e11d48; }
+.support-card-unmarked .support-icon-wrap { color: #64748b; }
+
+.support-card-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.support-card-sub {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.support-percent-badge {
+  font-size: 12px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
+.support-badge-core { background: #dcfce7; color: #15803d; }
+.support-badge-swing { background: #fef3c7; color: #b45309; }
+.support-badge-opposition { background: #ffe4e6; color: #be123c; }
+.support-badge-unmarked { background: #f1f5f9; color: #475569; }
+
+.support-counter-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.support-count-num {
+  font-size: 28px;
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.support-counter-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.warroom-progress-track {
+  width: 100%;
+  height: 7px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.warroom-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.support-bar-core { background: #16a34a; }
+.support-bar-swing { background: #f59e0b; }
+.support-bar-opposition { background: #f43f5e; }
+.support-bar-unmarked { background: #94a3b8; }
+
+.support-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  padding-top: 4px;
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+/* SIMULATION / FORECAST PANEL */
+.warroom-sim-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.sim-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #ffffff;
+}
+
+.sim-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sim-header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #34d399;
+}
+
+.sim-title-row h2 {
+  font-size: 17px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+}
+
+.sim-title-row p {
+  font-size: 12px;
+  color: #cbd5e1;
+  margin: 3px 0 0 0;
+}
+
+.sim-forecast-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  padding: 8px 16px;
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+}
+
+.sim-forecast-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.sim-forecast-text small {
+  font-size: 10px;
+  font-weight: 700;
+  color: #a7f3d0;
+  text-transform: uppercase;
+}
+
+.sim-forecast-text strong {
+  font-size: 20px;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.1;
+}
+
+.sim-panel-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.sim-slider-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sim-slider-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sim-slider-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  cursor: pointer;
+}
+
+.sim-slider-val-badge {
+  background: #059669;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 2px 9px;
+  border-radius: 999px;
+}
+
+.sim-presets {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sim-preset-btn {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.sim-preset-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.sim-preset-btn.is-active {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+}
+
+.warroom-range-slider {
+  width: 100%;
+  accent-color: #059669;
+  height: 6px;
+  cursor: pointer;
+}
+
+.sim-slider-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.sim-pills-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sim-pill-card {
+  padding: 12px 14px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid transparent;
+}
+
+.pill-core {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+.pill-swing {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+.pill-unmarked {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #334155;
+}
+
+.sim-pill-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sim-pill-calc {
+  font-size: 14px;
+  font-weight: 800;
+  font-family: inherit;
+  color: #0f172a;
+}
+
+.sim-pill-card small {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.sim-formula-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 10px 14px;
+  overflow-x: auto;
+}
+
+.sim-formula-tag {
+  font-size: 11px;
+  font-weight: 800;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 2px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.sim-formula-banner code {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+
+/* BOOTH TABLE STYLES */
+.warroom-table-card {
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.warroom-table th {
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.booth-turnout-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.booth-turnout-pct {
+  font-size: 11px;
+  font-weight: 700;
+  background: #ecfdf5;
+  color: #065f46;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.num-pill {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.num-pill-green { background: #dcfce7; color: #166534; }
+.num-pill-amber { background: #fef3c7; color: #92400e; }
+.num-pill-rose { background: #ffe4e6; color: #9f1239; }
+.num-pill-slate { background: #f1f5f9; color: #475569; }
+
+.record-status-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.status-badge-high { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.status-badge-med { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+.status-badge-low { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+
+/* ==========================================================================
+   WAR ROOM RESPONSIVENESS (MOBILE <= 768px and <= 480px)
+   ========================================================================== */
+@media (max-width: 880px) {
+  .warroom-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .warroom-kpi-span-mobile {
+    grid-column: 1 / -1;
+  }
+  .warroom-support-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .sim-pills-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .warroom-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .warroom-kpi-card {
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+  .warroom-kpi-val {
+    font-size: 20px;
+  }
+  .warroom-kpi-sub {
+    font-size: 10px;
+  }
+  .warroom-support-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .warroom-support-card {
+    padding: 12px 10px;
+    border-radius: 12px;
+    min-height: 125px;
+    gap: 8px;
+  }
+  .support-card-title {
+    font-size: 11px;
+  }
+  .support-card-sub {
+    display: none;
+  }
+  .support-percent-badge {
+    font-size: 11px;
+    padding: 2px 6px;
+  }
+  .support-count-num {
+    font-size: 22px;
+  }
+  .sim-panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px 16px;
+  }
+  .sim-forecast-badge {
+    width: 100%;
+    justify-content: center;
+  }
+  .sim-panel-body {
+    padding: 14px 12px;
+  }
+}
