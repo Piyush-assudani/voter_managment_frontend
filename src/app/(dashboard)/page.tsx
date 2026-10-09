@@ -588,9 +588,9 @@ export default function DashboardPage() {
                 <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
                   <legend className="eyebrow-label" style={{ marginBottom: '12px' }}>व्यक्तिगत जानकारी</legend>
                   <div className="feature-form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <label>EPIC (Voter ID)<input value={editValues.epic} onChange={(event) => setEditValues({ ...editValues, epic: event.target.value })} /></label>
+                    <label>EPIC (Voter ID)<input value={editValues.epic} onChange={(event) => setEditValues({ ...editValues, epic: event.target.value.toUpperCase().trim() })} /></label>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <label style={{ flex: 1 }}>उम्र<input type="number" value={editValues.age} onChange={(event) => setEditValues({ ...editValues, age: event.target.value })} /></label>
+                      <label style={{ flex: 1 }}>उम्र<input type="text" inputMode="numeric" pattern="[0-9]*" value={editValues.age} onChange={(event) => setEditValues({ ...editValues, age: event.target.value.replace(/\D/g, '').slice(0, 3) })} placeholder="उदा. 35" /></label>
                       <label style={{ flex: 1 }}>लिंग
                         <select value={editValues.gender} onChange={(event) => setEditValues({ ...editValues, gender: event.target.value })}>
                           <option value="">चुनें</option><option value="पुरुष">पुरुष</option><option value="स्त्री">स्त्री</option><option value="अन्य">अन्य</option>
@@ -598,7 +598,7 @@ export default function DashboardPage() {
                       </label>
                     </div>
                     <label>नाम (English)<input value={editValues.nameEn} onChange={(event) => setEditValues({ ...editValues, nameEn: event.target.value })} /></label>
-                    <label>नाम (हिंदी)<input value={editValues.nameHi} onChange={(event) => setEditValues({ ...editValues, nameHi: event.target.value })} /></label>
+                    <label>नाम (हिंदी - केवल देवनागरी)<input value={editValues.nameHi} onChange={(event) => setEditValues({ ...editValues, nameHi: event.target.value.replace(/[a-zA-Z\d]/g, '').replace(/[^\u0900-\u097F\s]/g, '') })} placeholder="केवल हिंदी" /></label>
                     <label>संबंध प्रकार
                       <select value={editValues.relationType} onChange={(event) => setEditValues({ ...editValues, relationType: event.target.value })}>
                         <option value="">चुनें</option><option value="पिता">पिता</option><option value="पति">पति</option><option value="माता">माता</option><option value="पत्नी">पत्नी</option><option value="अन्य">अन्य</option>
@@ -606,7 +606,7 @@ export default function DashboardPage() {
                     </label>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <label style={{ flex: 1 }}>रिश्तेदार का नाम (En)<input value={editValues.relativeNameEn} onChange={(event) => setEditValues({ ...editValues, relativeNameEn: event.target.value })} /></label>
-                      <label style={{ flex: 1 }}>रिश्तेदार का नाम (Hi)<input value={editValues.relativeNameHi} onChange={(event) => setEditValues({ ...editValues, relativeNameHi: event.target.value })} /></label>
+                      <label style={{ flex: 1 }}>रिश्तेदार का नाम (Hi - केवल देवनागरी)<input value={editValues.relativeNameHi} onChange={(event) => setEditValues({ ...editValues, relativeNameHi: event.target.value.replace(/[a-zA-Z\d]/g, '').replace(/[^\u0900-\u097F\s]/g, '') })} placeholder="केवल हिंदी" /></label>
                     </div>
                   </div>
                 </fieldset>
@@ -614,11 +614,11 @@ export default function DashboardPage() {
                 <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
                   <legend className="eyebrow-label" style={{ marginBottom: '12px' }}>मतदान व निवास</legend>
                   <div className="feature-form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <label>मकान नंबर<input value={editValues.houseNo} onChange={(event) => setEditValues({ ...editValues, houseNo: event.target.value })} /></label>
+                    <label>मकान नंबर<input value={editValues.houseNo} onChange={(event) => setEditValues({ ...editValues, houseNo: event.target.value.replace(/[^\w\d\/\-]/g, '') })} /></label>
                     <label>वार्ड नं<input value={editValues.wardNo} onChange={(event) => setEditValues({ ...editValues, wardNo: event.target.value })} /></label>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <label style={{ flex: 1 }}>भाग (Part) नं<input value={editValues.partNo} onChange={(event) => setEditValues({ ...editValues, partNo: event.target.value })} /></label>
-                      <label style={{ flex: 1 }}>क्रम (Serial) नं<input type="number" value={editValues.serialNo} onChange={(event) => setEditValues({ ...editValues, serialNo: event.target.value })} /></label>
+                      <label style={{ flex: 1 }}>क्रम (Serial) नं<input type="text" inputMode="numeric" pattern="[0-9]*" value={editValues.serialNo} onChange={(event) => setEditValues({ ...editValues, serialNo: event.target.value.replace(/\D/g, '') })} /></label>
                     </div>
                   </div>
                 </fieldset>
@@ -626,7 +626,7 @@ export default function DashboardPage() {
                 <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
                   <legend className="eyebrow-label" style={{ marginBottom: '12px' }}>संपर्क व चुनाव प्रबंधन</legend>
                   <div className="feature-form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <label>फोन नंबर<input value={editValues.phone} onChange={(event) => setEditValues({ ...editValues, phone: event.target.value })} /></label>
+                    <label>फोन नंबर<input type="tel" value={editValues.phone} onChange={(event) => setEditValues({ ...editValues, phone: event.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="10 अंक" /></label>
                     <label>जाति / समुदाय<input value={editValues.caste} onChange={(event) => setEditValues({ ...editValues, caste: event.target.value })} /></label>
                     <label>समर्थन वर्ग
                       <select value={editValues.supportStatus} onChange={(event) => setEditValues({ ...editValues, supportStatus: event.target.value })}>

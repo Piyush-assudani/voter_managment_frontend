@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Download, LoaderCircle, Mic, Printer, Search, UsersRound, X } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
+import { downloadBlob } from '@/lib/fileDownload';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
 
 interface Voter {
@@ -149,12 +150,7 @@ export default function CommunityPage() {
       if (ward.trim()) params.set('ward', ward.trim());
       const response = await apiFetch(`/features/export.xlsx?${params}`);
       if (!response.ok) throw new Error(await getApiError(response, 'Excel एक्सपोर्ट नहीं हो सका।'));
-      const url = URL.createObjectURL(await response.blob());
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = 'community-search.xlsx';
-      anchor.click();
-      URL.revokeObjectURL(url);
+      await downloadBlob(await response.blob(), 'community-search.xlsx');
     } catch (exportError) {
       setError(exportError instanceof Error ? exportError.message : 'Excel एक्सपोर्ट नहीं हो सका।');
     } finally {

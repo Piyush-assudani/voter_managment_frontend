@@ -9,6 +9,7 @@ import {
 import DashboardShell from '@/app/(dashboard)/DashboardShell';
 import AccountsManager from '@/components/AccountsManager';
 import { apiFetch, getApiError } from '@/lib/api';
+import { downloadBlob } from '@/lib/fileDownload';
 
 const moduleOptions = [
   ['voters', 'मतदाता सूची'],
@@ -296,12 +297,7 @@ export default function AdminPanel() {
     try {
       const response = await apiFetch(path);
       if (!response.ok) throw new Error(await getApiError(response, fallback));
-      const url = URL.createObjectURL(await response.blob());
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = filename;
-      anchor.click();
-      URL.revokeObjectURL(url);
+      await downloadBlob(await response.blob(), filename);
     } catch (downloadError) {
       setError(downloadError instanceof Error ? downloadError.message : fallback);
     } finally {
@@ -1221,9 +1217,9 @@ export default function AdminPanel() {
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: '#137333', background: '#e6f4ea', padding: '4px 10px', borderRadius: '20px' }}>
                                   <Check size={14} /> पूर्ण ({job.extractedCount.toLocaleString('hi-IN')} रिकॉर्ड्स)
                                 </span>
-                                <a
-                                  href={`/api/admin/pdf/download-excel/${job.id}`}
-                                  download={job.excelFilename || 'voters.xlsx'}
+                                <button
+                                  type="button"
+                                  onClick={() => void downloadExcel(`/admin/pdf/download-excel/${job.id}`, 'Excel फ़ाइल डाउनलोड नहीं हो सकी।', job.excelFilename || 'voters.xlsx')}
                                   style={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
@@ -1241,7 +1237,7 @@ export default function AdminPanel() {
                                   title="कन्वर्ट की गई Excel फाइल (.xlsx) डाउनलोड करें"
                                 >
                                   <Download size={13} /> Excel डाउनलोड
-                                </a>
+                                </button>
                               </div>
                             )}
                             {job.status === 'failed' && (

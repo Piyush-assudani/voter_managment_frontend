@@ -102,7 +102,7 @@ export default function LoginPage() {
         </div>
       </section>
       <div className="auth-caption">
-        ©️ 2026 MR PIPE. All Rights Reserved. | Powered by <a href="https://morihix.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'none' }}>Morihix Pvt. Ltd</a>
+        ©️ 2026 VijaySetu. All Rights Reserved. | Powered by <a href="https://morihix.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'none' }}>Morihix Pvt. Ltd</a>
       </div>
     </main>
   );

@@ -2,6 +2,7 @@ import html2canvas from 'html2canvas';
 import { createRoot } from 'react-dom/client';
 import React from 'react';
 import { VoterSlipTemplate } from '../components/VoterSlipTemplate';
+import { downloadDataUrl } from './fileDownload';
 
 export const generateSlipImage = async (voter: any): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -44,10 +45,8 @@ export const generateSlipImage = async (voter: any): Promise<string> => {
 export const downloadSlip = async (voter: any) => {
   try {
     const dataUrl = await generateSlipImage(voter);
-    const link = document.createElement('a');
-    link.href = dataUrl;
-    link.download = `VoterSlip_${voter.epic || voter.serialNo}_${voter.nameEn || 'unknown'}.jpg`;
-    link.click();
+    const fileName = `VoterSlip_${voter.epic || voter.serialNo}_${voter.nameEn || 'voter'}.jpg`;
+    downloadDataUrl(dataUrl, fileName);
   } catch(err) {
     console.error('Failed to download slip:', err);
     alert('पर्ची डाउनलोड नहीं हो सकी।');

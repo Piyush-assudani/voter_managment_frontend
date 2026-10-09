@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Download, LoaderCircle, MapPin, Phone, RefreshCw, Search, UserRoundX } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
+import { downloadBlob } from '@/lib/fileDownload';
 
 interface Migrant {
   _id: string;
@@ -91,12 +92,7 @@ export default function MigrantsPage() {
       if (ward.trim()) params.set('ward', ward.trim());
       const response = await apiFetch(`/features/export.xlsx?${params}`);
       if (!response.ok) throw new Error(await getApiError(response, 'Excel एक्सपोर्ट नहीं हो सका।'));
-      const url = URL.createObjectURL(await response.blob());
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = 'migrant-voters.xlsx';
-      anchor.click();
-      URL.revokeObjectURL(url);
+      await downloadBlob(await response.blob(), 'migrant-voters.xlsx');
     } catch (exportError) {
       setError(exportError instanceof Error ? exportError.message : 'Excel एक्सपोर्ट नहीं हो सका।');
     } finally {

@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Download, LoaderCircle, RefreshCw, Search } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
+import { downloadBlob } from '@/lib/fileDownload';
 
 interface Dispatch {
   id: string;
@@ -62,12 +63,7 @@ export default function DispatchHistoryPage() {
       if (status) params.set('status', status);
       const response = await apiFetch(`/features/export.xlsx?${params}`);
       if (!response.ok) throw new Error(await getApiError(response, 'Export could not be downloaded.'));
-      const url = URL.createObjectURL(await response.blob());
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = 'dispatch-history.xlsx';
-      anchor.click();
-      URL.revokeObjectURL(url);
+      await downloadBlob(await response.blob(), 'dispatch-history.xlsx');
     } catch (downloadError) {
       setError(downloadError instanceof Error ? downloadError.message : 'Export could not be downloaded.');
     } finally {

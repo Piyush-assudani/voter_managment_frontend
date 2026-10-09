@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, Download, LoaderCircle, Phone, RefreshCw } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
+import { downloadBlob } from '@/lib/fileDownload';
 
 interface Voter {
   _id: string;
@@ -115,12 +116,7 @@ export default function TurnoutPage() {
       if (pendingWard) params.set('ward', pendingWard);
       const response = await apiFetch(`/features/export.xlsx?${params}`);
       if (!response.ok) throw new Error(await getApiError(response, 'Excel एक्सपोर्ट नहीं हो सका।'));
-      const url = URL.createObjectURL(await response.blob());
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = 'pending-voters.xlsx';
-      anchor.click();
-      URL.revokeObjectURL(url);
+      await downloadBlob(await response.blob(), 'pending-voters.xlsx');
     } catch (exportError) {
       setError(exportError instanceof Error ? exportError.message : 'Excel एक्सपोर्ट नहीं हो सका।');
     } finally {
