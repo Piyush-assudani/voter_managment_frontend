@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Noto_Sans_Devanagari } from 'next/font/google';
 import './globals.css';
 
@@ -10,6 +10,14 @@ const notoSansDevanagari = Noto_Sans_Devanagari({
   subsets: ['devanagari', 'latin'],
   variable: '--font-noto-sans-devanagari',
 });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+};
 
 export const metadata: Metadata = {
   title: 'VijaySetu | Field workspace',
