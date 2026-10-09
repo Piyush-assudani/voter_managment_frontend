@@ -279,6 +279,12 @@ export default function AdminPanel() {
       const body = new FormData();
       body.set('organizationId', organizationId);
       body.set('pdf', file);
+      
+      const useOcrCheckbox = form.querySelector<HTMLInputElement>('input[name="useOcr"]');
+      if (useOcrCheckbox?.checked) {
+        body.set('useOcr', 'true');
+      }
+
       const response = await apiFetch('/admin/pdf/upload', { method: 'POST', body });
       if (!response.ok) throw new Error(await getApiError(response, 'PDF अपलोड नहीं हुई।'));
       const result = await response.json() as { message?: string, extractedCount?: number, backgroundProcessing?: boolean };
@@ -510,6 +516,12 @@ export default function AdminPanel() {
                     <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}><option value="">क्लाइंट चुनें</option>{organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}</select>
                   </label>
                   <label>PDF फाइल (.pdf)<input type="file" accept=".pdf,application/pdf" required /></label>
+                </div>
+                <div style={{ marginTop: '16px' }}>
+                  <label className="checkbox-label" style={{ fontWeight: '500' }}>
+                    <input type="checkbox" name="useOcr" />
+                    करप्टेड/हिंदी फॉन्ट के लिए Local OCR इस्तेमाल करें (धीमा लेकिन 100% सटीक)
+                  </label>
                 </div>
                 <div className="admin-form-actions" style={{ marginTop: '20px' }}>
                   <button className="button-primary" type="submit" disabled={uploadingPdf || !organizationId}>{uploadingPdf ? <LoaderCircle size={15} className="spin" /> : <Upload size={15} />} PDF अपलोड करें</button>
