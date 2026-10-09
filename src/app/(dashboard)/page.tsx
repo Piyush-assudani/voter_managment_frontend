@@ -94,6 +94,23 @@ export default function DashboardPage() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [whatsappQuota, setWhatsappQuota] = useState<{
+    whatsappEnabled: boolean;
+    whatsappCredits: number;
+    whatsappUsed: number;
+    canSend: boolean;
+    metaConfigured: boolean;
+  } | null>(null);
+
+  const loadWhatsappQuota = useCallback(async () => {
+    try {
+      const res = await apiFetch('/whatsapp/quota');
+      if (res.ok) {
+        const data = await res.json();
+        setWhatsappQuota(data);
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
@@ -290,13 +307,46 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ voterId: slipVoter._id, phoneNumber: slipPhone }),
       });
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(await getApiError(response, 'WhatsApp पर्ची नहीं भेजी जा सकी।'));
+        throw new Error(data.message || 'WhatsApp पर्ची नहीं भेजी जा सकी।');
       }
+      void loadWhatsappQuota();
       setSlipVoter(null);
-      setActionMessage('Meta API ने पर्ची भेजने का अनुरोध स्वीकार किया। डिलीवरी की पुष्टि उपलब्ध नहीं है।');
+      setActionMessage('Meta API द्वारा पर्ची सफलतापूर्वक भेज दी गई है।');
     } catch (sendError) {
       setActionMessage(sendError instanceof Error ? sendError.message : 'WhatsApp पर्ची नहीं भेजी जा सकी।');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const sendManualSlip = async () => {
+    if (!slipVoter) return;
+    setSending(true);
+    setActionMessage('');
+    try {
+      const response = await apiFetch('/whatsapp/send-manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voterId: slipVoter._id, phoneNumber: slipPhone }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'WhatsApp पर्ची नहीं भेजी जा सकी।');
+      }
+      if (typeof data.remainingCredits === 'number') {
+        setWhatsappQuota((prev) => prev ? { ...prev, whatsappCredits: data.remainingCredits, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev);
+      }
+      setActionMessage('1 क्रेडिट काटा गया। WhatsApp चैट खोली जा रही है...');
+      if (data.waLink) {
+        window.open(data.waLink, '_blank');
+      }
+      setTimeout(() => {
+        setSlipVoter(null);
+      }, 1200);
+    } catch (err) {
+      setActionMessage(err instanceof Error ? err.message : 'मैनुअल WhatsApp संदेश नहीं भेजा जा सका।');
     } finally {
       setSending(false);
     }
@@ -551,7 +601,7 @@ export default function DashboardPage() {
                       setSearchQuery('');
                       void loadVoters('', voter.houseNo || '', 1, voter.wardNo || '', voter.partNo || '');
                     }} title="परिवार देखें"><UsersRound size={16} /></button>
-                    <button className="vc-btn-slip" onClick={() => { setSlipPhone(voter.phone || ''); setSlipVoter(voter); setActionMessage(''); }} title="WhatsApp पर्ची">💬</button>
+                    <button className="vc-btn-slip" onClick={() => { setSlipPhone(voter.phone || ''); setSlipVoter(voter); setActionMessage(''); void loadWhatsappQuota(); }} title="WhatsApp पर्ची">💬</button>
                     <button className="vc-btn-slip" style={{ marginLeft: '4px', background: '#eff6ff', color: '#1e3a8a', borderColor: '#bfdbfe' }} onClick={() => void downloadSlip(voter)} title="पर्ची डाउनलोड करें">⬇️</button>
                     {isAdmin && (
                       <button className="vc-btn-slip" style={{ marginLeft: '4px', background: '#fef2f2', color: '#b91c1c', borderColor: '#fecaca' }} onClick={() => void deleteSingleVoter(voter)} title="मतदाता हटाएं">
@@ -676,6 +726,34 @@ export default function DashboardPage() {
               <div><span className="eyebrow-label">VOTER SLIP</span><h2 id="slip-title">डिजिटल मतदाता पर्ची</h2><p>भेजने से पहले नीचे दी गई जानकारी जाँचें।</p></div>
               <button className="icon-button" onClick={() => setSlipVoter(null)} aria-label="बंद करें"><X size={18} /></button>
             </div>
+
+            {whatsappQuota && (
+              <div style={{
+                margin: '12px 0',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                background: !whatsappQuota.whatsappEnabled ? '#fee2e2' : whatsappQuota.whatsappCredits <= 0 ? '#fef3c7' : '#f0fdf4',
+                border: !whatsappQuota.whatsappEnabled ? '1px solid #fecaca' : whatsappQuota.whatsappCredits <= 0 ? '1px solid #fde68a' : '1px solid #bbf7d0',
+                fontSize: '13px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '8px'
+              }}>
+                <span style={{ fontWeight: 600, color: !whatsappQuota.whatsappEnabled ? '#991b1b' : whatsappQuota.whatsappCredits <= 0 ? '#92400e' : '#166534' }}>
+                  {!whatsappQuota.whatsappEnabled
+                    ? '🚫 संगठन के लिए WhatsApp मैसेजिंग सेवा बंद (Disabled) है'
+                    : whatsappQuota.whatsappCredits <= 0
+                    ? '⚠️ WhatsApp क्रेडिट समाप्त (0 शेष)'
+                    : `💬 उपलब्ध WhatsApp क्रेडिट: ${whatsappQuota.whatsappCredits}`}
+                </span>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>
+                  प्रयुक्त: {whatsappQuota.whatsappUsed || 0} संदेश
+                </span>
+              </div>
+            )}
+
             <div className="slip-preview">
               <div className="slip-preview-title"><strong>{slipVoter.nameHi || slipVoter.nameEn}</strong><span>{slipVoter.epic}</span></div>
               <div className="slip-details">
@@ -687,10 +765,31 @@ export default function DashboardPage() {
             </div>
             <form onSubmit={sendSlip} className="modal-form">
               <label>WhatsApp नंबर<input required inputMode="tel" value={slipPhone} onChange={(event) => setSlipPhone(event.target.value)} placeholder="+91 98765 43210" /></label>
-              {actionMessage && <p className="form-error" role="alert">{actionMessage}</p>}
-              <div className="modal-actions">
+              {actionMessage && <p className="form-error" role="alert" style={{ whiteSpace: 'pre-wrap' }}>{actionMessage}</p>}
+              <div className="modal-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
                 <button className="button-secondary" type="button" onClick={() => window.print()}><Printer size={15} /> प्रिंट</button>
-                <button className="button-primary" type="submit" disabled={sending}>{sending ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />} WhatsApp पर भेजें</button>
+                <button
+                  type="button"
+                  className="button-primary"
+                  style={{ background: '#25D366', borderColor: '#22c55e', color: '#fff' }}
+                  onClick={() => void sendManualSlip()}
+                  disabled={sending || whatsappQuota?.whatsappEnabled === false || (whatsappQuota ? whatsappQuota.whatsappCredits <= 0 : false)}
+                  title="WhatsApp Web या App पर सीधे संदेश खोलें (1 क्रेडिट कटेगा)"
+                >
+                  {sending ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}
+                  WhatsApp चैट खोलें (मैनुअल)
+                </button>
+                {whatsappQuota?.metaConfigured && (
+                  <button
+                    className="button-secondary"
+                    type="submit"
+                    disabled={sending || whatsappQuota?.whatsappEnabled === false || (whatsappQuota ? whatsappQuota.whatsappCredits <= 0 : false)}
+                    title="Meta Cloud API से बैकग्राउंड में भेजें"
+                  >
+                    {sending ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}
+                    Meta API से भेजें
+                  </button>
+                )}
               </div>
             </form>
           </section>

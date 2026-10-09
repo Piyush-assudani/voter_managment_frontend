@@ -30,6 +30,9 @@ interface Tenant {
   isActive: boolean;
   activeWorkers: number;
   voterCount: number;
+  whatsappEnabled?: boolean;
+  whatsappCredits?: number;
+  whatsappUsed?: number;
 }
 
 interface AdminVoter {
@@ -100,6 +103,8 @@ export default function AdminPanel() {
   const [showTenantPassword, setShowTenantPassword] = useState(false);
   const [tenantModules, setTenantModules] = useState<string[]>(moduleOptions.map(([key]) => key));
   const [tenantWards, setTenantWards] = useState('');
+  const [tenantWhatsappEnabled, setTenantWhatsappEnabled] = useState(true);
+  const [tenantWhatsappCredits, setTenantWhatsappCredits] = useState('500');
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [importing, setImporting] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
@@ -320,6 +325,8 @@ export default function AdminPanel() {
           password: tenantPassword,
           modules: tenantModules,
           wards: tenantWards.split(',').map((ward) => ward.trim()).filter(Boolean),
+          whatsappEnabled: tenantWhatsappEnabled,
+          whatsappCredits: Number.parseInt(tenantWhatsappCredits, 10) || 0,
         }),
       });
       if (!response.ok) throw new Error(await getApiError(response, 'क्लाइंट खाता नहीं बन सका।'));
@@ -328,6 +335,7 @@ export default function AdminPanel() {
       setTenantEmail('');
       setTenantPassword('');
       setTenantWards('');
+      setTenantWhatsappCredits('500');
       await loadOrganizations();
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : 'क्लाइंट खाता नहीं बन सका।');
@@ -351,6 +359,8 @@ export default function AdminPanel() {
           modules: editingTenant.modules,
           wards: editingTenant.wards,
           isActive: editingTenant.isActive,
+          whatsappEnabled: editingTenant.whatsappEnabled ?? true,
+          whatsappCredits: editingTenant.whatsappCredits ?? 0,
         }),
       });
       if (!response.ok) throw new Error(await getApiError(response, 'क्लाइंट सेटिंग सेव नहीं हुई।'));
@@ -602,19 +612,42 @@ export default function AdminPanel() {
                     ))}
                   </div>
                 </fieldset>
+
+                <div style={{ marginTop: '16px', padding: '14px 18px', background: '#f0fdf4', borderRadius: '10px', border: '1px solid #bbf7d0', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: '#166534', cursor: 'pointer', margin: 0 }}>
+                    <input type="checkbox" checked={tenantWhatsappEnabled} onChange={(e) => setTenantWhatsappEnabled(e.target.checked)} />
+                    💬 WhatsApp मैसेजिंग सेवा सक्षम करें
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '13px', color: '#166534' }}>
+                    प्रारंभिक WhatsApp क्रेडिट्स:
+                    <input type="number" min="0" value={tenantWhatsappCredits} onChange={(e) => setTenantWhatsappCredits(e.target.value)} style={{ width: '90px', padding: '4px 8px', borderRadius: '6px', border: '1px solid #86efac' }} />
+                  </label>
+                </div>
+
                 <div className="admin-form-actions" style={{ marginTop: '20px' }}><button className="button-primary" type="submit" disabled={saving}>{saving ? <LoaderCircle size={15} className="spin" /> : <UserPlus size={15} />} क्लाइंट बनाएँ</button></div>
               </form>
             </section>
             <section className="records-panel">
-              <div className="records-toolbar"><div><h2>क्लाइंट संगठन</h2><p>मॉड्यूल, वार्ड और खाते की स्थिति नियंत्रित करें।</p></div><span className="panel-count">{organizations.length}</span></div>
+              <div className="records-toolbar"><div><h2>क्लाइंट संगठन</h2><p>मॉड्यूल, वार्ड, WhatsApp क्रेडिट और खाते की स्थिति नियंत्रित करें।</p></div><span className="panel-count">{organizations.length}</span></div>
               {loading ? <div className="empty-state"><LoaderCircle size={20} className="spin" /><p>क्लाइंट लोड हो रहे हैं…</p></div> : organizations.length ? (
-                <div className="table-scroll"><table className="voter-table desk-table"><thead><tr><th>क्लाइंट</th><th>वार्ड</th><th>सक्षम फीचर</th><th>कार्यकर्ता</th><th>मतदाता</th><th>स्थिति</th><th>एक्शन</th></tr></thead>
+                <div className="table-scroll"><table className="voter-table desk-table"><thead><tr><th>क्लाइंट</th><th>वार्ड</th><th>सक्षम फीचर</th><th>कार्यकर्ता</th><th>मतदाता</th><th>WhatsApp कोटा</th><th>स्थिति</th><th>एक्शन</th></tr></thead>
                   <tbody>{organizations.map((tenant) => <tr key={tenant.id}>
                     <td><strong className="voter-name">{tenant.name}</strong><div className="voter-subline">{tenant.id}</div></td>
                     <td>{tenant.wards.length ? tenant.wards.join(', ') : 'सभी'}</td>
                     <td>{tenant.modules.length}</td>
                     <td>{tenant.activeWorkers} / 10</td>
                     <td>{tenant.voterCount.toLocaleString('hi-IN')}</td>
+                    <td>
+                      {tenant.whatsappEnabled !== false ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#15803d', background: '#dcfce7', padding: '2px 8px', borderRadius: '12px' }}>
+                          🟢 {(tenant.whatsappCredits ?? 0).toLocaleString('hi-IN')} क्रेडिट
+                        </span>
+                      ) : (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#b91c1c', background: '#fee2e2', padding: '2px 8px', borderRadius: '12px' }}>
+                          🔴 अक्षम
+                        </span>
+                      )}
+                    </td>
                     <td><span className={`record-status ${tenant.isActive ? 'status-voted' : 'status-pending'}`}>{tenant.isActive ? 'सक्रिय' : 'बंद'}</span></td>
                     <td><button className="button-quiet" type="button" onClick={() => setEditingTenant({ ...tenant })}><Settings2 size={14} /> कस्टमाइज़</button></td>
                   </tr>)}</tbody>
@@ -1342,7 +1375,33 @@ export default function AdminPanel() {
                     {moduleOptions.map(([module, label]) => <label key={module}><input type="checkbox" checked={editingTenant.modules.includes(module)} onChange={() => setEditingTenant({ ...editingTenant, modules: editingTenant.modules.includes(module) ? editingTenant.modules.filter((item) => item !== module) : [...editingTenant.modules, module] })} /> {label}</label>)}
                   </div>
                 </fieldset>
-                <label className="checkbox-label"><input type="checkbox" checked={editingTenant.isActive} onChange={(event) => setEditingTenant({ ...editingTenant, isActive: event.target.checked })} /> क्लाइंट खाते को सक्रिय रखें</label>
+
+                <div style={{ marginTop: '16px', padding: '14px 18px', background: '#f0fdf4', borderRadius: '10px', border: '1px solid #bbf7d0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: '#166534', cursor: 'pointer', margin: 0 }}>
+                    <input type="checkbox" checked={editingTenant.whatsappEnabled ?? true} onChange={(e) => setEditingTenant({ ...editingTenant, whatsappEnabled: e.target.checked })} />
+                    💬 WhatsApp मैसेजिंग सेवा सक्षम रखें
+                  </label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', fontSize: '13px', color: '#166534' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                      उपलब्ध क्रेडिट्स:
+                      <input type="number" min="0" value={editingTenant.whatsappCredits ?? 0} onChange={(e) => setEditingTenant({ ...editingTenant, whatsappCredits: Number.parseInt(e.target.value, 10) || 0 })} style={{ width: '100px', padding: '4px 8px', borderRadius: '6px', border: '1px solid #86efac' }} />
+                    </label>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {[100, 500, 1000].map((add) => (
+                        <button key={add} type="button" className="button-quiet" style={{ fontSize: '11px', padding: '2px 8px', background: '#fff', border: '1px solid #86efac', borderRadius: '4px', cursor: 'pointer' }} onClick={() => setEditingTenant({ ...editingTenant, whatsappCredits: (editingTenant.whatsappCredits ?? 0) + add })}>
+                          +{add}
+                        </button>
+                      ))}
+                    </div>
+                    {typeof editingTenant.whatsappUsed === 'number' && (
+                      <span style={{ fontSize: '12px', color: '#64748b', marginLeft: 'auto' }}>
+                        प्रयुक्त: {editingTenant.whatsappUsed} संदेश
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <label className="checkbox-label" style={{ marginTop: '12px' }}><input type="checkbox" checked={editingTenant.isActive} onChange={(event) => setEditingTenant({ ...editingTenant, isActive: event.target.checked })} /> क्लाइंट खाते को सक्रिय रखें</label>
                 <div className="modal-actions"><button className="button-secondary" type="button" onClick={() => setEditingTenant(null)}>रद्द करें</button><button className="button-primary" type="submit" disabled={saving}>{saving ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />} सेव करें</button></div>
               </form>
             </section>
