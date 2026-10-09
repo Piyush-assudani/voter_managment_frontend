@@ -12,6 +12,14 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  experimental: {
+    // @ts-ignore
+    middlewareClientMaxBodySize: '100mb',
+    proxyClientMaxBodySize: '100mb',
+    serverActions: {
+      bodySizeLimit: '100mb',
+    },
+  },
   async rewrites() {
     return [
       {

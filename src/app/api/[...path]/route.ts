@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const TARGET_API = 'https://vijaysetu.piyushassudani.in/api';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300;
+
 async function handler(req: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
   const pathString = Array.isArray(path) ? path.join('/') : path || '';
@@ -24,6 +27,7 @@ async function handler(req: NextRequest, context: { params: Promise<{ path: stri
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     const body = await req.arrayBuffer();
     options.body = body;
+    requestHeaders.set('content-length', body.byteLength.toString());
   }
 
   try {

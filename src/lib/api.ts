@@ -33,9 +33,31 @@ export async function getApiError(response: Response, fallback: string) {
     }
     return 'आपका सेशन एक्सपायर हो गया है। कृपया दोबारा साइन इन करें।';
   }
+
+  if (response.status === 413) {
+    return 'फाइल का आकार बहुत बड़ा है (HTTP 413 Payload Too Large)। फाइल 50MB की सीमा से अधिक है। कृपया छोटी या कंप्रेस्ड PDF अपलोड करें।';
+  }
+
+  if (response.status === 504 || response.status === 502) {
+    return `सर्वर से संपर्क नहीं हो पाया या टाइमआउट हो गया (HTTP ${response.status})। कृपया दोबारा प्रयास करें।`;
+  }
+
   try {
-    const body = await response.json();
-    return typeof body.message === 'string' ? body.message : fallback;
+    const text = await response.text();
+    try {
+      const body = JSON.parse(text);
+      if (typeof body.message === 'string' && body.message.trim()) return body.message;
+      if (typeof body.error === 'string' && body.error.trim()) return body.error;
+      if (typeof body.details === 'string' && body.details.trim()) return body.details;
+    } catch {
+      if (text.includes('exceeded') || text.includes('too large') || text.includes('Entity Too Large')) {
+        return 'फाइल का साइज 50MB सीमा से अधिक है। कृपया फाइल का साइज कम करें।';
+      }
+      if (text.length > 0 && text.length < 250 && !text.includes('<!DOCTYPE')) {
+        return text;
+      }
+    }
+    return fallback;
   } catch {
     return fallback;
   }

@@ -59,7 +59,7 @@ interface UploadJob {
   uploadedAt: string;
 }
 
-type AdminView = 'tenants' | 'records' | 'users' | 'import' | 'system';
+type AdminView = 'tenants' | 'records' | 'users' | 'import' | 'export' | 'system';
 
 export default function AdminPanel() {
   const [activeView, setActiveView] = useState<AdminView>('tenants');
@@ -257,9 +257,14 @@ export default function AdminPanel() {
       setError('क्लाइंट चुनें और Excel workbook अपलोड करें।');
       return;
     }
+    const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+    if (file.size > MAX_SIZE) {
+      setError(`चयनित Excel फाइल (${(file.size / (1024 * 1024)).toFixed(1)}MB) 50MB की सीमा से बड़ी है। कृपया 50MB से छोटी फाइल अपलोड करें।`);
+      return;
+    }
     setImporting(true);
     setError('');
-    setNotice('');
+    setNotice(`Excel फाइल अपलोड हो रही है (${(file.size / (1024 * 1024)).toFixed(1)}MB)...`);
     try {
       const body = new FormData();
       body.set('organizationId', organizationId);
@@ -272,6 +277,7 @@ export default function AdminPanel() {
       if (activeView === 'records') await loadVoters();
     } catch (importError) {
       setError(importError instanceof Error ? importError.message : 'मतदाता Excel import नहीं हुआ।');
+      setNotice('');
     } finally {
       setImporting(false);
     }
@@ -285,9 +291,14 @@ export default function AdminPanel() {
       setError('कृपया एक PDF फाइल चुनें और क्लाइंट चुनें।');
       return;
     }
+    const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+    if (file.size > MAX_SIZE) {
+      setError(`चयनित PDF फाइल (${(file.size / (1024 * 1024)).toFixed(1)}MB) 50MB की सीमा से बड़ी है। कृपया फाइल कंप्रेस करें या 50MB से छोटी PDF चुनें।`);
+      return;
+    }
     setUploadingPdf(true);
     setError('');
-    setNotice('');
+    setNotice(`PDF अपलोड हो रही है (${(file.size / (1024 * 1024)).toFixed(1)}MB)... कृपया प्रतीक्षा करें।`);
     try {
       const body = new FormData();
       body.set('organizationId', organizationId);
@@ -310,6 +321,7 @@ export default function AdminPanel() {
       void loadPdfJobs();
     } catch (importError) {
       setError(importError instanceof Error ? importError.message : 'PDF अपलोड नहीं हुई।');
+      setNotice('');
     } finally {
       setUploadingPdf(false);
     }
