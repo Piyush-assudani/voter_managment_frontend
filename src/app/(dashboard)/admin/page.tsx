@@ -3,8 +3,8 @@
 import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity, AlertCircle, Check, ChevronDown, ChevronRight, Download, FileSpreadsheet,
-  FileText, Layers, LoaderCircle, MapPin, Plus, RefreshCw,
-  Settings2, ShieldCheck, Tag, Upload, User, UserPlus, UsersRound, X,
+  FileText, Layers, LoaderCircle, MapPin, MessageCircle, Phone, Plus, RefreshCw,
+  Settings2, ShieldCheck, Tag, Trash2, Upload, User, UserPlus, UsersRound, X,
 } from 'lucide-react';
 import DashboardShell from '@/app/(dashboard)/DashboardShell';
 import AccountsManager from '@/components/AccountsManager';
@@ -68,7 +68,18 @@ interface UploadJob {
   errorMessage?: string;
 }
 
-type AdminView = 'tenants' | 'records' | 'users' | 'import' | 'export' | 'system';
+interface LeadRecord {
+  _id: string;
+  name: string;
+  phone: string;
+  constituency: string;
+  electionType: string;
+  status: 'new' | 'contacted' | 'converted' | 'closed';
+  notes?: string;
+  createdAt: string;
+}
+
+type AdminView = 'tenants' | 'leads' | 'records' | 'users' | 'import' | 'export' | 'system';
 
 export default function AdminPanel() {
   const [activeView, setActiveView] = useState<AdminView>('tenants');
@@ -91,6 +102,8 @@ export default function AdminPanel() {
   const [importing, setImporting] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [pdfJobs, setPdfJobs] = useState<UploadJob[]>([]);
+  const [leads, setLeads] = useState<LeadRecord[]>([]);
+  const [loadingLeads, setLoadingLeads] = useState(false);
 
   // Form states for Excel import
   const [excelWard, setExcelWard] = useState('');
@@ -182,11 +195,56 @@ export default function AdminPanel() {
     }
   }, [organizationId, activeView]);
 
+  const loadLeads = useCallback(async () => {
+    setLoadingLeads(true);
+    try {
+      const res = await apiFetch('/admin/leads', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json() as LeadRecord[];
+        setLeads(data);
+      }
+    } catch (err) {
+      console.error('Failed to load leads:', err);
+    } finally {
+      setLoadingLeads(false);
+    }
+  }, []);
+
+  const updateLeadStatus = async (id: string, status: string) => {
+    try {
+      const res = await apiFetch(`/admin/leads/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        setLeads((prev) => prev.map((l) => l._id === id ? { ...l, status: status as LeadRecord['status'] } : l));
+        setNotice('लीड स्थिति अपडेट हो गई।');
+      }
+    } catch {
+      setError('लीड अपडेट नहीं हो सकी।');
+    }
+  };
+
+  const deleteLead = async (id: string, name: string) => {
+    if (!window.confirm(`क्या आप "${name}" की पूछताछ रिकॉर्ड को हटाना चाहते हैं?`)) return;
+    try {
+      const res = await apiFetch(`/admin/leads/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setLeads((prev) => prev.filter((l) => l._id !== id));
+        setNotice('लीड सफलतापूर्वक डिलीट कर दी गई।');
+      }
+    } catch {
+      setError('लीड हटाई नहीं जा सकी।');
+    }
+  };
+
   const loadPageData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       if (activeView === 'records') await Promise.all([loadOrganizations(), loadVoters()]);
+      else if (activeView === 'leads') await loadLeads();
       else if (activeView === 'tenants' || activeView === 'users' || activeView === 'import') {
         await loadOrganizations();
         await loadPdfJobs();
@@ -197,9 +255,10 @@ export default function AdminPanel() {
     } finally {
       setLoading(false);
     }
-  }, [activeView, loadHealth, loadOrganizations, loadVoters, loadPdfJobs]);
+  }, [activeView, loadHealth, loadOrganizations, loadVoters, loadPdfJobs, loadLeads]);
 
   useEffect(() => { void Promise.resolve().then(() => loadPageData()); }, [loadPageData]);
+  useEffect(() => { void loadLeads(); }, [loadLeads]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -462,6 +521,7 @@ export default function AdminPanel() {
         <nav className="admin-tabs" aria-label="एडमिन सेक्शन">
           {([
             { key: 'tenants', label: 'क्लाइंट व फीचर', Icon: UsersRound },
+            { key: 'leads', label: `लीड्स व पूछताछ ${leads.length > 0 ? `(${leads.length})` : ''}`, Icon: MessageCircle },
             { key: 'records', label: 'वोटर डेटा', Icon: FileSpreadsheet },
             { key: 'users', label: 'सभी अकाउंट', Icon: UserPlus },
             { key: 'import', label: 'डेटा इम्पोर्ट', Icon: Upload },
@@ -540,6 +600,174 @@ export default function AdminPanel() {
                   </tr>)}</tbody>
                 </table></div>
               ) : <div className="empty-state"><strong>अभी कोई क्लाइंट नहीं</strong><p>पहला संगठन बनाने पर वह इस सूची में दिखेगा।</p></div>}
+            </section>
+          </>
+        )}
+
+        {activeView === 'leads' && (
+          <>
+            <section className="feature-metrics">
+              <article className="metric-card">
+                <span>कुल पूछताछ (Total Leads)</span>
+                <strong>{leads.length.toLocaleString('hi-IN')}</strong>
+                <small>वेबसाइट डेमो फॉर्म से</small>
+              </article>
+              <article className="metric-card metric-card-green">
+                <span>नई लीड्स (New)</span>
+                <strong>{leads.filter((l) => l.status === 'new').length.toLocaleString('hi-IN')}</strong>
+                <small>तुरंत संपर्क करने योग्य</small>
+              </article>
+              <article className="metric-card">
+                <span>संपर्क / फाइनल</span>
+                <strong>{leads.filter((l) => l.status === 'contacted' || l.status === 'converted').length.toLocaleString('hi-IN')}</strong>
+                <small>फॉलो-अप जारी</small>
+              </article>
+            </section>
+
+            <section className="records-panel">
+              <div className="records-toolbar">
+                <div>
+                  <h2>वेबसाइट डेमो लीड्स व संपर्क पूछताछ</h2>
+                  <p>वेबसाइट के फॉर्म से आए उम्मीदवारों के अनुरोध। 1-क्लिक में WhatsApp पर बात करें।</p>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button className="button-secondary" type="button" onClick={() => void loadLeads()} disabled={loadingLeads}>
+                    <RefreshCw size={14} className={loadingLeads ? 'spin' : ''} /> रिफ्रेश करें
+                  </button>
+                  <span className="panel-count">{leads.length} लीड्स</span>
+                </div>
+              </div>
+
+              {loadingLeads ? (
+                <div className="empty-state">
+                  <LoaderCircle size={20} className="spin" />
+                  <p>लीड्स लोड हो रही हैं…</p>
+                </div>
+              ) : leads.length ? (
+                <div className="table-scroll">
+                  <table className="voter-table desk-table">
+                    <thead>
+                      <tr>
+                        <th>तारीख व समय</th>
+                        <th>प्रत्याशी / नाम</th>
+                        <th>मोबाइल (WhatsApp)</th>
+                        <th>विधानसभा / वार्ड</th>
+                        <th>चुनाव प्रकार</th>
+                        <th>स्थिति (Status)</th>
+                        <th>एक्शन (Contact & Manage)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leads.map((lead) => {
+                        const cleanPhone = lead.phone.replace(/\D/g, '');
+                        const waLink = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(
+                          `नमस्ते ${lead.name} जी,\n\nविजयसेतु (VijaySetu) चुनाव वॉर-रूम और वोटर सॉफ्टवेयर के डेमो के लिए आपका अनुरोध प्राप्त हुआ था।\n\nक्षेत्र: ${lead.constituency}\nचुनाव स्तर: ${lead.electionType}\n\nक्या अभी बात करने का सही समय है?`
+                        )}`;
+
+                        return (
+                          <tr key={lead._id}>
+                            <td style={{ fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap' }}>
+                              {new Date(lead.createdAt).toLocaleDateString('hi-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </td>
+                            <td>
+                              <strong className="voter-name" style={{ fontSize: '14px', color: '#0f172a' }}>{lead.name}</strong>
+                              <div className="voter-subline">{lead._id}</div>
+                            </td>
+                            <td>
+                              <a
+                                href={`tel:${lead.phone}`}
+                                style={{ color: '#059669', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <Phone size={13} /> {lead.phone}
+                              </a>
+                            </td>
+                            <td>
+                              <span style={{ fontWeight: 600, color: '#334155' }}>{lead.constituency || '—'}</span>
+                            </td>
+                            <td>
+                              <span style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 500 }}>
+                                {lead.electionType}
+                              </span>
+                            </td>
+                            <td>
+                              <select
+                                aria-label="लीड स्थिति"
+                                value={lead.status}
+                                onChange={(e) => void updateLeadStatus(lead._id, e.target.value)}
+                                style={{
+                                  fontSize: '12px',
+                                  padding: '4px 8px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #cbd5e1',
+                                  background:
+                                    lead.status === 'new' ? '#dcfce7' :
+                                    lead.status === 'contacted' ? '#e0f2fe' :
+                                    lead.status === 'converted' ? '#f3e8ff' : '#f1f5f9',
+                                  fontWeight: 600,
+                                  color:
+                                    lead.status === 'new' ? '#15803d' :
+                                    lead.status === 'contacted' ? '#0369a1' :
+                                    lead.status === 'converted' ? '#7e22ce' : '#475569'
+                                }}
+                              >
+                                <option value="new">नया (New)</option>
+                                <option value="contacted">बातचीत हुई (Contacted)</option>
+                                <option value="converted">फाइनल / एक्टिव (Converted)</option>
+                                <option value="closed">बंद (Closed)</option>
+                              </select>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                <a
+                                  href={waLink}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="button-secondary"
+                                  style={{
+                                    background: '#25d366',
+                                    color: '#ffffff',
+                                    borderColor: '#25d366',
+                                    padding: '5px 10px',
+                                    fontSize: '12px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    textDecoration: 'none'
+                                  }}
+                                  title="WhatsApp पर चैट करें"
+                                >
+                                  <MessageCircle size={14} /> WhatsApp
+                                </a>
+                                <button
+                                  type="button"
+                                  className="button-quiet"
+                                  style={{ color: '#b91c1c', padding: '5px' }}
+                                  onClick={() => void deleteLead(lead._id, lead.name)}
+                                  title="लीड हटाएं"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <MessageCircle size={24} style={{ color: '#94a3b8' }} />
+                  <strong>अभी कोई वेबसाइट लीड नहीं आई</strong>
+                  <p>वेबसाइट के लैंडिंग पेज पर फॉर्म भरने पर सभी पूछताछ तुरंत यहाँ दिखाई देंगी।</p>
+                </div>
+              )}
             </section>
           </>
         )}

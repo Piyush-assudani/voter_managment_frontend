@@ -12,7 +12,8 @@ import {
   Send,
   UsersRound,
   X,
-  Download
+  Download,
+  Trash2
 } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
@@ -92,6 +93,19 @@ export default function DashboardPage() {
   const [sending, setSending] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as {
+          user?: { role?: string };
+        };
+        setIsAdmin(payload?.user?.role === 'admin');
+      } catch {}
+    }
+  }, []);
 
   const loadVoters = useCallback(async (
     search = '',
@@ -296,6 +310,50 @@ export default function DashboardPage() {
     setSelectedIds([]);
   };
 
+  const deleteSingleVoter = async (voter: Voter) => {
+    if (!isAdmin) return;
+    const voterName = voter.nameHi || voter.nameEn || voter.epic;
+    if (!window.confirm(`क्या आप मतदाता "${voterName}" (EPIC: ${voter.epic}) को निश्चित रूप से हटाना चाहते हैं?`)) {
+      return;
+    }
+    setActionMessage('मतदाता रिकॉर्ड डिलीट किया जा रहा है...');
+    try {
+      const response = await apiFetch(`/voters/${encodeURIComponent(voter._id)}`, { method: 'DELETE' });
+      if (!response.ok) {
+        throw new Error(await getApiError(response, 'मतदाता हटाया नहीं जा सका।'));
+      }
+      setVoters((current) => current.filter((v) => v._id !== voter._id));
+      setTotalRecords((prev) => Math.max(0, prev - 1));
+      setActionMessage(`मतदाता "${voterName}" सफलतापूर्वक डिलीट कर दिया गया।`);
+    } catch (delError) {
+      setActionMessage(delError instanceof Error ? delError.message : 'मतदाता हटाया नहीं जा सका।');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!isAdmin || selectedIds.length === 0) return;
+    if (!window.confirm(`क्या आप चुने गए ${selectedIds.length} मतदाताओं को निश्चित रूप से डिलीट करना चाहते हैं?`)) {
+      return;
+    }
+    setActionMessage('रिकॉर्ड्स डिलीट किए जा रहे हैं...');
+    try {
+      const response = await apiFetch('/voters/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      if (!response.ok) {
+        throw new Error(await getApiError(response, 'रिकॉर्ड्स डिलीट नहीं हो सके।'));
+      }
+      setVoters((current) => current.filter((v) => !selectedIds.includes(v._id)));
+      setTotalRecords((prev) => Math.max(0, prev - selectedIds.length));
+      setActionMessage(`${selectedIds.length} मतदाता सफलतापूर्वक डिलीट कर दिए गए।`);
+      setSelectedIds([]);
+    } catch (bulkError) {
+      setActionMessage(bulkError instanceof Error ? bulkError.message : 'डेटा डिलीट करने में त्रुटि आई।');
+    }
+  };
+
   return (
     <div className="directory-page">
       <div className="page-intro">
@@ -406,9 +464,16 @@ export default function DashboardPage() {
           </div>
           <div className="records-toolbar-actions">
             {selectedIds.length > 0 && (
-              <button className="button-secondary" type="button" onClick={() => void handleBulkDownload()} disabled={isDownloading}>
-                {isDownloading ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />} पर्चियां डाउनलोड ({selectedIds.length})
-              </button>
+              <>
+                <button className="button-secondary" type="button" onClick={() => void handleBulkDownload()} disabled={isDownloading}>
+                  {isDownloading ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />} पर्चियां डाउनलोड ({selectedIds.length})
+                </button>
+                {isAdmin && (
+                  <button className="button-secondary" style={{ color: '#b91c1c', borderColor: '#fca5a5', background: '#fef2f2' }} type="button" onClick={() => void handleBulkDelete()}>
+                    <Trash2 size={15} /> चुने गए हटाएं ({selectedIds.length})
+                  </button>
+                )}
+              </>
             )}
             <button className="button-secondary" type="button" onClick={selectAll} disabled={loading || !voters.length}>
               {selectedIds.length === voters.length ? 'चयन हटाएँ' : 'सभी चुनें'}
@@ -480,6 +545,11 @@ export default function DashboardPage() {
                     }} title="परिवार देखें"><UsersRound size={16} /></button>
                     <button className="vc-btn-slip" onClick={() => { setSlipPhone(voter.phone || ''); setSlipVoter(voter); setActionMessage(''); }} title="WhatsApp पर्ची">💬</button>
                     <button className="vc-btn-slip" style={{ marginLeft: '4px', background: '#eff6ff', color: '#1e3a8a', borderColor: '#bfdbfe' }} onClick={() => void downloadSlip(voter)} title="पर्ची डाउनलोड करें">⬇️</button>
+                    {isAdmin && (
+                      <button className="vc-btn-slip" style={{ marginLeft: '4px', background: '#fef2f2', color: '#b91c1c', borderColor: '#fecaca' }} onClick={() => void deleteSingleVoter(voter)} title="मतदाता हटाएं">
+                        <Trash2 size={15} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
