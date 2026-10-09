@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 const LOCAL_API = 'http://127.0.0.1:5002/api';
 const REMOTE_API = 'https://vijaysetu.piyushassudani.in/api';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 async function resolveTargetApi(): Promise<{ base: string; host?: string }> {

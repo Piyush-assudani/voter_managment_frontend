@@ -106,6 +106,24 @@ export default function AdminPanel() {
   const [pdfBooth, setPdfBooth] = useState('');
   const [pdfDescription, setPdfDescription] = useState('');
 
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as {
+          user?: { role?: string };
+        };
+        if (payload?.user?.role !== 'admin') {
+          window.location.href = '/';
+        }
+      } catch {
+        window.location.href = '/login';
+      }
+    } else {
+      window.location.href = '/login';
+    }
+  }, []);
+
   const loadOrganizations = useCallback(async () => {
     const response = await apiFetch('/admin/organizations', { cache: 'no-store' });
     if (!response.ok) throw new Error(await getApiError(response, 'क्लाइंट खाते लोड नहीं हुए।'));
