@@ -89,16 +89,29 @@ export default function AdminPanel() {
     setOrganizations(await response.json() as Tenant[]);
   }, []);
 
-  const loadVoters = useCallback(async () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+
+  const loadVoters = useCallback(async (page = 1) => {
     setLoading(true);
     setError('');
     try {
-      const query = organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : '';
-      const response = await apiFetch(`/admin/master-data${query}`, { cache: 'no-store' });
+      const queryParams = new URLSearchParams();
+      if (organizationId) queryParams.set('organizationId', organizationId);
+      queryParams.set('page', page.toString());
+      queryParams.set('limit', '500'); // 500 per page
+      
+      const response = await apiFetch(`/admin/master-data?${queryParams.toString()}`, { cache: 'no-store' });
       if (!response.ok) throw new Error(await getApiError(response, 'मास्टर रिकॉर्ड लोड नहीं हुए।'));
-      const result: unknown = await response.json();
-      if (!Array.isArray(result)) throw new Error('सर्वर से रिकॉर्ड का सही उत्तर नहीं मिला।');
-      setVoters(result as AdminVoter[]);
+      const result = await response.json() as { voters: AdminVoter[], pagination: { total: number, page: number, pages: number } };
+      
+      if (!result.voters) throw new Error('सर्वर से रिकॉर्ड का सही उत्तर नहीं मिला।');
+      
+      setVoters(result.voters);
+      setCurrentPage(result.pagination.page);
+      setTotalPages(result.pagination.pages);
+      setTotalRecords(result.pagination.total);
     } catch (loadError) {
       setVoters([]);
       setError(loadError instanceof Error ? loadError.message : 'मास्टर रिकॉर्ड लोड नहीं हुए।');
@@ -450,7 +463,23 @@ export default function AdminPanel() {
                   {visibleVoters.map((voter) => <tr key={`${voter.organizationId}-${voter._id}`}><td><strong className="voter-name">{voter.nameHi || voter.nameEn || '—'}</strong></td><td className="voter-code">{voter.epic || '—'}</td><td>{organizations.find((tenant) => tenant.id === voter.organizationId)?.name ?? voter.organizationId}</td><td>{voter.wardNo || '—'}</td><td>{voter.partNo || '—'}</td><td>{voter.serialNo || '—'}</td><td>{voter.phone || '—'}</td></tr>)}
                 </tbody></table></div>
               ) : <div className="empty-state"><strong>रिकॉर्ड उपलब्ध नहीं</strong><p>{error || 'डेटाबेस में मतदाता रिकॉर्ड आने पर वे यहाँ दिखेंगे।'}</p></div>}
-              <div className="records-footnote">{visibleVoters.length} रिकॉर्ड दिखाए गए (अधिकतम 1,000)। पूरा डेटा एक्सपोर्ट से मिलेगा।</div>
+              <div className="records-footnote" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>कुल {totalRecords} रिकॉर्ड्स में से पेज {currentPage} ({visibleVoters.length} दिख रहे हैं)</div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    className="button-secondary" 
+                    disabled={currentPage === 1 || loading} 
+                    onClick={() => void loadVoters(currentPage - 1)}
+                    style={{ padding: '4px 12px', fontSize: '12px' }}
+                  > पिछला </button>
+                  <button 
+                    className="button-secondary" 
+                    disabled={currentPage === totalPages || totalPages === 0 || loading} 
+                    onClick={() => void loadVoters(currentPage + 1)}
+                    style={{ padding: '4px 12px', fontSize: '12px' }}
+                  > अगला </button>
+                </div>
+              </div>
             </section>
           </>
         )}
