@@ -65,6 +65,7 @@ interface UploadJob {
   uploadedAt: string;
   excelFilename?: string;
   hasExcel?: boolean;
+  errorMessage?: string;
 }
 
 type AdminView = 'tenants' | 'records' | 'users' | 'import' | 'export' | 'system';
@@ -975,7 +976,7 @@ export default function AdminPanel() {
                             )}
                             {job.status === 'failed' && (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: '#c5221f', background: '#fce8e6', padding: '4px 10px', borderRadius: '20px' }}>
-                                <AlertCircle size={14} /> त्रुटि
+                                <AlertCircle size={14} /> {job.errorMessage ? job.errorMessage : 'त्रुटि (Error)'}
                               </span>
                             )}
                           </div>
