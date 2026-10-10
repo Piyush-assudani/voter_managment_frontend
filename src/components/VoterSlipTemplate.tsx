@@ -755,7 +755,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
           </div>
 
           {/* Center: Party Headline & Candidate Name */}
-          <div className="voter-slip-center-column" style={{ flex: 1, height: '130px', maxHeight: '130px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 4px', minWidth: 0, overflow: 'hidden' }}>
+          <div className="voter-slip-center-column" style={{ flex: 1, minHeight: '130px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 6px', minWidth: 0, overflow: 'visible' }}>
             {isEditable ? (
               <>
                 <div style={{ display: 'flex', gap: '4px', width: '100%', marginBottom: '2px' }}>
@@ -800,7 +800,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                     }}
                   />
                 </div>
-                <div style={{ display: 'flex', gap: '4px', width: '100%', margin: '2px 0' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', width: '100%', margin: '2px 0' }}>
                   <InlineText
                     value={merged.candidateName}
                     fallback="प्रसन्न चंद मेहता"
@@ -810,9 +810,9 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                     title="प्रत्याशी का हिंदी नाम बदलें"
                     className="voter-slip-candidate-name"
                     style={{
-                      flex: 1,
+                      width: '100%',
                       color: '#1e3a8a',
-                      fontSize: '18px',
+                      fontSize: '19px',
                       fontWeight: 900,
                       letterSpacing: '-0.3px',
                       lineHeight: 1.2,
@@ -832,8 +832,9 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                     title="Candidate Name in English"
                     className="voter-slip-candidate-name-en"
                     style={{
-                      color: '#1e40af',
-                      fontSize: '12px',
+                      width: '100%',
+                      color: '#2563eb',
+                      fontSize: '12.5px',
                       fontWeight: 700,
                       textAlign: 'center',
                       background: 'rgba(219, 234, 254, 0.35)',
@@ -867,57 +868,64 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               </>
             ) : (
               <>
-                {/* Line 1: Party Name & Appeal (1 clean line) */}
+                {/* Line 1: Party Name & Appeal (Clean wrapping, no truncation) */}
                 <div
                   className="voter-slip-party-headline"
                   style={{
                     color: '#ea580c',
-                    fontSize: '12.5px',
+                    fontSize: '12px',
                     fontWeight: 700,
-                    lineHeight: 1.3,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
+                    lineHeight: 1.25,
+                    textAlign: 'center',
+                    wordBreak: 'break-word',
                     maxWidth: '100%',
                   }}
                 >
-                  {merged.partyName || 'भारतीय जनता पार्टी (भाजपा) प्रत्याशी'}{merged.appealHeadline ? ` ${merged.appealHeadline}` : ' (1 नंबर पर कमल का फूल का बटन दबाएं)'}
+                  <span>{merged.partyName || 'भारतीय जनता पार्टी (भाजपा) प्रत्याशी'}</span>
+                  {merged.appealHeadline && (
+                    <span style={{ marginLeft: '4px', display: 'inline-block' }}>
+                      {merged.appealHeadline}
+                    </span>
+                  )}
                 </div>
 
-                {/* Line 2: Candidate Name (Hindi & English together, 1 clean headline line) */}
+                {/* Line 2: Candidate Name (Hindi Prominent + English Subtitle, Never Cut Off) */}
                 <div
                   className="voter-slip-candidate-name"
                   style={{
                     color: '#1e3a8a',
-                    fontSize: '20px',
-                    fontWeight: 900,
-                    lineHeight: 1.25,
-                    letterSpacing: '-0.3px',
-                    margin: '4px 0',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
+                    margin: '3px 0',
+                    textAlign: 'center',
+                    wordBreak: 'break-word',
                     maxWidth: '100%',
+                    lineHeight: 1.18,
                   }}
                 >
-                  {merged.candidateName || 'प्रत्याशी नाम'}{merged.candidateNameEn ? ` (${merged.candidateNameEn})` : ''}
+                  <div style={{ fontSize: '20px', fontWeight: 900, letterSpacing: '-0.3px', color: '#1e3a8a' }}>
+                    {merged.candidateName || 'प्रत्याशी नाम'}
+                  </div>
+                  {merged.candidateNameEn && (
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#2563eb', letterSpacing: '0.2px', marginTop: '1px' }}>
+                      ({merged.candidateNameEn})
+                    </div>
+                  )}
                 </div>
 
-                {/* Line 3: Subtitle (1 clean line) */}
+                {/* Line 3: Subtitle (Clean wrapping, no truncation) */}
                 <div
                   className="voter-slip-subtitle"
                   style={{
                     color: '#475569',
-                    fontSize: '12px',
+                    fontSize: '11.5px',
                     fontWeight: 600,
-                    lineHeight: 1.3,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
+                    lineHeight: 1.25,
+                    textAlign: 'center',
+                    wordBreak: 'break-word',
                     maxWidth: '100%',
+                    marginTop: '1px',
                   }}
                 >
-                  {merged.subTitle || `मतदाता पर्ची (Voter Slip) · वार्ड नं. ${ward}`}
+                  {merged.subTitle || `मतदाता सूचना पर्ची (Voter Slip) · वार्ड नं. ${ward}`}
                 </div>
               </>
             )}

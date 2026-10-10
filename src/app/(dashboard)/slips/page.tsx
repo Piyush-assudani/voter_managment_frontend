@@ -145,11 +145,13 @@ export default function SlipsPage() {
       const token = window.localStorage.getItem('token');
       if (token) {
         const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-        if (payload?.user?.role === 'admin') {
-          setIsAdmin(true);
-        }
+        setIsAdmin(payload?.user?.role === 'admin');
+      } else {
+        setIsAdmin(false);
       }
-    } catch {}
+    } catch {
+      setIsAdmin(false);
+    }
   }, []);
 
   // Load Slip Configuration
@@ -295,8 +297,9 @@ export default function SlipsPage() {
     reader.readAsDataURL(file);
   };
 
-  // Open Customization Modal
+  // Open Customization Modal (Admin only)
   const openCustomizing = () => {
+    if (!isAdmin) return;
     setEditingConfig({ ...slipConfig });
     const currentSelected = typeof window !== 'undefined' ? window.localStorage.getItem('selectedClientOrgId') || '' : '';
     setSelectedTargetOrgId(currentSelected || activeOrgId || 'org_default');

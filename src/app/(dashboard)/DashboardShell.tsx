@@ -339,7 +339,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         </header>
         <main className="page-content" key={selectedClientId || 'all'}>{children}</main>
         <footer className="app-footer" style={{ justifyContent: 'center' }}>
-          <span>©️ 2026 VijaySetu. All Rights Reserved. | Powered by <a href="https://morihix.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'none' }}>Morihix Pvt. Ltd</a></span>
+          <span>&copy; 2026 VijaySetu. All Rights Reserved. &bull; <a href="/privacy" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Privacy Policy</a> &bull; <a href="/terms" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Terms of Service</a></span>
         </footer>
       </div>
     </div>
