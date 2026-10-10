@@ -103,6 +103,44 @@ export default function DashboardPage() {
     metaConfigured: boolean;
   } | null>(null);
   const [slipConfig, setSlipConfig] = useState<SlipConfig>(defaultSlipConfig);
+  const [organizationName, setOrganizationName] = useState<string>('');
+
+  const loadOrgDetails = useCallback(async () => {
+    try {
+      const selectedOrgId = typeof window !== 'undefined' ? window.localStorage.getItem('selectedClientOrgId') : null;
+      const res = await apiFetch('/auth/clients', { cache: 'no-store' });
+      if (res.ok) {
+        const clients = await res.json();
+        if (Array.isArray(clients) && clients.length > 0) {
+          if (selectedOrgId && selectedOrgId !== 'all') {
+            const matched = clients.find((c: { id: string; name: string }) => c.id === selectedOrgId);
+            if (matched) {
+              setOrganizationName(matched.name);
+              return;
+            }
+          } else if (clients.length === 1) {
+            setOrganizationName(clients[0].name);
+            return;
+          } else if (!selectedOrgId || selectedOrgId === 'all') {
+            setOrganizationName('सभी क्षेत्र / पंचायतें');
+            return;
+          }
+        }
+      }
+    } catch {}
+
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as {
+          user?: { organizationName?: string; role?: string };
+        };
+        if (payload.user?.organizationName) {
+          setOrganizationName(payload.user.organizationName);
+        }
+      } catch {}
+    }
+  }, []);
 
   const loadSlipConfig = useCallback(async () => {
     try {
@@ -110,6 +148,9 @@ export default function DashboardPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.slipConfig) setSlipConfig({ ...defaultSlipConfig, ...data.slipConfig });
+        if (data.organizationName && data.organizationName !== 'Default Organization') {
+          setOrganizationName((prev) => prev || data.organizationName);
+        }
       }
     } catch {}
   }, []);
@@ -125,6 +166,7 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    void loadOrgDetails();
     void loadSlipConfig();
     const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
     if (token) {
@@ -135,7 +177,7 @@ export default function DashboardPage() {
         setIsAdmin(payload?.user?.role === 'admin');
       } catch {}
     }
-  }, []);
+  }, [loadOrgDetails, loadSlipConfig]);
 
   const loadVoters = useCallback(async (
     search = '',
@@ -198,11 +240,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const handleClientChange = () => {
+      void loadOrgDetails();
+      void loadSlipConfig();
       void loadVoters();
     };
     window.addEventListener('client-changed', handleClientChange);
     return () => window.removeEventListener('client-changed', handleClientChange);
-  }, [loadVoters]);
+  }, [loadOrgDetails, loadSlipConfig, loadVoters]);
 
   useEffect(() => () => recognitionRef.current?.stop(), []);
 
@@ -433,7 +477,13 @@ export default function DashboardPage() {
           <h1>मतदाता सूची</h1>
           <p>अपनी क्षेत्रीय मतदाता जानकारी खोजें और अपडेट करें।</p>
         </div>
-        <div className="location-chip"><MapPin size={14} /> ग्राम पंचायत जैलातरा</div>
+        <div className="location-chip" title="सक्रिय संगठन / पंचायत (Database से डायनामिक)">
+          <MapPin size={14} />
+          <span>
+            {organizationName || 'क्षेत्रीय पंचायत / वार्ड'}
+            {wardFilter ? ` · वार्ड ${wardFilter}` : ''}
+          </span>
+        </div>
       </div>
 
       <section className="directory-summary">
