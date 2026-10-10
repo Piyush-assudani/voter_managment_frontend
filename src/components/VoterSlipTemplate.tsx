@@ -30,6 +30,94 @@ export const defaultSlipConfig: SlipConfig = {
   pollingStationFallback: '569 - सामुदायिक भवन, जाटा बास, महामंदिर, जोधपुर',
 };
 
+// Render vector symbol when no custom photo is uploaded
+function renderSymbolVector(symbolName?: string) {
+  const norm = (symbolName || '').toLowerCase();
+  if (norm.includes('हाथ') || norm.includes('पंजा') || norm.includes('hand') || norm.includes('palm')) {
+    // Congress Hand SVG
+    return (
+      <svg width="56" height="56" viewBox="0 0 100 100" fill="none" stroke="#1d4ed8" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M42 22 V50 M52 14 V50 M62 20 V50 M72 32 V52 M34 40 C34 58 36 68 45 78 C54 88 68 88 74 78 C80 68 80 56 80 44" fill="#eff6ff" />
+        <path d="M34 44 C26 48 24 56 30 64 C35 70 42 74 42 74" />
+      </svg>
+    );
+  }
+  if (norm.includes('पतंग') || norm.includes('kite')) {
+    // Independent Kite SVG
+    return (
+      <svg width="56" height="56" viewBox="0 0 100 100" fill="none" stroke="#ea580c" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="50,10 88,48 50,86 12,48" fill="#fff7ed" />
+        <line x1="50" y1="10" x2="50" y2="86" stroke="#ea580c" strokeWidth="3" />
+        <line x1="12" y1="48" x2="88" y2="48" stroke="#ea580c" strokeWidth="3" />
+        <polygon points="50,86 42,96 58,96" fill="#ea580c" />
+      </svg>
+    );
+  }
+  if (norm.includes('बल्ला') || norm.includes('bat') || norm.includes('cricket')) {
+    // Independent Cricket Bat SVG
+    return (
+      <svg width="56" height="56" viewBox="0 0 100 100" fill="none" stroke="#15803d" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="36" y="26" width="22" height="56" rx="4" fill="#f0fdf4" transform="rotate(-25 47 54)" />
+        <line x1="56" y1="28" x2="68" y2="12" stroke="#ea580c" strokeWidth="5" />
+        <circle cx="72" cy="72" r="8" fill="#dc2626" stroke="#dc2626" />
+      </svg>
+    );
+  }
+  if (norm.includes('चाबी') || norm.includes('key')) {
+    // Independent Key SVG
+    return (
+      <svg width="56" height="56" viewBox="0 0 100 100" fill="none" stroke="#d97706" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="36" cy="40" r="18" fill="#fef3c7" />
+        <circle cx="36" cy="40" r="8" fill="#ffffff" />
+        <line x1="54" y1="40" x2="84" y2="40" strokeWidth="6" />
+        <line x1="74" y1="40" x2="74" y2="54" strokeWidth="5" />
+        <line x1="84" y1="40" x2="84" y2="52" strokeWidth="5" />
+      </svg>
+    );
+  }
+  if (norm.includes('झाड़ू') || norm.includes('broom')) {
+    // AAP Broom SVG
+    return (
+      <svg width="56" height="56" viewBox="0 0 100 100" fill="none" stroke="#0284c7" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="80" y1="18" x2="52" y2="50" stroke="#78350f" strokeWidth="6" />
+        <polygon points="52,50 20,82 32,88 60,56" fill="#fef9c3" stroke="#eab308" strokeWidth="3" />
+        <line x1="28" y1="84" x2="54" y2="54" stroke="#ca8a04" strokeWidth="2" />
+      </svg>
+    );
+  }
+  if (norm.includes('कमल') || norm.includes('lotus') || !norm) {
+    // BJP Lotus SVG
+    return (
+      <svg width="60" height="52" viewBox="0 0 100 85" fill="none" stroke="#ea580c" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M50 10 C50 35 35 55 50 75 C65 55 50 35 50 10 Z" fill="#fff7ed" />
+        <path d="M50 30 C32 40 20 60 40 75 C30 65 35 45 50 30 Z" fill="#fff7ed" />
+        <path d="M50 30 C68 40 80 60 60 75 C70 65 65 45 50 30 Z" fill="#fff7ed" />
+        <path d="M50 48 C22 55 10 70 32 78 C20 72 25 58 50 48 Z" fill="#fff7ed" />
+        <path d="M50 48 C78 55 90 70 68 78 C80 72 75 58 50 48 Z" fill="#fff7ed" />
+        <path d="M22 78 Q50 85 78 78" stroke="#16a34a" strokeWidth="4" />
+      </svg>
+    );
+  }
+  // Generic Election Symbol Stamp
+  return (
+    <svg width="56" height="56" viewBox="0 0 100 100" fill="none" stroke="#047857" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="20" y="20" width="60" height="60" rx="8" fill="#ecfdf5" />
+      <polygon points="50,30 56,44 70,46 59,56 62,70 50,62 38,70 41,56 30,46 44,44" fill="#047857" />
+    </svg>
+  );
+}
+
+function getSymbolEmoji(symbolName?: string): string {
+  const norm = (symbolName || '').toLowerCase();
+  if (norm.includes('हाथ') || norm.includes('hand') || norm.includes('पंजा')) return '✋';
+  if (norm.includes('पतंग') || norm.includes('kite')) return '🪁';
+  if (norm.includes('बल्ला') || norm.includes('bat')) return '🏏';
+  if (norm.includes('चाबी') || norm.includes('key')) return '🔑';
+  if (norm.includes('झाड़ू') || norm.includes('broom')) return '🧹';
+  if (norm.includes('कमल') || norm.includes('lotus')) return '🌸';
+  return '🗳️';
+}
+
 export interface VoterSlipData {
   epic?: string;
   nameEn?: string;
@@ -163,15 +251,8 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                   style={{ width: '64px', height: '64px', objectFit: 'contain' }}
                 />
               ) : (
-                /* Default Lotus / Symbol Vector */
-                <svg width="60" height="52" viewBox="0 0 100 85" fill="none" stroke="#ea580c" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M50 10 C50 35 35 55 50 75 C65 55 50 35 50 10 Z" fill="#fff7ed" />
-                  <path d="M50 30 C32 40 20 60 40 75 C30 65 35 45 50 30 Z" fill="#fff7ed" />
-                  <path d="M50 30 C68 40 80 60 60 75 C70 65 65 45 50 30 Z" fill="#fff7ed" />
-                  <path d="M50 48 C22 55 10 70 32 78 C20 72 25 58 50 48 Z" fill="#fff7ed" />
-                  <path d="M50 48 C78 55 90 70 68 78 C80 72 75 58 50 48 Z" fill="#fff7ed" />
-                  <path d="M22 78 Q50 85 78 78" stroke="#16a34a" strokeWidth="4" />
-                </svg>
+                /* Dynamic Symbol Vector (Lotus, Hand, Kite, Bat, Key, Broom, etc.) */
+                renderSymbolVector(merged.partySymbolName)
               )}
             </div>
 
@@ -329,7 +410,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={merged.partySymbolImage} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain' }} />
             ) : (
-              <span>🌸</span>
+              <span>{getSymbolEmoji(merged.partySymbolName)}</span>
             )}
             <span>{merged.partySymbolName || 'कमल का फूल'}</span>
           </div>

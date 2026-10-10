@@ -13,6 +13,11 @@ import {
   X,
   Layers,
   Sparkles,
+  Sliders,
+  Check,
+  Upload,
+  Trash2,
+  Building,
 } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
@@ -38,6 +43,57 @@ interface Voter {
   boothName?: string;
 }
 
+const partyPresets: Record<string, Partial<SlipConfig>> = {
+  bjp: {
+    partyName: 'भारतीय जनता पार्टी (भाजपा) प्रत्याशी',
+    partySymbolName: 'कमल का फूल',
+    evmNumber: '1',
+    appealHeadline: '(1 नंबर पर कमल का फूल का बटन दबाएं)',
+    appealText: 'वार्ड से भाजपा प्रत्याशी को अपना अमूल्य वोट देकर भारी मतों से विजयी बनाएं।',
+    footerAppeal: 'कमल का बटन दबाएं और भारी मतों से विजयी बनाएं',
+  },
+  inc: {
+    partyName: 'भारतीय राष्ट्रीय कांग्रेस (INC) प्रत्याशी',
+    partySymbolName: 'हाथ का पंजा',
+    evmNumber: '2',
+    appealHeadline: '(2 नंबर पर हाथ के पंजे का बटन दबाएं)',
+    appealText: 'वार्ड से कांग्रेस प्रत्याशी को अपना अमूल्य वोट देकर भारी मतों से विजयी बनाएं।',
+    footerAppeal: 'हाथ के पंजे का बटन दबाएं और भारी मतों से विजयी बनाएं',
+  },
+  ind_kite: {
+    partyName: 'निर्दलीय प्रत्याशी',
+    partySymbolName: 'पतंग',
+    evmNumber: '4',
+    appealHeadline: '(4 नंबर पर पतंग का बटन दबाएं)',
+    appealText: 'वार्ड से निर्दलीय प्रत्याशी को अपना अमूल्य वोट देकर भारी मतों से विजयी बनाएं।',
+    footerAppeal: 'पतंग का बटन दबाएं और भारी मतों से विजयी बनाएं',
+  },
+  ind_bat: {
+    partyName: 'निर्दलीय प्रत्याशी',
+    partySymbolName: 'बल्ला',
+    evmNumber: '5',
+    appealHeadline: '(5 नंबर पर बल्ले का बटन दबाएं)',
+    appealText: 'वार्ड से निर्दलीय प्रत्याशी को अपना अमूल्य वोट देकर भारी मतों से विजयी बनाएं।',
+    footerAppeal: 'बल्ले का बटन दबाएं और भारी मतों से विजयी बनाएं',
+  },
+  ind_key: {
+    partyName: 'निर्दलीय प्रत्याशी',
+    partySymbolName: 'चाबी',
+    evmNumber: '6',
+    appealHeadline: '(6 नंबर पर चाबी का बटन दबाएं)',
+    appealText: 'वार्ड से निर्दलीय प्रत्याशी को अपना अमूल्य वोट देकर भारी मतों से विजयी बनाएं।',
+    footerAppeal: 'चाबी का बटन दबाएं और भारी मतों से विजयी बनाएं',
+  },
+  aap: {
+    partyName: 'आम आदमी पार्टी (आप) प्रत्याशी',
+    partySymbolName: 'झाड़ू',
+    evmNumber: '3',
+    appealHeadline: '(3 नंबर पर झाड़ू का बटन दबाएं)',
+    appealText: 'वार्ड से आप प्रत्याशी को अपना अमूल्य वोट देकर भारी मतों से विजयी बनाएं।',
+    footerAppeal: 'झाड़ू का बटन दबाएं और भारी मतों से विजयी बनाएं',
+  },
+};
+
 export default function SlipsPage() {
   const [voters, setVoters] = useState<Voter[]>([]);
   const [selectedVoter, setSelectedVoter] = useState<Voter | null>(null);
@@ -50,6 +106,18 @@ export default function SlipsPage() {
   const [availableParts, setAvailableParts] = useState<string[]>([]);
   const [slipConfig, setSlipConfig] = useState<SlipConfig>(defaultSlipConfig);
   const [orgName, setOrgName] = useState('विजयसेतु चुनाव वॉर रूम');
+
+  // Admin access & Client management state
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [clientsList, setClientsList] = useState<Array<{ id: string; name: string; slipConfig?: SlipConfig }>>([]);
+  const [activeOrgId, setActiveOrgId] = useState<string>('');
+
+  // Branding Customization Modal state (Admin only)
+  const [isCustomizing, setIsCustomizing] = useState(false);
+  const [editingConfig, setEditingConfig] = useState<SlipConfig>(defaultSlipConfig);
+  const [selectedTargetOrgId, setSelectedTargetOrgId] = useState<string>('');
+  const [savingBranding, setSavingBranding] = useState(false);
+  const [brandingSaveMsg, setBrandingSaveMsg] = useState('');
 
   // WhatsApp Quota state
   const [whatsappQuota, setWhatsappQuota] = useState<{
@@ -72,7 +140,20 @@ export default function SlipsPage() {
 
   const printContainerRef = useRef<HTMLDivElement>(null);
 
-  // 1. Load Slip Configuration
+  // Check Admin Role
+  useEffect(() => {
+    try {
+      const token = window.localStorage.getItem('token');
+      if (token) {
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        if (payload?.user?.role === 'admin') {
+          setIsAdmin(true);
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Load Slip Configuration
   const loadSlipConfig = useCallback(async () => {
     try {
       const res = await apiFetch('/features/slip-config', { cache: 'no-store' });
@@ -84,13 +165,16 @@ export default function SlipsPage() {
         if (data.organizationName) {
           setOrgName(data.organizationName);
         }
+        if (data.organizationId) {
+          setActiveOrgId(data.organizationId);
+        }
       }
     } catch (e) {
       console.warn('Slip config load warning:', e);
     }
   }, []);
 
-  // 2. Load WhatsApp Quota
+  // Load WhatsApp Quota
   const loadWhatsappQuota = useCallback(async () => {
     try {
       const res = await apiFetch('/whatsapp/quota', { cache: 'no-store' });
@@ -101,7 +185,25 @@ export default function SlipsPage() {
     } catch {}
   }, []);
 
-  // 3. Load Voters
+  // Load Admin Clients List
+  const loadClientsList = useCallback(async () => {
+    try {
+      const res = await apiFetch('/admin/organizations', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : data.organizations || [];
+        setClientsList(
+          list.map((org: any) => ({
+            id: org._id,
+            name: org.name,
+            slipConfig: org.slipConfig,
+          }))
+        );
+      }
+    } catch {}
+  }, []);
+
+  // Load Voters
   const loadVoters = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -117,7 +219,7 @@ export default function SlipsPage() {
       const res = await apiFetch(`/voters?${params.toString()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(await getApiError(res, 'मतदाता लोड नहीं हो सके'));
       const data = await res.json();
-      const list: Voter[] = data.voters || [];
+      const list: Voter[] = Array.isArray(data) ? data : data.data || data.voters || [];
       setVoters(list);
 
       // Extract unique wards & parts
@@ -141,11 +243,112 @@ export default function SlipsPage() {
     }
   }, [searchQuery, wardFilter, partFilter]);
 
+  // Initial load
   useEffect(() => {
     void loadSlipConfig();
     void loadWhatsappQuota();
     void loadVoters();
+    void loadClientsList();
+  }, [loadSlipConfig, loadWhatsappQuota, loadVoters, loadClientsList]);
+
+  // Listen to Client Switch event from Dashboard Shell
+  useEffect(() => {
+    const handleClientChange = () => {
+      void loadSlipConfig();
+      void loadWhatsappQuota();
+      void loadVoters();
+    };
+    window.addEventListener('client-changed', handleClientChange);
+    return () => window.removeEventListener('client-changed', handleClientChange);
   }, [loadSlipConfig, loadWhatsappQuota, loadVoters]);
+
+  // Image Upload handler for Branding Modal
+  const handleImageUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: 'partySymbolImage' | 'candidateImage'
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      alert('फाइल 8MB से छोटी होनी चाहिए।');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setEditingConfig((prev) => ({ ...prev, [field]: base64 }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Open Customization Modal
+  const openCustomizing = () => {
+    setEditingConfig({ ...slipConfig });
+    const currentSelected = typeof window !== 'undefined' ? window.localStorage.getItem('selectedClientOrgId') || '' : '';
+    setSelectedTargetOrgId(currentSelected || activeOrgId || 'org_default');
+    setBrandingSaveMsg('');
+    setIsCustomizing(true);
+  };
+
+  // Change target client inside modal
+  const handleTargetClientSelect = async (orgId: string) => {
+    setSelectedTargetOrgId(orgId);
+    try {
+      const res = await apiFetch(`/admin/organizations/${orgId}/slip-config`);
+      if (res.ok) {
+        const data = await res.json();
+        setEditingConfig({ ...defaultSlipConfig, ...data });
+      } else {
+        const found = clientsList.find((c) => c.id === orgId);
+        if (found?.slipConfig) {
+          setEditingConfig({ ...defaultSlipConfig, ...found.slipConfig });
+        }
+      }
+    } catch {}
+  };
+
+  // Apply Party Preset
+  const applyPreset = (presetKey: string) => {
+    const preset = partyPresets[presetKey];
+    if (preset) {
+      setEditingConfig((prev) => ({
+        ...prev,
+        ...preset,
+      }));
+    }
+  };
+
+  // Save Branding (Admin only)
+  const handleSaveBranding = async () => {
+    setSavingBranding(true);
+    setBrandingSaveMsg('');
+    try {
+      const orgId = selectedTargetOrgId || activeOrgId || 'org_default';
+      const res = await apiFetch('/features/slip-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId: orgId,
+          slipConfig: editingConfig,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'पर्ची ब्रांडिंग सहेजी नहीं जा सकी।');
+      }
+
+      setSlipConfig(editingConfig);
+      setBrandingSaveMsg('✅ पर्ची ब्रांडिंग सफलतापूर्वक अपडेट हो गई!');
+      setTimeout(() => {
+        setIsCustomizing(false);
+        setBrandingSaveMsg('');
+      }, 1100);
+    } catch (err: any) {
+      alert(err.message || 'ब्रांडिंग सहेजने में त्रुटि हुई');
+    } finally {
+      setSavingBranding(false);
+    }
+  };
 
   // Quick WhatsApp Send (Manual wa.me)
   const handleManualWhatsApp = async () => {
@@ -252,6 +455,20 @@ export default function SlipsPage() {
         </div>
 
         <div className="feature-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Admin-only Customize Button */}
+          {isAdmin && (
+            <button
+              className="button-primary"
+              type="button"
+              onClick={openCustomizing}
+              style={{ background: '#047857', borderColor: '#059669', color: '#fff' }}
+              title="केवल एडमिन: प्रत्याशी, पार्टी, चुनाव चिन्ह, दोनों फ़ोटो व अपील कस्टमाइज़ करें"
+            >
+              <Sliders size={15} />
+              <span>पर्ची कस्टमाइज़ करें (Admin)</span>
+            </button>
+          )}
+
           <button
             className="button-secondary"
             type="button"
@@ -302,7 +519,11 @@ export default function SlipsPage() {
           </div>
           <span style={{ color: '#cbd5e1' }}>|</span>
           <div style={{ fontSize: '13px', color: '#475569' }}>
-            प्रत्याशी: <strong style={{ color: '#0f172a' }}>{slipConfig.candidateName || 'प्रसन्न चंद मेहता'}</strong>
+            पार्टी: <strong style={{ color: '#0f172a' }}>{slipConfig.partyName || 'प्रत्याशी'}</strong>
+          </div>
+          <span style={{ color: '#cbd5e1' }}>|</span>
+          <div style={{ fontSize: '13px', color: '#475569' }}>
+            प्रत्याशी: <strong style={{ color: '#0f172a' }}>{slipConfig.candidateName || 'प्रत्याशी'}</strong>
           </div>
           <span style={{ color: '#cbd5e1' }}>|</span>
           <div style={{ fontSize: '13px', color: '#475569' }}>
@@ -314,25 +535,45 @@ export default function SlipsPage() {
           </div>
         </div>
 
-        {/* WhatsApp Quota Pill */}
-        {whatsappQuota && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '4px 10px',
-              borderRadius: '20px',
-              background: !whatsappQuota.whatsappEnabled ? '#fee2e2' : whatsappQuota.whatsappCredits <= 0 ? '#fef3c7' : '#f0fdf4',
-              border: !whatsappQuota.whatsappEnabled ? '1px solid #fecaca' : whatsappQuota.whatsappCredits <= 0 ? '1px solid #fde68a' : '1px solid #bbf7d0',
-              fontSize: '12px',
-              fontWeight: 600,
-              color: !whatsappQuota.whatsappEnabled ? '#991b1b' : whatsappQuota.whatsappCredits <= 0 ? '#92400e' : '#166534',
-            }}
-          >
-            <span>💬 कोटा: {whatsappQuota.whatsappCredits} क्रेडिट</span>
-          </div>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {isAdmin && (
+            <button
+              onClick={openCustomizing}
+              style={{
+                fontSize: '12px',
+                fontWeight: 600,
+                color: '#047857',
+                background: '#ecfdf5',
+                border: '1px solid #a7f3d0',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              ⚙️ बदलाव करें
+            </button>
+          )}
+
+          {/* WhatsApp Quota Pill */}
+          {whatsappQuota && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '4px 10px',
+                borderRadius: '20px',
+                background: !whatsappQuota.whatsappEnabled ? '#fee2e2' : whatsappQuota.whatsappCredits <= 0 ? '#fef3c7' : '#f0fdf4',
+                border: !whatsappQuota.whatsappEnabled ? '1px solid #fecaca' : whatsappQuota.whatsappCredits <= 0 ? '1px solid #fde68a' : '1px solid #bbf7d0',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: !whatsappQuota.whatsappEnabled ? '#991b1b' : whatsappQuota.whatsappCredits <= 0 ? '#92400e' : '#166534',
+              }}
+            >
+              <span>💬 कोटा: {whatsappQuota.whatsappCredits} क्रेडिट</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Filter Toolbar */}
@@ -382,21 +623,36 @@ export default function SlipsPage() {
             <option value="">सभी भाग (Part)</option>
             {availableParts.map((p) => (
               <option key={p} value={p}>
-                भाग {p}
+                भाग संख्या {p}
               </option>
             ))}
           </select>
         </div>
 
-        <div style={{ fontSize: '13px', color: '#64748b' }}>
-          कुल <strong>{voters.length}</strong> मतदाता उपलब्ध
+        <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
+          कुल मतदाता: <strong style={{ color: '#0f172a' }}>{voters.length}</strong>
         </div>
       </div>
 
-      {/* ================= BULK PRINT VIEW ================= */}
+      {/* Main Studio Content */}
       {bulkMode ? (
-        <section className="bulk-slips-section">
-          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        /* ================= BULK PRINT VIEW ================= */
+        <section
+          style={{
+            background: '#ffffff',
+            borderRadius: '14px',
+            border: '1px solid #e2e8f0',
+            padding: '24px',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+            }}
+          >
             <h2 style={{ fontSize: '18px', margin: 0 }}>
               बल्क पर्ची प्रिंट शीट ({voters.length} पर्चियां)
             </h2>
@@ -453,9 +709,9 @@ export default function SlipsPage() {
               }}
             >
               <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.05em' }}>
-                मतदाता चयन ({voters.length})
+                मतदाता सूची ({voters.length})
               </span>
-              <span style={{ fontSize: '11px', color: '#94a3b8' }}>क्लिक करके पर्ची देखें</span>
+              <span style={{ fontSize: '11px', color: '#94a3b8' }}>क्लिक कर पर्ची देखें</span>
             </div>
 
             <div style={{ overflowY: 'auto', flex: 1, padding: '8px' }}>
@@ -500,16 +756,25 @@ export default function SlipsPage() {
                             border: '1px solid #fed7aa',
                           }}
                         >
-                          #{voter.serialNo || '—'}
+                          क्र. {voter.serialNo || '-'}
                         </span>
                       </div>
 
-                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '8px' }}>
-                        <span>EPIC: <strong>{voter.epic}</strong></span>
-                        <span>•</span>
-                        <span>भाग: {voter.partNo || '1'}</span>
-                        <span>•</span>
-                        <span>मकान: {voter.houseNo || '—'}</span>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                        {voter.relationType === 'husband' ? 'पति' : 'पिता'}: {voter.relativeNameHi || voter.relativeNameEn || '-'}
+                      </div>
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontSize: '11px',
+                          color: '#94a3b8',
+                          marginTop: '4px',
+                        }}
+                      >
+                        <span style={{ color: '#2563eb', fontWeight: 600 }}>{voter.epic || 'EPIC: N/A'}</span>
+                        <span>भाग: {voter.partNo || '-'} · मकान: {voter.houseNo || '-'}</span>
                       </div>
                     </div>
                   );
@@ -518,44 +783,50 @@ export default function SlipsPage() {
             </div>
           </section>
 
-          {/* RIGHT: Live Slip Preview & Action Controls */}
+          {/* RIGHT: Live Voter Slip Preview & Actions */}
           <section
             style={{
               background: '#ffffff',
-              borderRadius: '16px',
+              borderRadius: '14px',
               border: '1px solid #e2e8f0',
               padding: '24px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              boxShadow: '0 4px 20px -4px rgba(0,0,0,0.05)',
             }}
           >
-            {/* Top Slip Action Bar */}
+            {/* Action Bar */}
             <div
               style={{
                 width: '100%',
-                maxWidth: '560px',
-                marginBottom: '18px',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 flexWrap: 'wrap',
-                gap: '10px',
+                gap: '12px',
+                marginBottom: '20px',
+                paddingBottom: '16px',
+                borderBottom: '1px solid #f1f5f9',
               }}
             >
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
-                प्रारूप पूर्वावलोकन (Live Slip Preview)
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>
+                  {selectedVoter ? (
+                    <>
+                      {selectedVoter.nameHi || selectedVoter.nameEn} ·{' '}
+                      <span style={{ color: '#2563eb' }}>{selectedVoter.epic}</span>
+                    </>
+                  ) : (
+                    'प्रारूप पूर्वावलोकन (Live Slip Preview)'
+                  )}
+                </h3>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  निचले मतदाता विवरण डेटाबेस से स्वचालित व गतिशील (Dynamic) हैं
+                </span>
               </div>
 
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button
-                  className="button-secondary"
-                  type="button"
-                  onClick={handlePrint}
-                  disabled={!selectedVoter}
-                  title="सीधे प्रिंटर पर भेजें या PDF सेव करें"
-                >
+                <button className="button-secondary" type="button" onClick={handlePrint} disabled={!selectedVoter}>
                   <Printer size={15} /> प्रिंट
                 </button>
 
@@ -564,18 +835,18 @@ export default function SlipsPage() {
                   type="button"
                   onClick={handleDownloadImage}
                   disabled={!selectedVoter || isDownloading}
-                  title="हाई-डेफिनिशन JPG इमेज डाउनलोड करें"
                 >
                   {isDownloading ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />}
                   JPG डाउनलोड
                 </button>
 
                 <button
-                  type="button"
                   className="button-primary"
+                  type="button"
                   style={{ background: '#25D366', borderColor: '#22c55e', color: '#fff' }}
                   onClick={() => {
-                    setWpPhone(selectedVoter?.phone || '');
+                    if (!selectedVoter) return;
+                    setWpPhone(selectedVoter.phone || '');
                     setWpMessage('');
                     setIsWpModalOpen(true);
                   }}
@@ -595,6 +866,531 @@ export default function SlipsPage() {
                 isInline={true}
                 forwardedRef={printContainerRef}
               />
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* ================= ADMIN SLIP BRANDING CUSTOMIZATION MODAL ================= */}
+      {isCustomizing && isAdmin && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setIsCustomizing(false);
+          }}
+        >
+          <section
+            className="form-modal"
+            role="dialog"
+            style={{ maxWidth: '980px', width: '96%', maxHeight: '92vh', overflowY: 'auto' }}
+          >
+            {/* Modal Heading */}
+            <div className="modal-heading" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '14px' }}>
+              <div>
+                <span className="eyebrow-label" style={{ color: '#059669' }}>
+                  ADMIN ACCESS ONLY · BRANDING STUDIO
+                </span>
+                <h2 style={{ fontSize: '20px', margin: '4px 0', color: '#0f172a' }}>
+                  ⚙️ पर्ची ब्रांडिंग व प्रत्याशी सेटिंग्स
+                </h2>
+                <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                  प्रत्याशी, पार्टी, चुनाव चिन्ह, दोनों फ़ोटो व अपील कस्टमाइज़ करें। यहाँ के बदलाव लाइव पर्ची पर तुरंत लागू होंगे।
+                </p>
+              </div>
+              <button className="icon-button" type="button" onClick={() => setIsCustomizing(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Client Organization Selector */}
+            {clientsList.length > 0 && (
+              <div
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  margin: '16px 0 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <Building size={16} color="#059669" />
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155' }}>क्लाइंट / संगठन चुनें:</span>
+                <select
+                  value={selectedTargetOrgId}
+                  onChange={(e) => void handleTargetClientSelect(e.target.value)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    background: '#fff',
+                    flex: '1 1 200px',
+                  }}
+                >
+                  {clientsList.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Quick Party Presets */}
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '8px' }}>
+                ⚡ त्वरित पार्टी प्रीसेट्स (Quick Presets):
+              </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => applyPreset('bjp')}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '20px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    background: '#fff7ed',
+                    border: '1.5px solid #fb923c',
+                    color: '#ea580c',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🌸 भाजपा (BJP - कमल)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyPreset('inc')}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '20px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    background: '#eff6ff',
+                    border: '1.5px solid #60a5fa',
+                    color: '#1d4ed8',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ✋ कांग्रेस (INC - हाथ)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyPreset('ind_kite')}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '20px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    background: '#fef3c7',
+                    border: '1.5px solid #f59e0b',
+                    color: '#b45309',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🪁 निर्दलीय (पतंग)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyPreset('ind_bat')}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '20px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    background: '#f0fdf4',
+                    border: '1.5px solid #4ade80',
+                    color: '#15803d',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🏏 निर्दलीय (बल्ला)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyPreset('ind_key')}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '20px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    background: '#faf5ff',
+                    border: '1.5px solid #c084fc',
+                    color: '#7e22ce',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🔑 निर्दलीय (चाबी)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyPreset('aap')}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '20px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    background: '#fefce8',
+                    border: '1.5px solid #facc15',
+                    color: '#a16207',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🧹 आप (AAP - झाड़ू)
+                </button>
+              </div>
+            </div>
+
+            {/* 2-Column Layout: Left Controls, Right Real-time Live Preview */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+                gap: '24px',
+                alignItems: 'start',
+              }}
+            >
+              {/* LEFT COLUMN: Input Fields & Uploaders */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                
+                {/* 1. Photos & Symbol Upload (Both Sides) */}
+                <div
+                  style={{
+                    border: '1.5px solid #fed7aa',
+                    background: '#fffaf5',
+                    borderRadius: '12px',
+                    padding: '14px',
+                  }}
+                >
+                  <span style={{ fontSize: '13px', fontWeight: 800, color: '#c2410c', display: 'block', marginBottom: '10px' }}>
+                    📸 दोनों साइड की फोटो अपलोड (Left & Right Column Images)
+                  </span>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                    {/* Left: Party Symbol */}
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                        बायां बॉक्स: चुनाव चिन्ह (Symbol Photo)
+                      </label>
+                      <div
+                        style={{
+                          border: '2px dashed #fdba74',
+                          borderRadius: '8px',
+                          padding: '10px',
+                          textAlign: 'center',
+                          background: '#fff',
+                        }}
+                      >
+                        {editingConfig.partySymbolImage ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={editingConfig.partySymbolImage}
+                              alt="Symbol"
+                              style={{ height: '54px', objectFit: 'contain' }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setEditingConfig((prev) => ({ ...prev, partySymbolImage: '' }))}
+                              style={{
+                                fontSize: '11px',
+                                color: '#dc2626',
+                                background: '#fee2e2',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '2px 8px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <Trash2 size={12} style={{ display: 'inline', marginRight: '3px' }} /> हटाएं
+                            </button>
+                          </div>
+                        ) : (
+                          <label style={{ cursor: 'pointer', display: 'block' }}>
+                            <Upload size={22} color="#ea580c" style={{ margin: '0 auto 4px' }} />
+                            <span style={{ fontSize: '11px', color: '#ea580c', fontWeight: 700, display: 'block' }}>
+                              चिन्ह फोटो अपलोड करें
+                            </span>
+                            <span style={{ fontSize: '10px', color: '#94a3b8' }}>PNG/JPG (वेक्टर फॉलबैक उपलब्ध)</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              style={{ display: 'none' }}
+                              onChange={(e) => handleImageUpload(e, 'partySymbolImage')}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right: Candidate Photo */}
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                        दायां बॉक्स: प्रत्याशी फ़ोटो (Candidate Portrait)
+                      </label>
+                      <div
+                        style={{
+                          border: '2px dashed #fdba74',
+                          borderRadius: '8px',
+                          padding: '10px',
+                          textAlign: 'center',
+                          background: '#fff',
+                        }}
+                      >
+                        {editingConfig.candidateImage ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={editingConfig.candidateImage}
+                              alt="Candidate"
+                              style={{ height: '54px', width: '54px', borderRadius: '4px', objectFit: 'cover' }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setEditingConfig((prev) => ({ ...prev, candidateImage: '' }))}
+                              style={{
+                                fontSize: '11px',
+                                color: '#dc2626',
+                                background: '#fee2e2',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '2px 8px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <Trash2 size={12} style={{ display: 'inline', marginRight: '3px' }} /> हटाएं
+                            </button>
+                          </div>
+                        ) : (
+                          <label style={{ cursor: 'pointer', display: 'block' }}>
+                            <Upload size={22} color="#ea580c" style={{ margin: '0 auto 4px' }} />
+                            <span style={{ fontSize: '11px', color: '#ea580c', fontWeight: 700, display: 'block' }}>
+                              प्रत्याशी फोटो अपलोड करें
+                            </span>
+                            <span style={{ fontSize: '10px', color: '#94a3b8' }}>पासपोर्ट साइज JPG/PNG</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              style={{ display: 'none' }}
+                              onChange={(e) => handleImageUpload(e, 'candidateImage')}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Candidate & Party Details */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                    प्रत्याशी का नाम (हिंदी):
+                    <input
+                      type="text"
+                      placeholder="उदा. प्रसन्न चंद मेहता"
+                      value={editingConfig.candidateName || ''}
+                      onChange={(e) => setEditingConfig({ ...editingConfig, candidateName: e.target.value })}
+                      style={{ marginTop: '4px' }}
+                    />
+                  </label>
+
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                    Candidate Name (English):
+                    <input
+                      type="text"
+                      placeholder="e.g. Prasann Chand Mehta"
+                      value={editingConfig.candidateNameEn || ''}
+                      onChange={(e) => setEditingConfig({ ...editingConfig, candidateNameEn: e.target.value })}
+                      style={{ marginTop: '4px' }}
+                    />
+                  </label>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 0.6fr', gap: '10px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                    पार्टी का नाम (Party Name):
+                    <input
+                      type="text"
+                      placeholder="उदा. भारतीय जनता पार्टी (भाजपा) प्रत्याशी"
+                      value={editingConfig.partyName || ''}
+                      onChange={(e) => setEditingConfig({ ...editingConfig, partyName: e.target.value })}
+                      style={{ marginTop: '4px' }}
+                    />
+                  </label>
+
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                    चुनाव चिन्ह (Symbol):
+                    <input
+                      type="text"
+                      placeholder="उदा. कमल का फूल / हाथ"
+                      value={editingConfig.partySymbolName || ''}
+                      onChange={(e) => setEditingConfig({ ...editingConfig, partySymbolName: e.target.value })}
+                      style={{ marginTop: '4px' }}
+                    />
+                  </label>
+
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                    EVM क्र.:
+                    <input
+                      type="text"
+                      placeholder="1"
+                      value={editingConfig.evmNumber || ''}
+                      onChange={(e) => setEditingConfig({ ...editingConfig, evmNumber: e.target.value })}
+                      style={{ marginTop: '4px' }}
+                    />
+                  </label>
+                </div>
+
+                {/* 3. Headlines and Appeals */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                    शीर्ष अपील (Top Headline):
+                    <input
+                      type="text"
+                      placeholder="(1 नंबर पर कमल का फूल का बटन दबाएं)"
+                      value={editingConfig.appealHeadline || ''}
+                      onChange={(e) => setEditingConfig({ ...editingConfig, appealHeadline: e.target.value })}
+                      style={{ marginTop: '4px' }}
+                    />
+                  </label>
+
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                    वार्ड / क्षेत्र सब-टाइटल:
+                    <input
+                      type="text"
+                      placeholder="मतदाता सूचना पर्ची · वार्ड नंबर 82"
+                      value={editingConfig.subTitle || ''}
+                      onChange={(e) => setEditingConfig({ ...editingConfig, subTitle: e.target.value })}
+                      style={{ marginTop: '4px' }}
+                    />
+                  </label>
+                </div>
+
+                <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                  EVM बैनर अपील (EVM Banner Appeal Text):
+                  <input
+                    type="text"
+                    placeholder="वार्ड नंबर 82 से भाजपा प्रत्याशी प्रसन्न चंद मेहता को अपना अमूल्य वोट देकर भारी मतों से विजय बनाएं।"
+                    value={editingConfig.appealText || ''}
+                    onChange={(e) => setEditingConfig({ ...editingConfig, appealText: e.target.value })}
+                    style={{ marginTop: '4px' }}
+                  />
+                </label>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                    फुटर अपील (Bottom Footer Appeal):
+                    <input
+                      type="text"
+                      placeholder="कमल का बटन दबाएं और भारी मतों से विजयी बनाएं"
+                      value={editingConfig.footerAppeal || ''}
+                      onChange={(e) => setEditingConfig({ ...editingConfig, footerAppeal: e.target.value })}
+                      style={{ marginTop: '4px' }}
+                    />
+                  </label>
+
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                    डिफ़ॉल्ट मतदान केंद्र (Polling Station):
+                    <input
+                      type="text"
+                      placeholder="569 - सामुदायिक भवन, जाटा बास, महामंदिर, जोधपुर"
+                      value={editingConfig.pollingStationFallback || ''}
+                      onChange={(e) => setEditingConfig({ ...editingConfig, pollingStationFallback: e.target.value })}
+                      style={{ marginTop: '4px' }}
+                    />
+                  </label>
+                </div>
+
+              </div>
+
+              {/* RIGHT COLUMN: Real-Time Live Preview */}
+              <div
+                style={{
+                  background: '#f8fafc',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '14px',
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '12px',
+                    paddingBottom: '8px',
+                    borderBottom: '1px solid #e2e8f0',
+                  }}
+                >
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Sparkles size={16} color="#ea580c" />
+                    <span>रियल-टाइम लाइव प्रीव्यू (Live Preview)</span>
+                  </div>
+                  <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700 }}>
+                    ⚡ लाइव अपडेट
+                  </span>
+                </div>
+
+                <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                  <VoterSlipTemplate
+                    voter={selectedVoter || voters[0] || undefined}
+                    config={editingConfig}
+                    isInline={true}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div
+              className="modal-actions"
+              style={{
+                marginTop: '20px',
+                paddingTop: '16px',
+                borderTop: '1px solid #e2e8f0',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div>
+                {brandingSaveMsg && (
+                  <span style={{ fontSize: '13px', color: '#16a34a', fontWeight: 700 }}>
+                    {brandingSaveMsg}
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button className="button-secondary" type="button" onClick={() => setIsCustomizing(false)}>
+                  रद्द करें
+                </button>
+                <button
+                  type="button"
+                  className="button-primary"
+                  style={{ background: '#047857', borderColor: '#059669', color: '#fff' }}
+                  onClick={handleSaveBranding}
+                  disabled={savingBranding}
+                >
+                  {savingBranding ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
+                  ब्रांडिंग सहेजें (Save Branding)
+                </button>
+              </div>
             </div>
           </section>
         </div>
