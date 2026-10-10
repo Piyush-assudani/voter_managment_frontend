@@ -14,7 +14,7 @@ export function apiUrl(path: string) {
   return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-export function apiFetch(path: string, options: RequestInit = {}) {
+export async function apiFetch(path: string, options: RequestInit = {}) {
   const headers = new Headers(options.headers);
   const token = typeof window === 'undefined' ? null : window.localStorage.getItem('token');
 
@@ -27,7 +27,35 @@ export function apiFetch(path: string, options: RequestInit = {}) {
     headers.set('x-organization-id', selectedOrgId);
   }
 
-  return fetch(apiUrl(path), { ...options, headers });
+  const res = await fetch(apiUrl(path), { ...options, headers });
+
+  if (res.status === 403) {
+    try {
+      const clone = res.clone();
+      const data = await clone.json();
+      if (
+        data?.code === 'ACCOUNT_SUSPENDED' ||
+        (typeof data?.message === 'string' && (data.message.includes('बंद') || data.message.includes('disabled') || data.message.includes('Suspend')))
+      ) {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('account_suspended', 'true');
+          window.dispatchEvent(
+            new CustomEvent('account-suspended', {
+              detail: {
+                name: 'Roots Reach Media',
+                phone: '7231077770',
+                message: data.message,
+              },
+            })
+          );
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return res;
 }
 
 export async function getApiError(response: Response, fallback: string) {
@@ -37,6 +65,32 @@ export async function getApiError(response: Response, fallback: string) {
       window.location.href = '/login';
     }
     return 'आपका सेशन एक्सपायर हो गया है। कृपया दोबारा साइन इन करें।';
+  }
+
+  if (response.status === 403) {
+    try {
+      const data = await response.clone().json();
+      if (
+        data?.code === 'ACCOUNT_SUSPENDED' ||
+        (typeof data?.message === 'string' && (data.message.includes('बंद') || data.message.includes('disabled') || data.message.includes('Suspend')))
+      ) {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('account_suspended', 'true');
+          window.dispatchEvent(
+            new CustomEvent('account-suspended', {
+              detail: {
+                name: 'Roots Reach Media',
+                phone: '7231077770',
+                message: data.message,
+              },
+            })
+          );
+        }
+        return data.message || 'आपका खाता एडमिन द्वारा बंद (Suspend) किया गया है। कृपया आगे की सेवा के लिए एडमिन से संपर्क करें।';
+      }
+    } catch {
+      // ignore
+    }
   }
 
   if (response.status === 413) {

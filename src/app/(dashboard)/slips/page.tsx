@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Download,
   LoaderCircle,
@@ -22,6 +22,7 @@ import { apiFetch, getApiError } from '@/lib/api';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
 import { ImageCropModal } from '@/components/ImageCropModal';
 import { downloadSlip } from '@/lib/downloadSlip';
+import { SortButton, SortState } from '@/components/SortButton';
 
 interface Voter {
   _id: string;
@@ -137,6 +138,32 @@ export default function SlipsPage() {
   // Bulk Print Mode
   const [bulkMode, setBulkMode] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [sort, setSort] = useState<SortState>({ field: 'serialNo', direction: 'asc' });
+
+  const handleSort = (field: string) => {
+    setSort((prev) => ({
+      field,
+      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
+  const sortedVoters = useMemo(() => {
+    const list = [...voters];
+    list.sort((a, b) => {
+      let cmp = 0;
+      if (sort.field === 'serialNo') {
+        cmp = (Number(a.serialNo) || 0) - (Number(b.serialNo) || 0);
+      } else if (sort.field === 'name') {
+        const nameA = (a.nameHi || a.nameEn || '').trim();
+        const nameB = (b.nameHi || b.nameEn || '').trim();
+        cmp = nameA.localeCompare(nameB, 'hi-IN');
+      } else if (sort.field === 'houseNo') {
+        cmp = (a.houseNo || '').localeCompare(b.houseNo || '', undefined, { numeric: true });
+      }
+      return sort.direction === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  }, [voters, sort]);
 
   const printContainerRef = useRef<HTMLDivElement>(null);
 
@@ -688,9 +715,15 @@ export default function SlipsPage() {
               marginBottom: '20px',
             }}
           >
-            <h2 style={{ fontSize: '18px', margin: 0 }}>
-              बल्क पर्ची प्रिंट शीट ({voters.length} पर्चियां)
-            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              <h2 style={{ fontSize: '18px', margin: 0 }}>
+                बल्क पर्ची प्रिंट शीट ({voters.length} पर्चियां)
+              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <SortButton label="क्रम संख्या" field="serialNo" type="numeric" currentSort={sort} onSort={handleSort} />
+                <SortButton label="नाम" field="name" type="alpha" currentSort={sort} onSort={handleSort} />
+              </div>
+            </div>
             <button className="button-primary" type="button" onClick={handlePrint}>
               <Printer size={15} /> पूरी शीट प्रिंट करें
             </button>
@@ -704,7 +737,7 @@ export default function SlipsPage() {
               gap: '24px',
             }}
           >
-            {voters.map((voter) => (
+            {sortedVoters.map((voter) => (
               <div key={voter._id} style={{ background: '#fff', borderRadius: '16px' }}>
                 <VoterSlipTemplate voter={voter} config={slipConfig} isInline={true} />
               </div>
@@ -740,14 +773,20 @@ export default function SlipsPage() {
                 borderBottom: '1px solid #f1f5f9',
                 background: '#f8fafc',
                 display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
+                flexDirection: 'column',
+                gap: '8px',
               }}
             >
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.05em' }}>
-                मतदाता सूची ({voters.length})
-              </span>
-              <span style={{ fontSize: '11px', color: '#94a3b8' }}>क्लिक कर पर्ची देखें</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.05em' }}>
+                  मतदाता सूची ({voters.length})
+                </span>
+                <span style={{ fontSize: '11px', color: '#94a3b8' }}>क्लिक कर पर्ची देखें</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <SortButton label="क्रम संख्या" field="serialNo" type="numeric" currentSort={sort} onSort={handleSort} />
+                <SortButton label="नाम" field="name" type="alpha" currentSort={sort} onSort={handleSort} />
+              </div>
             </div>
 
             <div style={{ overflowY: 'auto', flex: 1, padding: '8px' }}>
@@ -761,7 +800,7 @@ export default function SlipsPage() {
                   कोई मतदाता नहीं मिला
                 </div>
               ) : (
-                voters.map((voter) => {
+                sortedVoters.map((voter) => {
                   const isSelected = selectedVoter?._id === voter._id;
                   return (
                     <div

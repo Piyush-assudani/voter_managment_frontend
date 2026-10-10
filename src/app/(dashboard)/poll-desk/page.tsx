@@ -3,6 +3,7 @@
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, Circle, LoaderCircle, Printer, RefreshCw, Search } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
+import { SortButton, SortState } from '@/components/SortButton';
 
 interface Voter {
   _id: string;
@@ -115,6 +116,14 @@ export default function PollDeskPage() {
     if (selectedWard) void loadVoters(selectedWard);
   }, [selectedWard, loadVoters]);
 
+  const [sort, setSort] = useState<SortState>({ field: 'serialNo', direction: 'asc' });
+  const handleSort = (field: string) => {
+    setSort((prev) => ({
+      field,
+      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
   const visibleVoters = useMemo(() => voters.filter((voter) => {
     const matchesPart = !selectedPart || voter.partNo === selectedPart;
     const matchesStatus = filter === 'all' || (filter === 'voted' ? voter.voted : !voter.voted);
@@ -125,6 +134,24 @@ export default function PollDeskPage() {
       || (voter.nameEn || '').toLowerCase().includes(query);
     return matchesPart && matchesStatus && matchesSearch;
   }), [filter, debouncedSearch, selectedPart, voters]);
+
+  const sortedVisibleVoters = useMemo(() => {
+    const list = [...visibleVoters];
+    list.sort((a, b) => {
+      let cmp = 0;
+      if (sort.field === 'serialNo') {
+        cmp = (Number(a.serialNo) || 0) - (Number(b.serialNo) || 0);
+      } else if (sort.field === 'name') {
+        const nameA = (a.nameHi || a.nameEn || '').trim();
+        const nameB = (b.nameHi || b.nameEn || '').trim();
+        cmp = nameA.localeCompare(nameB, 'hi-IN');
+      } else if (sort.field === 'houseNo') {
+        cmp = (a.houseNo || '').localeCompare(b.houseNo || '', undefined, { numeric: true });
+      }
+      return sort.direction === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  }, [visibleVoters, sort]);
 
   const parts = useMemo(() => [...new Set(voters.map((voter) => voter.partNo).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [voters]);
   const partVoters = useMemo(() => voters.filter((voter) => !selectedPart || voter.partNo === selectedPart), [voters, selectedPart]);
@@ -237,9 +264,24 @@ export default function PollDeskPage() {
         ) : (
           <div className="table-scroll">
             <table className="voter-table desk-table">
-              <thead><tr><th>क्रमांक</th><th>मतदाता</th><th>मकान</th><th>उम्र / लिंग</th><th>मतदान स्थिति</th><th>कार्य</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>
+                    <SortButton label="क्रम संख्या" field="serialNo" type="numeric" currentSort={sort} onSort={handleSort} />
+                  </th>
+                  <th>
+                    <SortButton label="नाम" field="name" type="alpha" currentSort={sort} onSort={handleSort} />
+                  </th>
+                  <th>
+                    <SortButton label="मकान" field="houseNo" type="numeric" currentSort={sort} onSort={handleSort} />
+                  </th>
+                  <th>उम्र / लिंग</th>
+                  <th>मतदान स्थिति</th>
+                  <th>कार्य</th>
+                </tr>
+              </thead>
               <tbody>
-                {visibleVoters.map((voter) => <VoterTableRow key={voter._id} voter={voter} toggleVote={toggleVote} savingId={savingId} />)}
+                {sortedVisibleVoters.map((voter) => <VoterTableRow key={voter._id} voter={voter} toggleVote={toggleVote} savingId={savingId} />)}
               </tbody>
             </table>
           </div>

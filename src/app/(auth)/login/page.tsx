@@ -91,7 +91,64 @@ export default function LoginPage() {
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          {error && <p className="auth-error" role="alert">{error}</p>}
+          {error && (
+            <div
+              style={{
+                marginTop: '12px',
+                padding: '14px 16px',
+                borderRadius: '12px',
+                background: '#fef2f2',
+                border: '1.5px solid #f87171',
+                textAlign: 'left',
+              }}
+              role="alert"
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b91c1c', fontWeight: 800, fontSize: '14px', marginBottom: '6px' }}>
+                <span>⛔</span>
+                <span>{error.includes('बंद') || error.includes('Suspend') ? 'खाता बंद / निलंबित है' : 'साइन इन त्रुटि'}</span>
+              </div>
+              <p style={{ margin: 0, fontSize: '13px', color: '#7f1d1d', lineHeight: 1.5 }}>{error}</p>
+              {(error.includes('बंद') || error.includes('Suspend')) && (
+                <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #fecaca' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#991b1b', marginBottom: '4px' }}>
+                    संपर्क करें: Roots Reach Media
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                    <a
+                      href="tel:7231077770"
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        background: '#2563eb',
+                        color: '#fff',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                      }}
+                    >
+                      📞 7231077770
+                    </a>
+                    <a
+                      href="https://wa.me/917231077770?text=%E0%A4%A8%E0%A4%AE%E0%A4%B8%E0%A5%8D%E0%A4%A4%E0%A5%87%20Roots%20Reach%20Media%2C%20%E0%A4%AE%E0%A5%87%E0%A4%B0%E0%A4%BE%20%E0%A4%B5%E0%A4%BF%E0%A4%9C%E0%A4%AF%E0%A4%B8%E0%A5%87%E0%A4%A4%E0%A5%81%20%E0%A4%96%E0%A4%BE%E0%A4%A4%E0%A4%BE%20%E0%A4%8F%E0%A4%A1%E0%A4%AE%E0%A4%BF%E0%A4%A8%20%E0%A4%A6%E0%A5%8D%E0%A4%B5%E0%A4%BE%E0%A4%B0%E0%A4%BE%20%E0%A4%AC%E0%A4%82%E0%A4%A6%20(%E0%A4%A8%E0%A4%BF%E0%A4%B2%E0%A4%82%E0%A4%AC%E0%A4%BF%E0%A4%A4)%20%E0%A4%95%E0%A4%BF%E0%A4%AF%E0%A4%BE%20%E0%A4%97%E0%A4%AF%E0%A4%BE%20%E0%A4%B9%E0%A5%88%E0%A5%A4%20%E0%A4%95%E0%A5%83%E0%A4%AA%E0%A4%AF%E0%A4%BE%20%E0%A4%87%E0%A4%B8%E0%A5%87%20%E0%A4%AA%E0%A5%81%E0%A4%A8%E0%A4%83%20%E0%A4%9A%E0%A4%BE%E0%A4%B2%E0%A5%82%20%E0%A4%95%E0%A4%B0%E0%A5%87%E0%A4%82%E0%A5%A4"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        background: '#16a34a',
+                        color: '#fff',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                      }}
+                    >
+                      💬 WhatsApp
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           <button className="auth-submit" type="submit" disabled={loading}>
             {loading ? <LoaderCircle size={16} className="spin" /> : <>साइन इन करें <ArrowRight size={16} /></>}
           </button>
@@ -102,7 +159,7 @@ export default function LoginPage() {
         </div>
       </section>
       <div className="auth-caption">
-        &copy; 2026 VijaySetu. All Rights Reserved. &bull; <a href="/privacy" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Privacy Policy</a> &bull; <a href="/terms" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Terms of Service</a>
+        &copy; 2026 VijaySetu &bull; Roots Reach Media. All Rights Reserved. &bull; <a href="/privacy" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Privacy Policy</a> &bull; <a href="/terms" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Terms of Service</a> &bull; 📞 7231077770
       </div>
     </main>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check,
   FileText,
@@ -22,6 +22,7 @@ import { apiFetch, getApiError } from '@/lib/api';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
 import { downloadSlip } from '@/lib/downloadSlip';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
+import { SortButton, SortState } from '@/components/SortButton';
 
 interface Voter {
   _id: string;
@@ -68,6 +69,32 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [familyHouse, setFamilyHouse] = useState('');
+  const [sort, setSort] = useState<SortState>({ field: 'serialNo', direction: 'asc' });
+
+  const handleSort = (field: string) => {
+    setSort((prev) => ({
+      field,
+      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
+  const sortedVoters = useMemo(() => {
+    const list = [...voters];
+    list.sort((a, b) => {
+      let cmp = 0;
+      if (sort.field === 'serialNo') {
+        cmp = (Number(a.serialNo) || 0) - (Number(b.serialNo) || 0);
+      } else if (sort.field === 'name') {
+        const nameA = (a.nameHi || a.nameEn || '').trim();
+        const nameB = (b.nameHi || b.nameEn || '').trim();
+        cmp = nameA.localeCompare(nameB, 'hi-IN');
+      } else if (sort.field === 'houseNo') {
+        cmp = (a.houseNo || '').localeCompare(b.houseNo || '', undefined, { numeric: true });
+      }
+      return sort.direction === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  }, [voters, sort]);
   const [tagVoter, setTagVoter] = useState<Voter | null>(null);
   const [tagValues, setTagValues] = useState({
     caste: '',
@@ -693,6 +720,11 @@ export default function DashboardPage() {
                 )}
               </>
             )}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              <SortButton label="क्रम संख्या" field="serialNo" type="numeric" currentSort={sort} onSort={handleSort} />
+              <SortButton label="नाम" field="name" type="alpha" currentSort={sort} onSort={handleSort} />
+              <SortButton label="मकान" field="houseNo" type="numeric" currentSort={sort} onSort={handleSort} />
+            </div>
             <button className="button-secondary" type="button" onClick={selectAll} disabled={loading || !voters.length}>
               {selectedIds.length === voters.length ? 'चयन हटाएँ' : 'सभी चुनें'}
             </button>
@@ -719,7 +751,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="voter-cards-grid">
-            {voters.map((voter) => (
+            {sortedVoters.map((voter) => (
               <div key={voter._id} className="voter-card">
                 <div className="vc-header">
                   <div className="vc-header-left">

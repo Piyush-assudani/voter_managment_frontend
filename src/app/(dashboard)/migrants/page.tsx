@@ -1,9 +1,10 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Download, LoaderCircle, MapPin, Phone, RefreshCw, Search, UserRoundX } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
+import { SortButton, SortState } from '@/components/SortButton';
 
 interface Migrant {
   _id: string;
@@ -32,6 +33,34 @@ export default function MigrantsPage() {
   const [savingId, setSavingId] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [sort, setSort] = useState<SortState>({ field: 'name', direction: 'asc' });
+
+  const handleSort = (field: string) => {
+    setSort((prev) => ({
+      field,
+      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
+  const sortedVoters = useMemo(() => {
+    const list = [...voters];
+    list.sort((a, b) => {
+      let cmp = 0;
+      if (sort.field === 'serialNo') {
+        cmp = (Number(a.serialNo) || 0) - (Number(b.serialNo) || 0);
+      } else if (sort.field === 'name') {
+        const nameA = (a.nameHi || a.nameEn || '').trim();
+        const nameB = (b.nameHi || b.nameEn || '').trim();
+        cmp = nameA.localeCompare(nameB, 'hi-IN');
+      } else if (sort.field === 'location') {
+        const locA = (locations[a._id] || a.migrantLocation || '').trim();
+        const locB = (locations[b._id] || b.migrantLocation || '').trim();
+        cmp = locA.localeCompare(locB, 'hi-IN');
+      }
+      return sort.direction === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  }, [voters, sort, locations]);
 
   const load = useCallback(async (q = search, selectedWard = ward) => {
     setLoading(true);
@@ -119,15 +148,34 @@ export default function MigrantsPage() {
           <button className="button-primary" type="submit" disabled={loading}><Search size={15} /> खोजें</button>
         </form>
         {loading && !voters.length ? <div className="empty-state"><LoaderCircle size={20} className="spin" /><p>प्रवासी रिकॉर्ड लोड हो रहे हैं…</p></div> : voters.length ? (
-          <div className="table-scroll"><table className="voter-table desk-table"><thead><tr><th>मतदाता</th><th>मतदाता विवरण</th><th>संपर्क</th><th>वर्तमान स्थान</th><th>कार्य</th></tr></thead><tbody>
-            {voters.map((voter) => <tr key={voter._id}>
-              <td><div className="voter-name">{voter.nameHi || voter.nameEn || '—'}</div><div className="voter-subline">{voter.relativeNameHi || '—'}</div></td>
-              <td>{voter.wardNo} · {voter.partNo} · मकान {voter.houseNo || '—'}<div className="voter-subline">क्रम {voter.serialNo || '—'} · परिवार में {voter.householdCount || 1}</div></td>
-              <td>{voter.phone ? <div className="feature-actions"><a className="button-quiet" href={`tel:${voter.phone}`} aria-label={`${voter.nameHi || voter.nameEn} को कॉल करें`}><Phone size={14} /> कॉल</a><a className="button-quiet" href={`https://wa.me/${voter.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">WhatsApp</a></div> : 'फोन दर्ज नहीं'}</td>
-              <td><input className="feature-inline-input" aria-label={`${voter.nameHi || voter.nameEn} का वर्तमान स्थान`} placeholder="स्थान दर्ज करें" value={locations[voter._id] || ''} onChange={(event) => setLocations((current) => ({ ...current, [voter._id]: event.target.value }))} /></td>
-              <td><div className="feature-actions"><button className="button-secondary" type="button" onClick={() => void updateVoter(voter)} disabled={savingId === voter._id}>{savingId === voter._id ? <LoaderCircle size={14} className="spin" /> : <MapPin size={14} />} सेव</button><button className="button-quiet" type="button" onClick={() => void updateVoter(voter, true)} disabled={savingId === voter._id}><UserRoundX size={14} /> चिह्न हटाएँ</button></div></td>
-            </tr>)}
-          </tbody></table></div>
+          <div className="table-scroll">
+            <table className="voter-table desk-table">
+              <thead>
+                <tr>
+                  <th>
+                    <SortButton label="नाम" field="name" type="alpha" currentSort={sort} onSort={handleSort} />
+                  </th>
+                  <th>
+                    <SortButton label="क्रम संख्या / विवरण" field="serialNo" type="numeric" currentSort={sort} onSort={handleSort} />
+                  </th>
+                  <th>संपर्क</th>
+                  <th>
+                    <SortButton label="वर्तमान स्थान" field="location" type="alpha" currentSort={sort} onSort={handleSort} />
+                  </th>
+                  <th>कार्य</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedVoters.map((voter) => <tr key={voter._id}>
+                  <td><div className="voter-name">{voter.nameHi || voter.nameEn || '—'}</div><div className="voter-subline">{voter.relativeNameHi || '—'}</div></td>
+                  <td>{voter.wardNo} · {voter.partNo} · मकान {voter.houseNo || '—'}<div className="voter-subline">क्रम {voter.serialNo || '—'} · परिवार में {voter.householdCount || 1}</div></td>
+                  <td>{voter.phone ? <div className="feature-actions"><a className="button-quiet" href={`tel:${voter.phone}`} aria-label={`${voter.nameHi || voter.nameEn} को कॉल करें`}><Phone size={14} /> कॉल</a><a className="button-quiet" href={`https://wa.me/${voter.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">WhatsApp</a></div> : 'फोन दर्ज नहीं'}</td>
+                  <td><input className="feature-inline-input" aria-label={`${voter.nameHi || voter.nameEn} का वर्तमान स्थान`} placeholder="स्थान दर्ज करें" value={locations[voter._id] || ''} onChange={(event) => setLocations((current) => ({ ...current, [voter._id]: event.target.value }))} /></td>
+                  <td><div className="feature-actions"><button className="button-secondary" type="button" onClick={() => void updateVoter(voter)} disabled={savingId === voter._id}>{savingId === voter._id ? <LoaderCircle size={14} className="spin" /> : <MapPin size={14} />} सेव</button><button className="button-quiet" type="button" onClick={() => void updateVoter(voter, true)} disabled={savingId === voter._id}><UserRoundX size={14} /> चिह्न हटाएँ</button></div></td>
+                </tr>)}
+              </tbody>
+            </table>
+          </div>
         ) : <div className="empty-state"><strong>{loading ? 'लोड हो रहा है…' : 'कोई प्रवासी रिकॉर्ड नहीं'}</strong><p>मतदाता सूची में किसी रिकॉर्ड को प्रवासी चिह्नित करने पर वह यहाँ दिखेगा।</p></div>}
       </section>
     </div>

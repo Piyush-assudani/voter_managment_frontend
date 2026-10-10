@@ -2,7 +2,7 @@
 
 import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Activity, AlertCircle, Check, ChevronDown, ChevronRight, Download, Eye, EyeOff, FileSpreadsheet,
+  Activity, AlertCircle, Check, ChevronDown, ChevronRight, Copy, Download, Eye, EyeOff, FileSpreadsheet,
   FileText, KeyRound, Layers, LoaderCircle, MapPin, MessageCircle, Phone, Plus, RefreshCw,
   Settings2, ShieldCheck, Sparkles, Tag, Ticket, Trash2, Upload, User, UserPlus, UsersRound, X,
 } from 'lucide-react';
@@ -12,6 +12,7 @@ import { apiFetch, getApiError } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
 import { ImageCropModal } from '@/components/ImageCropModal';
+import { SortButton, SortState } from '@/components/SortButton';
 
 const partyPresets: Record<string, { label: string; config: Partial<SlipConfig> }> = {
   bjp: {
@@ -155,13 +156,33 @@ interface LeadRecord {
   createdAt: string;
 }
 
-type AdminView = 'tenants' | 'branding' | 'leads' | 'records' | 'users' | 'import' | 'export' | 'system';
+interface DemoUserRecord {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+  isActive: boolean;
+  voterCount: number;
+  createdAt: string;
+}
+
+type AdminView = 'tenants' | 'demo' | 'branding' | 'leads' | 'records' | 'users' | 'import' | 'export' | 'system';
 
 export default function AdminPanel() {
   const [activeView, setActiveView] = useState<AdminView>('tenants');
   const [organizations, setOrganizations] = useState<Tenant[]>([]);
   const [voters, setVoters] = useState<AdminVoter[]>([]);
   const [health, setHealth] = useState<SystemHealth | null>(null);
+  const [demoUsers, setDemoUsers] = useState<DemoUserRecord[]>([]);
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoGenerating, setDemoGenerating] = useState(false);
+  const [demoClientName, setDemoClientName] = useState('');
+  const [demoCustomEmail, setDemoCustomEmail] = useState('');
+  const [demoCustomPassword, setDemoCustomPassword] = useState('');
+  const [latestGenerated, setLatestGenerated] = useState<DemoUserRecord | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [demoSort, setDemoSort] = useState<SortState>({ field: 'date', direction: 'desc' });
+  const [recordsSort, setRecordsSort] = useState<SortState>({ field: 'serialNo', direction: 'asc' });
   const [expandedOrgId, setExpandedOrgId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -481,11 +502,138 @@ export default function AdminPanel() {
     }
   };
 
+  const handleDemoSort = (field: string) => {
+    setDemoSort((prev) => ({
+      field,
+      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
+  const handleRecordsSort = (field: string) => {
+    setRecordsSort((prev) => ({
+      field,
+      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
+  const loadDemoUsers = useCallback(async () => {
+    setDemoLoading(true);
+    try {
+      const res = await apiFetch('/admin/demo-users');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) setDemoUsers(data);
+      }
+    } catch (e) {
+      console.error('Failed to load demo users', e);
+    } finally {
+      setDemoLoading(false);
+    }
+  }, []);
+
+  const createDemoUser = async (e: FormEvent) => {
+    e.preventDefault();
+    setDemoGenerating(true);
+    setError('');
+    setNotice('');
+    try {
+      const res = await apiFetch('/admin/demo-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientName: demoClientName.trim(),
+          customEmail: demoCustomEmail.trim(),
+          customPassword: demoCustomPassword.trim(),
+        }),
+      });
+      if (!res.ok) throw new Error(await getApiError(res, 'डेमो खाता नहीं बन सका।'));
+      const result = await res.json();
+      setNotice(result.message || 'नया डेमो यूज़र व 25 सैंपल मतदाताओं का डेटा तैयार हो गया!');
+      if (result.demoUser) {
+        setLatestGenerated(result.demoUser);
+      }
+      setDemoClientName('');
+      setDemoCustomEmail('');
+      setDemoCustomPassword('');
+      await loadDemoUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'डेमो खाता नहीं बन सका।');
+    } finally {
+      setDemoGenerating(false);
+    }
+  };
+
+  const toggleDemoSuspend = async (orgId: string) => {
+    setError('');
+    setNotice('');
+    try {
+      const res = await apiFetch(`/admin/demo-users/${encodeURIComponent(orgId)}/toggle-suspend`, {
+        method: 'PUT',
+      });
+      if (!res.ok) throw new Error(await getApiError(res, 'स्टेटस अपडेट नहीं हो पाया।'));
+      const result = await res.json();
+      setNotice(result.message);
+      await loadDemoUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'स्टेटस अपडेट नहीं हो पाया।');
+    }
+  };
+
+  const deleteDemoUser = async (orgId: string) => {
+    if (!window.confirm('क्या आप सचमुच इस डेमो खाते और इसके सभी डेटा को हटाना चाहते हैं?')) return;
+    setError('');
+    setNotice('');
+    try {
+      const res = await apiFetch(`/admin/demo-users/${encodeURIComponent(orgId)}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error(await getApiError(res, 'डेमो खाता डिलीट नहीं हो सका।'));
+      const result = await res.json();
+      setNotice(result.message);
+      if (latestGenerated?.id === orgId) setLatestGenerated(null);
+      await loadDemoUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'डेमो खाता डिलीट नहीं हो सका।');
+    }
+  };
+
+  const copyDemoCredentials = (email: string, pass: string, id: string) => {
+    const text = `विजयसेतु डेमो पोर्टल:\nलॉगिन लिंक: https://vijaysetu.piyushassudani.in/login\nआईडी / ईमेल: ${email}\nपासवर्ड: ${pass}\nसहायता संपर्क: Roots Reach Media (+91 72310 77770)`;
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setNotice('डेमो क्रेडेंशियल्स कॉपी हो गए!');
+    setTimeout(() => setCopiedId(null), 3000);
+  };
+
+  const shareDemoWhatsApp = (email: string, pass: string, name: string) => {
+    const msg = `*नमस्ते ${name}!*\n\nआपका *VijaySetu (विजयसेतु)* इलेक्शन मैनेजमेंट डेमो पोर्टल तैयार है:\n\n🔗 *लॉगिन लिंक:* https://vijaysetu.piyushassudani.in/login\n📧 *आईडी / ईमेल:* ${email}\n🔑 *पासवर्ड:* ${pass}\n\nपोर्टल में 25 सैंपल मतदाताओं का डेटा, 1-सेकंड पर्ची जनरेटर, लाइव पोल-डेस्क व जातिगत समीकरण पहले से सक्रिय हैं।\n\nकिसी भी सहायता के लिए संपर्क करें:\n*Roots Reach Media* - 📞 +91 72310 77770`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  const sortedDemoUsers = useMemo(() => {
+    const list = [...demoUsers];
+    list.sort((a, b) => {
+      let cmp = 0;
+      if (demoSort.field === 'name') {
+        cmp = (a.name || '').localeCompare(b.name || '', 'hi-IN');
+      } else if (demoSort.field === 'voterCount') {
+        cmp = (a.voterCount || 0) - (b.voterCount || 0);
+      } else if (demoSort.field === 'status') {
+        cmp = a.isActive === b.isActive ? 0 : a.isActive ? -1 : 1;
+      } else {
+        cmp = new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      }
+      return demoSort.direction === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  }, [demoUsers, demoSort]);
+
   const loadPageData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       if (activeView === 'records') await Promise.all([loadOrganizations(), loadVoters()]);
+      else if (activeView === 'demo') await loadDemoUsers();
       else if (activeView === 'leads') await loadLeads();
       else if (activeView === 'tenants' || activeView === 'branding' || activeView === 'users' || activeView === 'import') {
         await loadOrganizations();
@@ -497,7 +645,7 @@ export default function AdminPanel() {
     } finally {
       setLoading(false);
     }
-  }, [activeView, loadHealth, loadOrganizations, loadVoters, loadPdfJobs, loadLeads]);
+  }, [activeView, loadHealth, loadOrganizations, loadVoters, loadPdfJobs, loadLeads, loadDemoUsers]);
 
   useEffect(() => { void Promise.resolve().then(() => loadPageData()); }, [loadPageData]);
   useEffect(() => { void loadLeads(); }, [loadLeads]);
@@ -529,7 +677,28 @@ export default function AdminPanel() {
     () => [...new Set(voters.map((voter) => voter.wardNo).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
     [voters],
   );
-  const visibleVoters = wardFilter ? voters.filter((voter) => voter.wardNo === wardFilter) : voters;
+
+  const filteredVoters = wardFilter ? voters.filter((voter) => voter.wardNo === wardFilter) : voters;
+
+  const visibleVoters = useMemo(() => {
+    const list = [...filteredVoters];
+    list.sort((a, b) => {
+      let cmp = 0;
+      if (recordsSort.field === 'serialNo') {
+        cmp = (Number(a.serialNo) || 0) - (Number(b.serialNo) || 0);
+      } else if (recordsSort.field === 'name') {
+        const nameA = (a.nameHi || a.nameEn || '').trim();
+        const nameB = (b.nameHi || b.nameEn || '').trim();
+        cmp = nameA.localeCompare(nameB, 'hi-IN');
+      } else if (recordsSort.field === 'wardNo') {
+        cmp = (a.wardNo || '').localeCompare(b.wardNo || '', undefined, { numeric: true });
+      } else if (recordsSort.field === 'partNo') {
+        cmp = (a.partNo || '').localeCompare(b.partNo || '', undefined, { numeric: true });
+      }
+      return recordsSort.direction === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  }, [filteredVoters, recordsSort]);
 
   const downloadExcel = async (path: string, fallback: string, filename: string) => {
     setSaving(true);
@@ -783,6 +952,7 @@ export default function AdminPanel() {
         <nav className="admin-tabs" aria-label="एडमिन सेक्शन">
           {([
             { key: 'tenants', label: 'क्लाइंट व संगठन', Icon: UsersRound },
+            { key: 'demo', label: `डेमो यूज़र जनरेटर ${demoUsers.length > 0 ? `(${demoUsers.length})` : ''}`, Icon: KeyRound },
             { key: 'branding', label: 'पर्ची ब्रांडिंग', Icon: Ticket },
             { key: 'leads', label: `लीड्स व पूछताछ ${leads.length > 0 ? `(${leads.length})` : ''}`, Icon: MessageCircle },
             { key: 'records', label: 'वोटर डेटा', Icon: FileSpreadsheet },
@@ -1041,6 +1211,379 @@ export default function AdminPanel() {
                 </div>
               ) : (
                 <div className="empty-state"><strong>अभी कोई क्लाइंट नहीं</strong><p>पहला संगठन बनाने पर वह इस सूची में दिखेगा।</p></div>
+              )}
+            </section>
+          </>
+        )}
+
+        {/* ================================================================= */}
+        {/* DEMO USERS GENERATOR & INSTANT SUSPENSION CONTROLLER            */}
+        {/* ================================================================= */}
+        {activeView === 'demo' && (
+          <>
+            <section className="feature-metrics">
+              <article className="metric-card">
+                <span>कुल डेमो खाते</span>
+                <strong>{demoUsers.length.toLocaleString('hi-IN')}</strong>
+                <small>सिस्टम में निर्मित डेमो पोर्टल्स</small>
+              </article>
+              <article className="metric-card metric-card-green">
+                <span>सक्रिय डेमो खाते</span>
+                <strong>{demoUsers.filter((d) => d.isActive).length.toLocaleString('hi-IN')}</strong>
+                <small>वर्तमान में चालू डेमो</small>
+              </article>
+              <article className="metric-card" style={{ borderColor: '#fca5a5' }}>
+                <span style={{ color: '#b91c1c' }}>निलंबित (Suspended)</span>
+                <strong style={{ color: '#b91c1c' }}>{demoUsers.filter((d) => !d.isActive).length.toLocaleString('hi-IN')}</strong>
+                <small>एडमिन द्वारा बंद किए गए खाते</small>
+              </article>
+            </section>
+
+            {/* DEMO GENERATOR CARD */}
+            <section
+              className="records-panel"
+              style={{
+                padding: '24px',
+                marginBottom: '24px',
+                background: '#ffffff',
+                borderRadius: '16px',
+                border: '1.5px solid #bfdbfe',
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.05)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <div className="eyebrow-label" style={{ color: '#2563eb' }}>INSTANT DEMO GENERATOR</div>
+                  <h2 style={{ fontSize: '19px', fontWeight: 800, color: '#0f172a', margin: '2px 0 4px' }}>
+                    नया डेमो खाता व सैंपल डेटा जनरेट करें
+                  </h2>
+                  <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
+                    1-क्लिक में आईडी व पासवर्ड तैयार होगा और खाते में 25 यथार्थवादी सैंपल मतदाताओं का डेटा स्वतः लोड हो जाएगा।
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={createDemoUser} className="modal-form">
+                <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                  <label>
+                    क्लाइंट / प्रत्याशी का नाम (वैकल्पिक)
+                    <input
+                      placeholder="उदा. डेमो - हवामहल विधानसभा"
+                      value={demoClientName}
+                      onChange={(e) => setDemoClientName(e.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    कस्टम ईमेल (खाली छोड़ने पर स्वतः बनेगा)
+                    <input
+                      placeholder="उदा. demo_client@vijaysetu.com"
+                      value={demoCustomEmail}
+                      onChange={(e) => setDemoCustomEmail(e.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    कस्टम पासवर्ड (खाली छोड़ने पर स्वतः बनेगा)
+                    <input
+                      placeholder="उदा. Demo@2024"
+                      value={demoCustomPassword}
+                      onChange={(e) => setDemoCustomPassword(e.target.value)}
+                    />
+                  </label>
+                </div>
+
+                <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <button
+                    className="button-primary"
+                    type="submit"
+                    disabled={demoGenerating}
+                    style={{ background: '#2563eb', padding: '10px 22px', fontSize: '14px', fontWeight: 800 }}
+                  >
+                    {demoGenerating ? <LoaderCircle size={16} className="spin" /> : <Sparkles size={16} />}
+                    {demoGenerating ? 'डेमो तैयार हो रहा है…' : '🚀 नया डेमो खाता जनरेट करें'}
+                  </button>
+                  <span style={{ fontSize: '13px', color: '#64748b' }}>
+                    *खाते में 25 वोटर्स, 1-सेकंड पर्ची, पोल-डेस्क व जातिगत समीकरण स्वतः लोड होंगे।
+                  </span>
+                </div>
+              </form>
+
+              {/* LATEST GENERATED CREDENTIALS ALERT */}
+              {latestGenerated && (
+                <div
+                  style={{
+                    marginTop: '20px',
+                    padding: '20px',
+                    borderRadius: '14px',
+                    background: '#f0fdf4',
+                    border: '1.5px solid #86efac',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Check size={18} style={{ color: '#16a34a' }} />
+                      <strong style={{ color: '#166534', fontSize: '15px' }}>
+                        डेमो खाता सफलतापूर्वक तैयार हो गया! ({latestGenerated.name})
+                      </strong>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setLatestGenerated(null)}
+                      style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0 }}
+                      title="बंद करें"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+                    <div style={{ background: '#ffffff', padding: '10px 14px', borderRadius: '10px', border: '1px solid #dcfce7' }}>
+                      <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>लॉगिन आईडी / ईमेल</span>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>{latestGenerated.email}</div>
+                    </div>
+
+                    <div style={{ background: '#ffffff', padding: '10px 14px', borderRadius: '10px', border: '1px solid #dcfce7' }}>
+                      <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>पासवर्ड</span>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>{latestGenerated.password}</div>
+                    </div>
+
+                    <div style={{ background: '#ffffff', padding: '10px 14px', borderRadius: '10px', border: '1px solid #dcfce7' }}>
+                      <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>सैंपल डेटा</span>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: '#16a34a' }}>25 मतदाता (लोडेड)</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => copyDemoCredentials(latestGenerated.email, latestGenerated.password, latestGenerated.id)}
+                      className="button-secondary"
+                      style={{ fontSize: '12px', fontWeight: 700 }}
+                    >
+                      <Copy size={13} /> {copiedId === latestGenerated.id ? 'कॉपी हो गया!' : 'आईडी व पासवर्ड कॉपी करें'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => shareDemoWhatsApp(latestGenerated.email, latestGenerated.password, latestGenerated.name)}
+                      className="button-primary"
+                      style={{ background: '#16a34a', fontSize: '12px', fontWeight: 700 }}
+                    >
+                      <Phone size={13} /> WhatsApp पर क्लाइंट को भेजें
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* DEMO ACCOUNTS LIST TABLE */}
+            <section className="records-panel">
+              <div className="records-toolbar" style={{ justifyContent: 'space-between' }}>
+                <div>
+                  <h2>सभी डेमो खाते ({demoUsers.length})</h2>
+                  <p>काम पूरा होने पर 1-क्लिक में सस्पेंड (Suspend) करें। सस्पेंड होते ही क्लाइंट स्क्रीन पर लॉकआउट आ जाएगा।</p>
+                </div>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => void loadDemoUsers()}
+                  disabled={demoLoading}
+                >
+                  {demoLoading ? <LoaderCircle size={14} className="spin" /> : <RefreshCw size={14} />} रिफ्रेश
+                </button>
+              </div>
+
+              {demoLoading && demoUsers.length === 0 ? (
+                <div className="empty-state">
+                  <LoaderCircle size={22} className="spin" />
+                  <p>डेमो खाते लोड हो रहे हैं…</p>
+                </div>
+              ) : demoUsers.length === 0 ? (
+                <div className="empty-state">
+                  <KeyRound size={26} style={{ color: '#94a3b8' }} />
+                  <strong>अभी कोई डेमो खाता नहीं बनाया गया है</strong>
+                  <p>ऊपर दिए गए फॉर्म से नया डेमो खाता व 25 सैंपल मतदाताओं का डेटा तैयार करें।</p>
+                </div>
+              ) : (
+                <div className="table-scroll">
+                  <table className="voter-table desk-table">
+                    <thead>
+                      <tr>
+                        <th>
+                          <SortButton label="क्लाइंट / नाम" field="name" type="alpha" currentSort={demoSort} onSort={handleDemoSort} />
+                        </th>
+                        <th>लॉगिन ईमेल / ID</th>
+                        <th>पासवर्ड</th>
+                        <th>
+                          <SortButton label="सैंपल वोटर्स" field="voterCount" type="numeric" currentSort={demoSort} onSort={handleDemoSort} />
+                        </th>
+                        <th>
+                          <SortButton label="अवस्था" field="status" type="alpha" currentSort={demoSort} onSort={handleDemoSort} />
+                        </th>
+                        <th>
+                          <SortButton label="तिथि" field="date" type="numeric" currentSort={demoSort} onSort={handleDemoSort} />
+                        </th>
+                        <th style={{ textAlign: 'right' }}>नियंत्रण व एक्शन</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedDemoUsers.map((user) => (
+                        <tr key={user.id}>
+                          <td>
+                            <strong className="voter-name">{user.name}</strong>
+                          </td>
+                          <td>
+                            <code style={{ background: '#f1f5f9', padding: '3px 6px', borderRadius: '4px', fontSize: '12px' }}>
+                              {user.email}
+                            </code>
+                          </td>
+                          <td>
+                            <code style={{ background: '#f1f5f9', padding: '3px 6px', borderRadius: '4px', fontSize: '12px', fontWeight: 700 }}>
+                              {user.password}
+                            </code>
+                          </td>
+                          <td>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1' }}>
+                              {user.voterCount} मतदाता
+                            </span>
+                          </td>
+                          <td>
+                            {user.isActive ? (
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  background: '#dcfce7',
+                                  color: '#15803d',
+                                  border: '1px solid #86efac',
+                                  padding: '3px 10px',
+                                  borderRadius: '12px',
+                                  fontSize: '11px',
+                                  fontWeight: 800,
+                                }}
+                              >
+                                🟢 सक्रिय (Active)
+                              </span>
+                            ) : (
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  background: '#fee2e2',
+                                  color: '#b91c1c',
+                                  border: '1px solid #fca5a5',
+                                  padding: '3px 10px',
+                                  borderRadius: '12px',
+                                  fontSize: '11px',
+                                  fontWeight: 800,
+                                }}
+                              >
+                                🔴 बंद (Suspended)
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ fontSize: '12px', color: '#64748b' }}>
+                            {user.createdAt ? new Date(user.createdAt).toLocaleDateString('hi-IN', { day: '2-digit', month: 'short' }) : '—'}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                              {/* TOGGLE SUSPEND / ACTIVATE */}
+                              {user.isActive ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void toggleDemoSuspend(user.id)}
+                                  style={{
+                                    background: '#fee2e2',
+                                    color: '#b91c1c',
+                                    border: '1px solid #fca5a5',
+                                    padding: '4px 10px',
+                                    borderRadius: '6px',
+                                    fontSize: '11.5px',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease',
+                                  }}
+                                  title="इस खाते को तुरंत बंद करें"
+                                >
+                                  ⛔ सस्पेंड करें
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => void toggleDemoSuspend(user.id)}
+                                  style={{
+                                    background: '#dcfce7',
+                                    color: '#15803d',
+                                    border: '1px solid #86efac',
+                                    padding: '4px 10px',
+                                    borderRadius: '6px',
+                                    fontSize: '11.5px',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease',
+                                  }}
+                                  title="इस खाते को पुनः चालू करें"
+                                >
+                                  ✅ चालू करें
+                                </button>
+                              )}
+
+                              {/* COPY CREDENTIALS */}
+                              <button
+                                type="button"
+                                onClick={() => copyDemoCredentials(user.email, user.password, user.id)}
+                                className="button-secondary"
+                                style={{ padding: '4px 8px', fontSize: '11px' }}
+                                title="आईडी व पासवर्ड कॉपी करें"
+                              >
+                                <Copy size={12} /> {copiedId === user.id ? 'कॉपी!' : 'कॉपी'}
+                              </button>
+
+                              {/* WHATSAPP SHARE */}
+                              <button
+                                type="button"
+                                onClick={() => shareDemoWhatsApp(user.email, user.password, user.name)}
+                                style={{
+                                  background: '#22c55e',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  padding: '4px 8px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                }}
+                                title="WhatsApp पर क्रेडेंशियल्स शेयर करें"
+                              >
+                                💬 WhatsApp
+                              </button>
+
+                              {/* DELETE DEMO */}
+                              <button
+                                type="button"
+                                onClick={() => void deleteDemoUser(user.id)}
+                                style={{
+                                  background: 'none',
+                                  border: '1px solid #e2e8f0',
+                                  color: '#94a3b8',
+                                  padding: '4px 8px',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                }}
+                                title="खाता व सैंपल डेटा डिलीट करें"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </section>
           </>
@@ -1988,10 +2531,35 @@ export default function AdminPanel() {
                   <AlertCircle size={15} /> डेटा डिलीट करें
                 </button>
               </div>
-              {loading ? <div className="empty-state"><LoaderCircle size={21} className="spin" /><p>मास्टर डेटा लोड हो रहा है…</p></div> : voters.length ? (
-                <div className="table-scroll"><table className="voter-table desk-table"><thead><tr><th>मतदाता</th><th>EPIC</th><th>क्लाइंट</th><th>वार्ड</th><th>भाग</th><th>क्रमांक</th><th>फ़ोन</th></tr></thead><tbody>
-                  {visibleVoters.map((voter) => <tr key={`${voter.organizationId}-${voter._id}`}><td><strong className="voter-name">{voter.nameHi || voter.nameEn || '—'}</strong></td><td className="voter-code">{voter.epic || '—'}</td><td>{organizations.find((tenant) => tenant.id === voter.organizationId)?.name ?? voter.organizationId}</td><td>{voter.wardNo || '—'}</td><td>{voter.partNo || '—'}</td><td>{voter.serialNo || '—'}</td><td>{voter.phone || '—'}</td></tr>)}
-                </tbody></table></div>
+              {loading ? (
+                <div className="empty-state"><LoaderCircle size={21} className="spin" /><p>मास्टर डेटा लोड हो रहा है…</p></div>
+              ) : voters.length ? (
+                <div className="table-scroll">
+                  <table className="voter-table desk-table">
+                    <thead>
+                      <tr>
+                        <th>
+                          <SortButton label="मतदाता" field="name" type="alpha" currentSort={recordsSort} onSort={handleRecordsSort} />
+                        </th>
+                        <th>EPIC</th>
+                        <th>क्लाइंट</th>
+                        <th>
+                          <SortButton label="वार्ड" field="wardNo" type="numeric" currentSort={recordsSort} onSort={handleRecordsSort} />
+                        </th>
+                        <th>
+                          <SortButton label="भाग" field="partNo" type="numeric" currentSort={recordsSort} onSort={handleRecordsSort} />
+                        </th>
+                        <th>
+                          <SortButton label="क्रमांक" field="serialNo" type="numeric" currentSort={recordsSort} onSort={handleRecordsSort} />
+                        </th>
+                        <th>फ़ोन</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleVoters.map((voter) => <tr key={`${voter.organizationId}-${voter._id}`}><td><strong className="voter-name">{voter.nameHi || voter.nameEn || '—'}</strong></td><td className="voter-code">{voter.epic || '—'}</td><td>{organizations.find((tenant) => tenant.id === voter.organizationId)?.name ?? voter.organizationId}</td><td>{voter.wardNo || '—'}</td><td>{voter.partNo || '—'}</td><td>{voter.serialNo || '—'}</td><td>{voter.phone || '—'}</td></tr>)}
+                    </tbody>
+                  </table>
+                </div>
               ) : <div className="empty-state"><strong>रिकॉर्ड उपलब्ध नहीं</strong><p>{error || 'डेटाबेस में मतदाता रिकॉर्ड आने पर वे यहाँ दिखेंगे।'}</p></div>}
               <div className="records-footnote" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>कुल {totalRecords} रिकॉर्ड्स में से पेज {currentPage} ({visibleVoters.length} दिख रहे हैं)</div>
