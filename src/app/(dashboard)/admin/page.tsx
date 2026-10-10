@@ -1552,7 +1552,7 @@ export default function AdminPanel() {
                           </div>
                         ) : (
                           <div style={{ fontSize: '11px', color: '#9a3412', background: '#fff', padding: '6px 8px', borderRadius: '6px', border: '1px solid #fed7aa' }}>
-                            वेक्टर चिन्ह ({targetSlipConfig.partySymbolName || 'कमल'}) सक्रिय है
+                            चिन्ह फोटो अपलोड नहीं है (पर्ची में केवल अपलोड की गई फोटो दिखेगी)
                           </div>
                         )}
 

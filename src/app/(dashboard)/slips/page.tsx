@@ -1122,7 +1122,7 @@ export default function SlipsPage() {
                             <span style={{ fontSize: '11px', color: '#ea580c', fontWeight: 700, display: 'block' }}>
                               चिन्ह फोटो अपलोड करें
                             </span>
-                            <span style={{ fontSize: '10px', color: '#94a3b8' }}>PNG/JPG (वेक्टर फॉलबैक उपलब्ध)</span>
+                            <span style={{ fontSize: '10px', color: '#94a3b8' }}>PNG/JPG फोटो अपलोड करें</span>
                             <input
                               type="file"
                               accept="image/*"

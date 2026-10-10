@@ -4066,20 +4066,34 @@ a {
     gap: 8px !important;
   }
   .voter-slip-symbol-box {
-    width: 84px !important;
-    min-width: 84px !important;
+    width: 86px !important;
+    min-width: 86px !important;
+    max-width: 86px !important;
+    height: 114px !important;
+    min-height: 114px !important;
+    max-height: 114px !important;
     border-radius: 8px !important;
   }
-  .voter-slip-symbol-box img,
+  .voter-slip-symbol-box img {
+    max-width: 100% !important;
+    max-height: 52px !important;
+  }
   .voter-slip-symbol-box svg {
-    width: 44px !important;
-    height: 44px !important;
+    width: 32px !important;
+    height: 32px !important;
   }
   .voter-slip-photo-box {
-    width: 84px !important;
-    min-width: 84px !important;
-    height: 112px !important;
+    width: 86px !important;
+    min-width: 86px !important;
+    max-width: 86px !important;
+    height: 114px !important;
+    min-height: 114px !important;
+    max-height: 114px !important;
     border-radius: 8px !important;
+  }
+  .voter-slip-photo-box svg {
+    width: 36px !important;
+    height: 36px !important;
   }
   .voter-slip-candidate-name {
     font-size: 17px !important;
