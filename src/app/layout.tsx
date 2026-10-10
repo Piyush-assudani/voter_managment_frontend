@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Noto_Sans_Devanagari } from 'next/font/google';
 import './globals.css';
+import { ContentProtection } from '@/components/ContentProtection';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -35,6 +36,7 @@ export default function RootLayout({
         className={`${inter.variable} ${notoSansDevanagari.variable} bg-[#FAFAFA] text-[#111827]`}
         suppressHydrationWarning
       >
+        <ContentProtection />
         {children}
       </body>
     </html>
