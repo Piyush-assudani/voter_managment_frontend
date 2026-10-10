@@ -49,7 +49,7 @@ const supportConfig: Record<
   { label: string; subLabel: string; icon: typeof ThumbsUp; cardClass: string; badgeClass: string; barClass: string }
 > = {
   core: {
-    label: 'समर्थन चिह्नित',
+    label: '100% पक्का समर्थक',
     subLabel: 'पक्का वोटर बेस',
     icon: ThumbsUp,
     cardClass: 'support-card-core',
@@ -57,7 +57,7 @@ const supportConfig: Record<
     barClass: 'support-bar-core',
   },
   swing: {
-    label: 'अनिर्णीत चिह्नित',
+    label: '50/50 स्विंग वोटर',
     subLabel: 'प्रयास योग्य वोटर',
     icon: CircleHelp,
     cardClass: 'support-card-swing',
@@ -65,7 +65,7 @@ const supportConfig: Record<
     barClass: 'support-bar-swing',
   },
   opposition: {
-    label: 'विरोध चिह्नित',
+    label: 'एंटी वोटर',
     subLabel: 'विरोधी रुझान',
     icon: ThumbsDown,
     cardClass: 'support-card-opposition',
@@ -73,7 +73,7 @@ const supportConfig: Record<
     barClass: 'support-bar-opposition',
   },
   unmarked: {
-    label: 'अवर्गीकृत (बाकी)',
+    label: 'सामान्य',
     subLabel: 'संपर्क शेष',
     icon: UserMinus,
     cardClass: 'support-card-unmarked',
@@ -323,7 +323,7 @@ export default function WarroomPage() {
             <div className="sim-slider-header">
               <label htmlFor="baseline-slider" className="sim-slider-label">
                 <SlidersHorizontal size={16} />
-                <span>अवर्गीकृत रिकॉर्ड का बेसलाइन शेयर:</span>
+                <span>सामान्य रिकॉर्ड का बेसलाइन शेयर:</span>
                 <span className="sim-slider-val-badge">{baseline}%</span>
               </label>
               <div className="sim-presets">
@@ -361,7 +361,7 @@ export default function WarroomPage() {
           <div className="sim-pills-grid">
             <div className="sim-pill-card pill-core">
               <span className="sim-pill-title">
-                <ThumbsUp size={14} /> कोर समर्थन (100%)
+                <ThumbsUp size={14} /> 100% पक्का समर्थक
               </span>
               <strong className="sim-pill-calc">
                 {supportTotals.core.toLocaleString('hi-IN')} × 1.0 = {supportTotals.core.toLocaleString('hi-IN')}
@@ -371,7 +371,7 @@ export default function WarroomPage() {
 
             <div className="sim-pill-card pill-swing">
               <span className="sim-pill-title">
-                <CircleHelp size={14} /> अनिर्णीत रुझान (50%)
+                <CircleHelp size={14} /> 50/50 स्विंग वोटर
               </span>
               <strong className="sim-pill-calc">
                 {supportTotals.swing.toLocaleString('hi-IN')} × 0.5 = {Math.round(supportTotals.swing * 0.5).toLocaleString('hi-IN')}
@@ -381,7 +381,7 @@ export default function WarroomPage() {
 
             <div className="sim-pill-card pill-unmarked">
               <span className="sim-pill-title">
-                <UserMinus size={14} /> अवर्गीकृत ({baseline}%)
+                <UserMinus size={14} /> सामान्य ({baseline}%)
               </span>
               <strong className="sim-pill-calc">
                 {supportTotals.unmarked.toLocaleString('hi-IN')} × {baseline}% = {Math.round((supportTotals.unmarked * baseline) / 100).toLocaleString('hi-IN')}
@@ -393,12 +393,12 @@ export default function WarroomPage() {
           <div className="sim-formula-banner">
             <span className="sim-formula-tag">सूत्र विधि</span>
             <code>
-              कुल अनुमान = (समर्थन × 100%) + (अनिर्णीत × 50%) + (अवर्गीकृत × {baseline}%)
+              कुल अनुमान = (पक्का समर्थक × 100%) + (50/50 स्विंग × 50%) + (सामान्य × {baseline}%)
             </code>
           </div>
 
           <div className="records-footnote">
-            ℹ️ <strong>नोट:</strong> Baseline केवल आंतरिक विश्लेषण और बूथ प्लानिंग मॉडल है; यह चुनाव परिणाम का दावा नहीं करता। विरोध चिह्नित वोटर इसमें शामिल नहीं किए जाते।
+            ℹ️ <strong>नोट:</strong> Baseline केवल आंतरिक विश्लेषण और बूथ प्लानिंग मॉडल है; यह चुनाव परिणाम का दावा नहीं करता। एंटी वोटर इसमें शामिल नहीं किए जाते।
           </div>
         </div>
       </section>
@@ -429,10 +429,10 @@ export default function WarroomPage() {
                   <th>वार्ड / भाग</th>
                   <th>कुल वोटर</th>
                   <th>मतदान प्रगति</th>
-                  <th>समर्थन</th>
-                  <th>अनिर्णीत</th>
-                  <th>विरोध</th>
-                  <th>अवर्गीकृत</th>
+                  <th>100% पक्का समर्थक</th>
+                  <th>50/50 स्विंग</th>
+                  <th>एंटी वोटर</th>
+                  <th>सामान्य</th>
                   <th>स्थिति व रुझान</th>
                 </tr>
               </thead>

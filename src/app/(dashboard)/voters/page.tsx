@@ -664,7 +664,7 @@ export default function DashboardPage() {
             <input aria-label="वार्ड फ़िल्टर" value={wardFilter} onChange={(event) => setWardFilter(event.target.value)} placeholder="वार्ड फ़िल्टर" />
           </label>
           <select className="directory-select-filter" aria-label="समर्थन वर्ग फ़िल्टर" value={supportFilter} onChange={(event) => setSupportFilter(event.target.value)}>
-            <option value="">सभी support tags</option><option value="core">समर्थन चिह्नित</option><option value="swing">अनिर्णीत चिह्नित</option><option value="opposition">विरोध चिह्नित</option><option value="unmarked">अवर्गीकृत</option>
+            <option value="">सभी support tags</option><option value="core">1- 100% पक्का समर्थक</option><option value="swing">2- 50/50 स्विंग वोटर</option><option value="opposition">3- एंटी वोटर</option><option value="unmarked">4- सामान्य</option>
           </select>
           <select className="directory-select-filter" aria-label="प्रवासी फ़िल्टर" value={migrantFilter} onChange={(event) => setMigrantFilter(event.target.value)}>
             <option value="">सभी मतदाता</option><option value="true">प्रवासी</option><option value="false">गैर-प्रवासी</option>
@@ -775,9 +775,9 @@ export default function DashboardPage() {
                 <div className="vc-tags">
                   <span className={`vc-tag vc-tag-support vc-tag-${voter.supportStatus || 'unmarked'}`}>
                     <span className="vc-status-dot" aria-hidden="true" />
-                    {voter.supportStatus === 'core' ? 'समर्थन चिह्नित' :
-                     voter.supportStatus === 'swing' ? 'अनिर्णीत' :
-                     voter.supportStatus === 'opposition' ? 'विरोध चिह्नित' : 'अवर्गीकृत'}
+                    {voter.supportStatus === 'core' ? '100% पक्का समर्थक' :
+                     voter.supportStatus === 'swing' ? '50/50 स्विंग वोटर' :
+                     voter.supportStatus === 'opposition' ? 'एंटी वोटर' : 'सामान्य'}
                   </span>
                   {voter.caste && <span className="vc-tag vc-tag-caste">समुदाय · {voter.caste}</span>}
                   {voter.phone && <span className="vc-tag vc-tag-phone">फ़ोन · {voter.phone}</span>}
@@ -906,10 +906,10 @@ export default function DashboardPage() {
                           onChange={(event) => setTagValues({ ...tagValues, supportStatus: event.target.value })}
                           style={{ marginTop: '4px', height: '38px' }}
                         >
-                          <option value="unmarked">अवर्गीकृत</option>
-                          <option value="core">समर्थन चिह्नित</option>
-                          <option value="swing">अनिर्णीत चिह्नित</option>
-                          <option value="opposition">विरोध चिह्नित</option>
+                          <option value="unmarked">4- सामान्य</option>
+                          <option value="core">1- 100% पक्का समर्थक</option>
+                          <option value="swing">2- 50/50 स्विंग वोटर</option>
+                          <option value="opposition">3- एंटी वोटर</option>
                         </select>
                       </label>
                       <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>

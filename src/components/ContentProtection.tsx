@@ -1,120 +1,170 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect } from 'react';
+
+declare global {
+  interface Window {
+    AndroidSecurityBridge?: {
+      setScreenSecurity: (enable: boolean) => void;
+    };
+  }
+}
+
+function isUserAdmin(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const token = window.localStorage.getItem('token');
+    if (!token) return false;
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(atob(parts[1]));
+    return payload?.user?.role === 'admin';
+  } catch {
+    return false;
+  }
+}
 
 /**
  * ContentProtection Component
- * Protects frontend content from being copied, right-clicked, inspected, or scraped:
- * - Disables context menu (right-click)
- * - Disables copy and cut actions
- * - Disables image drag & drop / saving
- * - Disables DevTools and View-Source shortcuts (F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S)
- * - Disables text selection on non-input elements
- * - Displays a sleek security notification on blocked attempts
+ * Protects frontend content from being copied, right-clicked, screenshotted, or scraped:
+ * - Admin users have FULL ACCESS (allowed to screenshot, right-click, print, and copy).
+ * - Non-admin users (workers, operators, guests) have silent protection enabled:
+ *   - Silent right-click context menu blocking (no warning toast shown).
+ *   - Silent copy and cut blocking.
+ *   - Screenshot key suppression & clipboard wiping on capture shortcuts.
+ *   - Print media suppression.
+ *   - Native Android hardware screenshot blocking via AndroidSecurityBridge (FLAG_SECURE).
  */
 export const ContentProtection: React.FC = () => {
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showSecurityWarning = useCallback((msg: string) => {
-    setToastMessage(msg);
-  }, []);
-
   useEffect(() => {
-    if (!toastMessage) return;
-    const timer = setTimeout(() => {
-      setToastMessage(null);
-    }, 2200);
-    return () => clearTimeout(timer);
-  }, [toastMessage]);
+    const admin = isUserAdmin();
 
-  useEffect(() => {
-    // 1. Disable Right-Click Context Menu
+    // 1. Hardware-level Android WebView Screenshot Protection
+    if (typeof window !== 'undefined' && window.AndroidSecurityBridge?.setScreenSecurity) {
+      window.AndroidSecurityBridge.setScreenSecurity(!admin);
+    }
+
+    // Admins are exempt from all restrictions
+    if (admin) {
+      return;
+    }
+
+    // 2. Silent Right-Click Prevention (No annoying toast popup)
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
-      showSecurityWarning('सुरक्षा नीति: राइट-क्लिक और इमेज डाउनलोड प्रतिबंधित है');
       return false;
     };
 
-    // 2. Disable Copy & Cut (except when editing within input/textarea)
+    // 3. Silent Copy & Cut Prevention (except inside inputs)
     const handleCopy = (e: ClipboardEvent) => {
       const activeEl = document.activeElement;
-      const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || (activeEl as HTMLElement).isContentEditable);
+      const isInput =
+        activeEl &&
+        (activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          (activeEl as HTMLElement).isContentEditable);
       if (isInput) return;
-      
-      // Block copying data out
+
       e.preventDefault();
-      showSecurityWarning('डेटा सुरक्षा: सामग्री कॉपी करना प्रतिबंधित है');
       return false;
     };
 
     const handleCut = (e: ClipboardEvent) => {
       const activeEl = document.activeElement;
-      const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || (activeEl as HTMLElement).isContentEditable);
+      const isInput =
+        activeEl &&
+        (activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          (activeEl as HTMLElement).isContentEditable);
       if (isInput) return;
 
       e.preventDefault();
-      showSecurityWarning('डेटा सुरक्षा: कट / कॉपी प्रतिबंधित है');
       return false;
     };
 
-    // 3. Prevent Image & Element Dragging (no drag-to-desktop / save)
+    // 4. Prevent Image Drag & Drop
     const handleDragStart = (e: DragEvent) => {
       e.preventDefault();
       return false;
     };
 
-    // 4. Disable DevTools & Page Inspection Keyboard Shortcuts
+    // 5. Block Screenshot Keys & DevTools Shortcuts Silently
     const handleKeyDown = (e: KeyboardEvent) => {
       const key = (e.key || '').toLowerCase();
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
+      // PrintScreen Key -> Clear clipboard immediately
+      if (e.key === 'PrintScreen' || key === 'printscreen') {
+        e.preventDefault();
+        try {
+          void navigator.clipboard?.writeText('');
+        } catch {
+          // ignore
+        }
+        return false;
+      }
+
+      // Screenshot shortcuts: Win+Shift+S, Cmd+Shift+3/4/5
+      if (isCtrlOrCmd && e.shiftKey && (key === 's' || key === '3' || key === '4' || key === '5')) {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+          void navigator.clipboard?.writeText('');
+        } catch {
+          // ignore
+        }
+        return false;
+      }
 
       // F12 -> DevTools
       if (e.key === 'F12') {
         e.preventDefault();
         e.stopPropagation();
-        showSecurityWarning('सुरक्षा नीति: डेवलपर टूल्स प्रतिबंधित हैं');
         return false;
       }
 
-      // Ctrl+Shift+I / Cmd+Option+I -> Inspect
-      // Ctrl+Shift+J / Cmd+Option+J -> Console
-      // Ctrl+Shift+C / Cmd+Option+C -> Inspect Element
+      // Ctrl+Shift+I / J / C
       if (isCtrlOrCmd && (e.shiftKey || e.altKey) && (key === 'i' || key === 'j' || key === 'c')) {
         e.preventDefault();
         e.stopPropagation();
-        showSecurityWarning('सुरक्षा नीति: इंस्पेक्ट टूल प्रतिबंधित है');
         return false;
       }
 
-      // Ctrl+U / Cmd+Option+U -> View Source
+      // Ctrl+U -> View Source
       if (isCtrlOrCmd && key === 'u') {
         e.preventDefault();
         e.stopPropagation();
-        showSecurityWarning('सुरक्षा नीति: सोर्स कोड देखना प्रतिबंधित है');
         return false;
       }
 
-      // Ctrl+S / Cmd+S -> Save Page HTML
+      // Ctrl+S -> Save Page
       if (isCtrlOrCmd && key === 's') {
         e.preventDefault();
         e.stopPropagation();
-        showSecurityWarning('सुरक्षा नीति: पेज सेव करना प्रतिबंधित है');
         return false;
       }
 
-      // Ctrl+C / Cmd+C on page content outside form inputs & editable elements
+      // Ctrl+C outside input elements
       if (isCtrlOrCmd && key === 'c') {
         const activeEl = document.activeElement;
-        const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || (activeEl as HTMLElement).isContentEditable);
+        const isInput =
+          activeEl &&
+          (activeEl.tagName === 'INPUT' ||
+            activeEl.tagName === 'TEXTAREA' ||
+            (activeEl as HTMLElement).isContentEditable);
         if (!isInput) {
           e.preventDefault();
-          showSecurityWarning('डेटा सुरक्षा: कॉपी करना प्रतिबंधित है');
           return false;
         }
       }
     };
 
-    // Attach listeners to document & window
+    // Inject non-admin print protection style
+    const styleEl = document.createElement('style');
+    styleEl.id = 'non-admin-print-protection';
+    styleEl.innerHTML = '@media print { body { display: none !important; } }';
+    document.head.appendChild(styleEl);
+
     document.addEventListener('contextmenu', handleContextMenu, { capture: true });
     document.addEventListener('copy', handleCopy, { capture: true });
     document.addEventListener('cut', handleCut, { capture: true });
@@ -122,42 +172,14 @@ export const ContentProtection: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown, { capture: true });
 
     return () => {
+      styleEl.remove();
       document.removeEventListener('contextmenu', handleContextMenu, { capture: true });
       document.removeEventListener('copy', handleCopy, { capture: true });
       document.removeEventListener('cut', handleCut, { capture: true });
       document.removeEventListener('dragstart', handleDragStart, { capture: true });
       window.removeEventListener('keydown', handleKeyDown, { capture: true });
     };
-  }, [showSecurityWarning]);
+  }, []);
 
-  if (!toastMessage) return null;
-
-  return (
-    <div
-      role="alert"
-      style={{
-        position: 'fixed',
-        bottom: '24px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 999999,
-        background: 'rgba(15, 23, 42, 0.94)',
-        backdropFilter: 'blur(8px)',
-        color: '#ffffff',
-        padding: '10px 18px',
-        borderRadius: '30px',
-        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1)',
-        fontSize: '13px',
-        fontWeight: 600,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        letterSpacing: '0.2px',
-        pointerEvents: 'none',
-        animation: 'securityToastSlide 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-      }}
-    >
-      <span>{toastMessage}</span>
-    </div>
-  );
+  return null;
 };

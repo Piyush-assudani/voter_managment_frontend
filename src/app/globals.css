@@ -627,13 +627,18 @@ a {
   border-radius: 50%;
 }
 
+h1,
+h2,
+h3,
+h4,
 .page-intro h1,
 .auth-heading h1 {
   margin: 8px 0 4px;
   color: #1a2620;
+  font-family: var(--font-outfit), var(--font-noto-sans-devanagari), var(--font-inter), sans-serif;
   font-size: clamp(23px, 3vw, 28px);
-  font-weight: 650;
-  letter-spacing: -0.045em;
+  font-weight: 750;
+  letter-spacing: -0.035em;
   line-height: 1.25;
 }
 
@@ -1213,6 +1218,8 @@ a {
   margin: 0 auto;
   color: #26332c;
   padding: 0 4px;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 @media (min-width: 1920px) {
@@ -4478,6 +4485,22 @@ img {
     opacity: 1;
     transform: translate(-50%, 0) scale(1);
   }
+}
+
+/* Bulk Slip Sheet & Slip Typography Protections */
+.slips-bulk-print-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)) !important;
+}
+
+.voter-slip-center-column {
+  min-width: 140px !important;
+  word-break: keep-all !important;
+  overflow-wrap: break-word !important;
+}
+
+.voter-slip-center-column * {
+  word-break: keep-all !important;
+  overflow-wrap: break-word !important;
 }
 
 

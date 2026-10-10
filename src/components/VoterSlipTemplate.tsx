@@ -563,12 +563,12 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               if (isEditable) symbolFileInputRef.current?.click();
             }}
             style={{
-              width: '110px',
-              minWidth: '110px',
-              maxWidth: '110px',
-              height: '130px',
-              minHeight: '130px',
-              maxHeight: '130px',
+              width: '95px',
+              minWidth: '80px',
+              maxWidth: '100px',
+              height: '124px',
+              minHeight: '120px',
+              maxHeight: '126px',
               boxSizing: 'border-box',
               border: isEditable ? '2px dashed #ea580c' : '2px solid #fb923c',
               borderRadius: '10px',
@@ -761,7 +761,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
           </div>
 
           {/* Center: Party Headline & Candidate Name */}
-          <div className="voter-slip-center-column" style={{ flex: 1, minHeight: '130px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 6px', minWidth: 0, overflow: 'visible' }}>
+          <div className="voter-slip-center-column" style={{ flex: 1, minHeight: '124px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 8px', minWidth: '150px', overflow: 'visible' }}>
             {isEditable ? (
               <>
                 <div style={{ display: 'flex', gap: '4px', width: '100%', marginBottom: '2px' }}>
@@ -883,7 +883,8 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                     fontWeight: 700,
                     lineHeight: 1.25,
                     textAlign: 'center',
-                    wordBreak: 'break-word',
+                    wordBreak: 'keep-all',
+                    overflowWrap: 'break-word',
                     maxWidth: '100%',
                   }}
                 >
@@ -900,18 +901,19 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                   className="voter-slip-candidate-name"
                   style={{
                     color: '#1e3a8a',
-                    margin: '3px 0',
+                    margin: '2px 0',
                     textAlign: 'center',
-                    wordBreak: 'break-word',
+                    wordBreak: 'keep-all',
+                    overflowWrap: 'break-word',
                     maxWidth: '100%',
-                    lineHeight: 1.18,
+                    lineHeight: 1.2,
                   }}
                 >
-                  <div style={{ fontSize: '20px', fontWeight: 900, letterSpacing: '-0.3px', color: '#1e3a8a' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '-0.2px', color: '#1e3a8a', wordBreak: 'keep-all' }}>
                     {merged.candidateName || 'प्रत्याशी नाम'}
                   </div>
                   {merged.candidateNameEn && (
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#2563eb', letterSpacing: '0.2px', marginTop: '1px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#2563eb', letterSpacing: '0.2px', marginTop: '1px', wordBreak: 'keep-all' }}>
                       ({merged.candidateNameEn})
                     </div>
                   )}
@@ -922,11 +924,12 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                   className="voter-slip-subtitle"
                   style={{
                     color: '#475569',
-                    fontSize: '11.5px',
+                    fontSize: '11px',
                     fontWeight: 600,
                     lineHeight: 1.25,
                     textAlign: 'center',
-                    wordBreak: 'break-word',
+                    wordBreak: 'keep-all',
+                    overflowWrap: 'break-word',
                     maxWidth: '100%',
                     marginTop: '1px',
                   }}
@@ -944,12 +947,12 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               if (isEditable) candidateFileInputRef.current?.click();
             }}
             style={{
-              width: '110px',
-              minWidth: '110px',
-              maxWidth: '110px',
-              height: '130px',
-              minHeight: '130px',
-              maxHeight: '130px',
+              width: '95px',
+              minWidth: '80px',
+              maxWidth: '100px',
+              height: '124px',
+              minHeight: '120px',
+              maxHeight: '126px',
               boxSizing: 'border-box',
               border: isEditable ? '2px dashed #ea580c' : '2px solid #fb923c',
               borderRadius: '10px',

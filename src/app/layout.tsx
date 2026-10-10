@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Noto_Sans_Devanagari } from 'next/font/google';
+import { Inter, Noto_Sans_Devanagari, Outfit } from 'next/font/google';
 import './globals.css';
 import { ContentProtection } from '@/components/ContentProtection';
 
@@ -10,6 +10,11 @@ const inter = Inter({
 const notoSansDevanagari = Noto_Sans_Devanagari({
   subsets: ['devanagari', 'latin'],
   variable: '--font-noto-sans-devanagari',
+});
+const outfit = Outfit({
+  subsets: ['latin'],
+  variable: '--font-outfit',
+  weight: ['400', '500', '600', '700', '800', '900'],
 });
 
 export const viewport: Viewport = {
@@ -33,7 +38,7 @@ export default function RootLayout({
   return (
     <html lang="hi">
       <body
-        className={`${inter.variable} ${notoSansDevanagari.variable} bg-[#FAFAFA] text-[#111827]`}
+        className={`${inter.variable} ${notoSansDevanagari.variable} ${outfit.variable} bg-[#FAFAFA] text-[#111827]`}
         suppressHydrationWarning
       >
         <ContentProtection />

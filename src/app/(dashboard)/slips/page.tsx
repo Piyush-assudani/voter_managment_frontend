@@ -571,25 +571,21 @@ export default function SlipsPage() {
           gap: '12px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#1e3a8a', fontSize: '14px' }}>
-            <Sparkles size={16} color="#ea580c" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#1e3a8a', fontSize: '12.5px', background: '#eff6ff', padding: '4px 10px', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+            <Sparkles size={14} color="#ea580c" />
             <span>संगठन: {orgName}</span>
           </div>
-          <span style={{ color: '#cbd5e1' }}>|</span>
-          <div style={{ fontSize: '13px', color: '#475569' }}>
+          <div style={{ fontSize: '12.5px', color: '#475569', background: '#f8fafc', padding: '4px 10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
             पार्टी: <strong style={{ color: '#0f172a' }}>{slipConfig.partyName || 'प्रत्याशी'}</strong>
           </div>
-          <span style={{ color: '#cbd5e1' }}>|</span>
-          <div style={{ fontSize: '13px', color: '#475569' }}>
+          <div style={{ fontSize: '12.5px', color: '#475569', background: '#f8fafc', padding: '4px 10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
             प्रत्याशी: <strong style={{ color: '#0f172a' }}>{slipConfig.candidateName || 'प्रत्याशी'}</strong>
           </div>
-          <span style={{ color: '#cbd5e1' }}>|</span>
-          <div style={{ fontSize: '13px', color: '#475569' }}>
+          <div style={{ fontSize: '12.5px', color: '#475569', background: '#fff7ed', padding: '4px 10px', borderRadius: '8px', border: '1px solid #fed7aa' }}>
             चुनाव चिन्ह: <strong style={{ color: '#ea580c' }}>{slipConfig.partySymbolName || 'कमल का फूल'}</strong>
           </div>
-          <span style={{ color: '#cbd5e1' }}>|</span>
-          <div style={{ fontSize: '13px', color: '#475569' }}>
+          <div style={{ fontSize: '12.5px', color: '#475569', background: '#f0fdf4', padding: '4px 10px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
             EVM क्रम: <strong style={{ color: '#16a34a' }}>#{slipConfig.evmNumber || '1'}</strong>
           </div>
         </div>
@@ -730,7 +726,7 @@ export default function SlipsPage() {
             className="slips-bulk-print-grid"
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 460px), 1fr))',
               gap: '24px',
             }}
           >
