@@ -1,10 +1,10 @@
 import html2canvas from 'html2canvas';
 import { createRoot } from 'react-dom/client';
 import React from 'react';
-import { VoterSlipTemplate, SlipConfig } from '../components/VoterSlipTemplate';
+import { VoterSlipTemplate, SlipConfig, VoterSlipData } from '../components/VoterSlipTemplate';
 import { downloadDataUrl } from './fileDownload';
 
-export const generateSlipImage = async (voter: any, slipConfig?: SlipConfig): Promise<string> => {
+export const generateSlipImage = async (voter: VoterSlipData, slipConfig?: SlipConfig): Promise<string> => {
   return new Promise((resolve, reject) => {
     const container = document.createElement('div');
     container.style.position = 'fixed';
@@ -16,7 +16,7 @@ export const generateSlipImage = async (voter: any, slipConfig?: SlipConfig): Pr
     const root = createRoot(container);
     const ref = React.createRef<HTMLDivElement>();
     
-    root.render(React.createElement(VoterSlipTemplate as any, { voter, config: slipConfig, forwardedRef: ref }));
+    root.render(React.createElement(VoterSlipTemplate, { voter, config: slipConfig, forwardedRef: ref }));
     
     setTimeout(async () => {
       try {
@@ -42,7 +42,7 @@ export const generateSlipImage = async (voter: any, slipConfig?: SlipConfig): Pr
   });
 };
 
-export const downloadSlip = async (voter: any, slipConfig?: SlipConfig) => {
+export const downloadSlip = async (voter: VoterSlipData, slipConfig?: SlipConfig) => {
   try {
     const dataUrl = await generateSlipImage(voter, slipConfig);
     const fileName = `VoterSlip_${voter.epic || voter.serialNo}_${voter.nameEn || 'voter'}.jpg`;

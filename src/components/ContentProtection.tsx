@@ -39,6 +39,7 @@ export const ContentProtection: React.FC = () => {
     const handleCopy = (e: ClipboardEvent) => {
       const activeEl = document.activeElement;
       const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || (activeEl as HTMLElement).isContentEditable);
+      if (isInput) return;
       
       // Block copying data out
       e.preventDefault();
@@ -47,6 +48,10 @@ export const ContentProtection: React.FC = () => {
     };
 
     const handleCut = (e: ClipboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || (activeEl as HTMLElement).isContentEditable);
+      if (isInput) return;
+
       e.preventDefault();
       showSecurityWarning('⚠️ डेटा सुरक्षा: कट / कॉपी प्रतिबंधित है');
       return false;
@@ -97,10 +102,10 @@ export const ContentProtection: React.FC = () => {
         return false;
       }
 
-      // Ctrl+C / Cmd+C on page content outside form inputs
+      // Ctrl+C / Cmd+C on page content outside form inputs & editable elements
       if (isCtrlOrCmd && key === 'c') {
         const activeEl = document.activeElement;
-        const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+        const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || (activeEl as HTMLElement).isContentEditable);
         if (!isInput) {
           e.preventDefault();
           showSecurityWarning('⚠️ डेटा सुरक्षा: कॉपी करना प्रतिबंधित है');

@@ -10,7 +10,6 @@ import {
   LoaderCircle,
   MapPin,
   RefreshCw,
-  ShieldAlert,
   SlidersHorizontal,
   Sparkles,
   ThumbsDown,

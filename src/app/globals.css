@@ -4049,8 +4049,24 @@ a {
   opacity: 1 !important;
 }
 
+/* Responsive Slips Studio Layout for Tablets & Mobile */
+@media (max-width: 900px) {
+  .slips-studio-layout {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+}
+
 /* Mobile & Tablet Responsive Scaling for Voter Slip */
 @media (max-width: 640px) {
+  .visual-editor-canvas-card {
+    padding: 12px 8px !important;
+    border-radius: 12px !important;
+  }
+  .slips-live-preview-section {
+    padding: 12px 8px !important;
+    border-radius: 12px !important;
+  }
   .voter-slip-printable-card {
     width: 100% !important;
     max-width: 100% !important;
@@ -4064,69 +4080,303 @@ a {
   }
   .voter-slip-header-row {
     gap: 8px !important;
+    align-items: center !important;
   }
-  .voter-slip-symbol-box {
-    width: 86px !important;
-    min-width: 86px !important;
-    max-width: 86px !important;
-    height: 114px !important;
-    min-height: 114px !important;
-    max-height: 114px !important;
+  .voter-slip-symbol-box,
+  .voter-slip-photo-box {
+    width: 82px !important;
+    min-width: 82px !important;
+    max-width: 82px !important;
+    height: 108px !important;
+    min-height: 108px !important;
+    max-height: 108px !important;
     border-radius: 8px !important;
+    border-width: 1.5px !important;
+  }
+  .voter-slip-serial-badge {
+    height: 20px !important;
+    font-size: 10.5px !important;
+    padding: 0 2px !important;
   }
   .voter-slip-symbol-box img {
     max-width: 100% !important;
-    max-height: 52px !important;
+    max-height: 50px !important;
   }
   .voter-slip-symbol-box svg {
-    width: 32px !important;
-    height: 32px !important;
-  }
-  .voter-slip-photo-box {
-    width: 86px !important;
-    min-width: 86px !important;
-    max-width: 86px !important;
-    height: 114px !important;
-    min-height: 114px !important;
-    max-height: 114px !important;
-    border-radius: 8px !important;
+    width: 30px !important;
+    height: 30px !important;
   }
   .voter-slip-photo-box svg {
     width: 36px !important;
     height: 36px !important;
   }
+  .voter-slip-symbol-box .voter-slip-symbol-caption {
+    height: 20px !important;
+    font-size: 9.5px !important;
+    margin-bottom: 3px !important;
+  }
+  .voter-slip-party-headline {
+    font-size: 11.5px !important;
+    line-height: 1.25 !important;
+  }
+  .voter-slip-appeal-headline {
+    font-size: 10px !important;
+    display: block !important;
+    margin-left: 0 !important;
+    margin-top: 2px !important;
+  }
   .voter-slip-candidate-name {
-    font-size: 17px !important;
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+  }
+  .voter-slip-candidate-name-en {
+    font-size: 11.5px !important;
+    display: block !important;
+    margin-left: 0 !important;
+    margin-top: 2px !important;
+  }
+  .voter-slip-subtitle {
+    font-size: 10.5px !important;
+    line-height: 1.25 !important;
   }
   .voter-slip-ribbon {
     padding: 6px 8px !important;
     gap: 8px !important;
     border-radius: 8px !important;
   }
+  .voter-slip-ribbon-evm-badge {
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 18px !important;
+    border-radius: 6px !important;
+  }
+  .voter-slip-ribbon-pill {
+    padding: 3px 6px !important;
+    font-size: 10px !important;
+    gap: 4px !important;
+  }
   .voter-slip-metric-grid {
     gap: 8px !important;
   }
   .voter-slip-metric-card {
-    padding: 8px 10px !important;
+    padding: 6px 8px !important;
+    border-radius: 8px !important;
+    border-width: 1.5px !important;
+  }
+  .voter-slip-metric-label {
+    font-size: 11px !important;
   }
   .voter-slip-metric-num {
     font-size: 26px !important;
+    margin-top: 2px !important;
   }
   .voter-slip-voter-table {
-    font-size: 12.5px !important;
+    font-size: 12px !important;
+    border-radius: 8px !important;
+    padding: 4px 8px !important;
   }
   .voter-slip-voter-row {
     padding: 5px 2px !important;
-    font-size: 12.5px !important;
+    font-size: 12px !important;
+    gap: 6px !important;
   }
   .voter-slip-voter-label {
-    width: 105px !important;
+    width: 95px !important;
+    min-width: 95px !important;
+    font-size: 11px !important;
+    flex-shrink: 0 !important;
+  }
+  .voter-slip-voter-value {
     font-size: 12px !important;
+    word-break: break-word !important;
   }
   .voter-slip-polling-box {
     padding: 8px 10px !important;
+    border-radius: 8px !important;
+    font-size: 11.5px !important;
+  }
+  .voter-slip-footer-appeal {
+    font-size: 11.5px !important;
   }
 }
+
+/* Tier 2: Standard Mobile Smartphones (max-width: 440px) */
+@media (max-width: 440px) {
+  .visual-editor-canvas-card {
+    padding: 10px 6px !important;
+    border-radius: 10px !important;
+  }
+  .slips-live-preview-section {
+    padding: 10px 6px !important;
+    border-radius: 10px !important;
+  }
+  .voter-slip-inner-card {
+    padding: 10px 8px !important;
+    gap: 8px !important;
+    border-radius: 10px !important;
+  }
+  .voter-slip-header-row {
+    gap: 6px !important;
+  }
+  .voter-slip-symbol-box,
+  .voter-slip-photo-box {
+    width: 74px !important;
+    min-width: 74px !important;
+    max-width: 74px !important;
+    height: 98px !important;
+    min-height: 98px !important;
+    max-height: 98px !important;
+    border-radius: 7px !important;
+  }
+  .voter-slip-serial-badge {
+    height: 19px !important;
+    font-size: 10px !important;
+  }
+  .voter-slip-evm-input {
+    width: 22px !important;
+    font-size: 10px !important;
+  }
+  .voter-slip-ribbon-evm-input {
+    width: 24px !important;
+    font-size: 16px !important;
+  }
+  .voter-slip-symbol-box img {
+    max-height: 44px !important;
+  }
+  .voter-slip-symbol-box svg {
+    width: 26px !important;
+    height: 26px !important;
+  }
+  .voter-slip-photo-box svg {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  .voter-slip-symbol-box .voter-slip-symbol-caption {
+    height: 19px !important;
+    font-size: 9px !important;
+  }
+  .voter-slip-party-headline {
+    font-size: 10.5px !important;
+    line-height: 1.2 !important;
+  }
+  .voter-slip-appeal-headline {
+    font-size: 9.5px !important;
+  }
+  .voter-slip-candidate-name {
+    font-size: 14.5px !important;
+    line-height: 1.15 !important;
+  }
+  .voter-slip-candidate-name-en {
+    font-size: 10.5px !important;
+  }
+  .voter-slip-subtitle {
+    font-size: 9.5px !important;
+  }
+  .voter-slip-ribbon {
+    padding: 5px 6px !important;
+    gap: 6px !important;
+  }
+  .voter-slip-ribbon-evm-badge {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 15px !important;
+  }
+  .voter-slip-ribbon-pill {
+    padding: 2px 5px !important;
+    font-size: 9.5px !important;
+  }
+  .voter-slip-metric-num {
+    font-size: 22px !important;
+  }
+  .voter-slip-voter-label {
+    width: 86px !important;
+    min-width: 86px !important;
+    font-size: 10.5px !important;
+  }
+  .voter-slip-voter-value {
+    font-size: 11px !important;
+  }
+}
+
+/* Tier 3: Compact Phones (max-width: 360px - e.g. iPhone SE, Galaxy A/J, small displays) */
+@media (max-width: 360px) {
+  .visual-editor-canvas-card {
+    padding: 8px 4px !important;
+  }
+  .slips-live-preview-section {
+    padding: 8px 4px !important;
+  }
+  .voter-slip-inner-card {
+    padding: 8px 6px !important;
+    gap: 6px !important;
+    border-radius: 8px !important;
+  }
+  .voter-slip-header-row {
+    gap: 4px !important;
+  }
+  .voter-slip-symbol-box,
+  .voter-slip-photo-box {
+    width: 66px !important;
+    min-width: 66px !important;
+    max-width: 66px !important;
+    height: 88px !important;
+    min-height: 88px !important;
+    max-height: 88px !important;
+    border-radius: 6px !important;
+  }
+  .voter-slip-serial-badge {
+    height: 17px !important;
+    font-size: 9px !important;
+  }
+  .voter-slip-evm-input {
+    width: 18px !important;
+    font-size: 9px !important;
+  }
+  .voter-slip-ribbon-evm-input {
+    width: 20px !important;
+    font-size: 14px !important;
+  }
+  .voter-slip-symbol-box img {
+    max-height: 38px !important;
+  }
+  .voter-slip-symbol-box svg {
+    width: 22px !important;
+    height: 22px !important;
+  }
+  .voter-slip-photo-box svg {
+    width: 28px !important;
+    height: 28px !important;
+  }
+  .voter-slip-candidate-name {
+    font-size: 13px !important;
+  }
+  .voter-slip-candidate-name-en {
+    font-size: 9.5px !important;
+  }
+  .voter-slip-party-headline {
+    font-size: 9.5px !important;
+  }
+  .voter-slip-appeal-headline {
+    font-size: 8.5px !important;
+  }
+  .voter-slip-subtitle {
+    font-size: 8.5px !important;
+  }
+  .voter-slip-ribbon-evm-badge {
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 14px !important;
+  }
+  .voter-slip-voter-label {
+    width: 78px !important;
+    min-width: 78px !important;
+    font-size: 10px !important;
+  }
+  .voter-slip-voter-value {
+    font-size: 10.5px !important;
+  }
+}
+
 
 /* ========================================================================= */
 /* 🛡️ FRONTEND CONTENT PROTECTION (ANTI-COPY, ANTI-SCRAPING, ANTI-DOWNLOAD) */

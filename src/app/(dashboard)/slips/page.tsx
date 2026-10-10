@@ -9,7 +9,6 @@ import {
   Search,
   Send,
   Ticket,
-  UserCheck,
   X,
   Layers,
   Sparkles,
@@ -191,9 +190,9 @@ export default function SlipsPage() {
       const res = await apiFetch('/admin/organizations', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        const list = Array.isArray(data) ? data : data.organizations || [];
+        const list: Array<{ _id: string; name: string; slipConfig?: SlipConfig }> = Array.isArray(data) ? data : data.organizations || [];
         setClientsList(
-          list.map((org: any) => ({
+          list.map((org) => ({
             id: org._id,
             name: org.name,
             slipConfig: org.slipConfig,
@@ -343,8 +342,9 @@ export default function SlipsPage() {
         setIsCustomizing(false);
         setBrandingSaveMsg('');
       }, 1100);
-    } catch (err: any) {
-      alert(err.message || 'ब्रांडिंग सहेजने में त्रुटि हुई');
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'ब्रांडिंग सहेजने में त्रुटि हुई';
+      alert(errorMsg);
     } finally {
       setSavingBranding(false);
     }
@@ -665,7 +665,7 @@ export default function SlipsPage() {
             className="slips-bulk-print-grid"
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(460px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))',
               gap: '24px',
             }}
           >
@@ -679,6 +679,7 @@ export default function SlipsPage() {
       ) : (
         /* ================= SINGLE VOTER SLIP STUDIO VIEW ================= */
         <div
+          className="slips-studio-layout"
           style={{
             display: 'grid',
             gridTemplateColumns: 'minmax(300px, 380px) 1fr',
@@ -785,6 +786,7 @@ export default function SlipsPage() {
 
           {/* RIGHT: Live Voter Slip Preview & Actions */}
           <section
+            className="slips-live-preview-section"
             style={{
               background: '#ffffff',
               borderRadius: '14px',
@@ -1056,7 +1058,7 @@ export default function SlipsPage() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
                 gap: '24px',
                 alignItems: 'start',
               }}
@@ -1077,7 +1079,7 @@ export default function SlipsPage() {
                     📸 दोनों साइड की फोटो अपलोड (Left & Right Column Images)
                   </span>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: '14px' }}>
                     {/* Left: Party Symbol */}
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>

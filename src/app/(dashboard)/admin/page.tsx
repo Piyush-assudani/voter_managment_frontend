@@ -1242,16 +1242,19 @@ export default function AdminPanel() {
             {studioMode === 'visual' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {/* Visual Editor Canvas Card */}
-                <div style={{
-                  background: '#ffffff',
-                  borderRadius: '16px',
-                  border: '1.5px solid #cbd5e1',
-                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
-                  padding: '24px 20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                }}>
+                <div
+                  className="visual-editor-canvas-card"
+                  style={{
+                    background: '#ffffff',
+                    borderRadius: '16px',
+                    border: '1.5px solid #cbd5e1',
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
+                    padding: '24px 20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                  }}
+                >
                   {/* Top Notification / Instructions */}
                   <div style={{
                     width: '100%',
@@ -1308,7 +1311,7 @@ export default function AdminPanel() {
                     borderRadius: '12px',
                     border: '1px solid #e2e8f0',
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
                     gap: '12px',
                   }}>
                     {/* Left: Symbol Image Quick Upload */}
@@ -1385,7 +1388,7 @@ export default function AdminPanel() {
 
             {/* ================= MODE 2: CLASSIC FORM MODE ================= */}
             {studioMode === 'form' && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px', alignItems: 'start' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '24px', alignItems: 'start' }}>
                 {/* Form Controls */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {/* Card 1: प्रत्याशी व पार्टी */}
@@ -2503,7 +2506,7 @@ export default function AdminPanel() {
                     🎨 मतदाता पर्ची ब्रांडिंग (फोटो व विवरण संपादन)
                   </legend>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1.1fr) minmax(320px, 1fr)', gap: '20px', alignItems: 'start' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '20px', alignItems: 'start' }}>
                     {/* Inputs */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
