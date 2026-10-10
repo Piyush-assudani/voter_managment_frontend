@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Building2,
 } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 interface LauncherModule {
   id: string;
@@ -167,6 +168,8 @@ export default function DashboardHomePage() {
     } catch {}
   }, []);
 
+  const [stats, setStats] = useState<{ totalVoters: number }>({ totalVoters: 0 });
+
   // Filter modules based on user permissions & admin role
   const visibleModules = launcherModules.filter((mod) => {
     if (mod.adminOnly && !isAdmin) return false;
@@ -176,15 +179,30 @@ export default function DashboardHomePage() {
     return true;
   });
 
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const res = await apiFetch('/voters?page=1&pageSize=1', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data.total === 'number') {
+            setStats({ totalVoters: data.total });
+          }
+        }
+      } catch {}
+    };
+    void loadStats();
+  }, []);
+
   return (
-    <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '24px 28px 60px', width: '100%' }}>
-      {/* Top Banner / Heading: VijaySetu Brand & Context (No "Smart Booth") */}
+    <div style={{ maxWidth: '1680px', margin: '0 auto', padding: '20px 16px 60px', width: '100%' }}>
+      {/* Top Banner / Heading: VijaySetu Brand & Context */}
       <div
         style={{
           background: 'linear-gradient(135deg, #064e3b 0%, #047857 60%, #0f766e 100%)',
           borderRadius: '16px',
-          padding: '24px 28px',
-          marginBottom: '28px',
+          padding: '20px 24px',
+          marginBottom: '20px',
           color: '#ffffff',
           display: 'flex',
           alignItems: 'center',
@@ -194,12 +212,12 @@ export default function DashboardHomePage() {
           boxShadow: '0 8px 24px -4px rgba(4, 120, 87, 0.25)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
           <div
             style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '14px',
+              width: '52px',
+              height: '52px',
+              borderRadius: '12px',
               background: '#ffffff',
               display: 'flex',
               alignItems: 'center',
@@ -213,8 +231,8 @@ export default function DashboardHomePage() {
             <img src="/logo.png" alt="VijaySetu" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 900, letterSpacing: '-0.4px', color: '#ffffff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 900, letterSpacing: '-0.4px', color: '#ffffff' }}>
                 विजयसेतु (VijaySetu)
               </h1>
               <span
@@ -222,10 +240,10 @@ export default function DashboardHomePage() {
                   background: 'rgba(255, 255, 255, 0.2)',
                   border: '1px solid rgba(255, 255, 255, 0.35)',
                   color: '#ffffff',
-                  fontSize: '11px',
+                  fontSize: '10.5px',
                   fontWeight: 700,
-                  padding: '2px 10px',
-                  borderRadius: '14px',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
                   textTransform: 'uppercase',
                   letterSpacing: '0.4px',
                 }}
@@ -233,7 +251,7 @@ export default function DashboardHomePage() {
                 इलेक्शन मैनेजमेंट सिस्टम
               </span>
             </div>
-            <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#d1fae5', fontWeight: 500 }}>
+            <p style={{ margin: '3px 0 0', fontSize: '12.5px', color: '#d1fae5', fontWeight: 500 }}>
               मतदाता खोज, डिजिटल पर्ची वितरण, वॉर-रूम व फील्ड ऑपरेशन कंसोल
             </p>
           </div>
@@ -246,7 +264,7 @@ export default function DashboardHomePage() {
               backdropFilter: 'blur(8px)',
               border: '1px solid rgba(255, 255, 255, 0.25)',
               borderRadius: '10px',
-              padding: '6px 14px',
+              padding: '6px 12px',
               fontSize: '12px',
               fontWeight: 600,
               display: 'flex',
@@ -263,13 +281,109 @@ export default function DashboardHomePage() {
               background: '#ffffff',
               color: '#065f46',
               borderRadius: '10px',
-              padding: '6px 14px',
+              padding: '6px 12px',
               fontSize: '12px',
               fontWeight: 800,
               boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
             }}
           >
-            2026 Edition &bull; 100% सुरक्षित
+            Roots Reach Media &bull; 📞 7231077770
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Summary / Status Strip (Fills wide screen nicely, stacks on mobile) */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: '14px',
+          marginBottom: '24px',
+        }}
+      >
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            padding: '14px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+          }}
+        >
+          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <UsersRound size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>पंजीकृत मतदाता</div>
+            <div style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a' }}>
+              {stats.totalVoters > 0 ? stats.totalVoters.toLocaleString('hi-IN') : 'डेटाबेस कनेक्टेड'}
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            padding: '14px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+          }}
+        >
+          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <CheckSquare size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>मतदान दिवस डेस्क</div>
+            <div style={{ fontSize: '18px', fontWeight: 900, color: '#059669' }}>लाइव ट्रैकिंग सक्रिय</div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            padding: '14px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+          }}
+        >
+          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Ticket size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>डिजिटल मतदाता पर्ची</div>
+            <div style={{ fontSize: '18px', fontWeight: 900, color: '#d97706' }}>ECI मानक + फ़ोटो</div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            padding: '14px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+          }}
+        >
+          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#f3e8ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <ShieldCheck size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>सर्वर व डेटा सुरक्षा</div>
+            <div style={{ fontSize: '18px', fontWeight: 900, color: '#7c3aed' }}>100% एन्क्रिप्टेड</div>
           </div>
         </div>
       </div>
@@ -278,8 +392,8 @@ export default function DashboardHomePage() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '22px',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+          gap: '20px',
         }}
       >
         {visibleModules.map((item) => {

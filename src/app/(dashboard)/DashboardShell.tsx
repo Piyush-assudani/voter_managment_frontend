@@ -188,7 +188,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   };
 
   return (
-    <div className="app-shell" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f8fafc' }}>
+    <div className="app-shell" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f8fafc', overflowX: 'hidden' }}>
       {/* Top Header Bar with VijaySetu Logo, Name, Back Button & Controls */}
       <header
         className="topbar"
@@ -199,20 +199,19 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          minHeight: '64px',
-          padding: '0 24px',
+          minHeight: '60px',
           background: '#ffffff',
           borderBottom: '1px solid #e2e8f0',
           boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
         }}
       >
         {/* Left: Brand Identity (Logo + VijaySetu Name) & Back Button */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
             <div
               style={{
-                width: '38px',
-                height: '38px',
+                width: '36px',
+                height: '36px',
                 borderRadius: '8px',
                 background: '#ffffff',
                 border: '1px solid #e2e8f0',
@@ -221,31 +220,33 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 justifyContent: 'center',
                 overflow: 'hidden',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                flexShrink: 0,
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.png" alt="VijaySetu Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <span style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
                   VijaySetu
                 </span>
                 <span
+                  className="hidden sm:inline-block"
                   style={{
-                    fontSize: '10.5px',
+                    fontSize: '10px',
                     fontWeight: 700,
                     color: '#047857',
                     background: '#ecfdf5',
                     border: '1px solid #a7f3d0',
-                    padding: '1px 6px',
-                    borderRadius: '10px',
+                    padding: '1px 5px',
+                    borderRadius: '8px',
                   }}
                 >
                   विजयसेतु
                 </span>
               </div>
-              <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+              <span className="hidden md:inline-block" style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600 }}>
                 चुनाव प्रबंधन प्रणाली
               </span>
             </div>
@@ -258,30 +259,31 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '6px 14px',
-                borderRadius: '8px',
+                gap: '4px',
+                padding: '5px 10px',
+                borderRadius: '7px',
                 background: '#047857',
                 color: '#ffffff',
-                fontSize: '12.5px',
+                fontSize: '11.5px',
                 fontWeight: 700,
                 textDecoration: 'none',
-                boxShadow: '0 2px 6px rgba(4, 120, 87, 0.25)',
-                marginLeft: '12px',
+                boxShadow: '0 2px 5px rgba(4, 120, 87, 0.2)',
+                marginLeft: '6px',
                 cursor: 'pointer',
-                transition: 'background 0.15s ease',
+                flexShrink: 0,
               }}
               title="मुख्य मेन्यू पर वापस जाएं"
             >
-              <ChevronLeft size={16} />
-              <span>मुख्य मेन्यू</span>
+              <ChevronLeft size={15} />
+              <span className="hidden sm:inline">मुख्य मेन्यू</span>
+              <span className="sm:hidden">मेन्यू</span>
             </Link>
           )}
 
-          {/* Subpage Title */}
+          {/* Subpage Title (Visible on larger screens) */}
           {pathname !== '/' && (
-            <div style={{ marginLeft: '8px', borderLeft: '1px solid #cbd5e1', paddingLeft: '12px' }}>
-              <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#1e293b' }}>
+            <div className="hidden lg:block" style={{ marginLeft: '6px', borderLeft: '1px solid #cbd5e1', paddingLeft: '10px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' }}>
                 {activePage}
               </span>
             </div>
@@ -289,10 +291,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         </div>
 
         {/* Center: Client Selector (Admin) or Client Badge (Non-Admin) */}
-        <div className="topbar-client-container">
+        <div className="topbar-client-container" style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
           {userInfo.role === 'admin' ? (
             <div className="topbar-client-selector-box" title="सक्रिय क्लाइंट चुनें (डेटा केवल इस क्लाइंट का दिखेगा)">
-              <Building2 size={15} className="text-emerald-700 shrink-0" />
+              <Building2 size={14} className="text-emerald-700 shrink-0" />
               <span className="client-select-label">क्लाइंट:</span>
               <select
                 value={selectedClientId}
@@ -321,35 +323,37 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             </div>
           ) : (
             <div className="topbar-client-fixed-badge" title="आप केवल अपने अधिकृत क्लाइंट का डेटा देख सकते हैं">
-              <Building2 size={14} className="text-emerald-600 shrink-0" />
-              <span className="fixed-client-name">
+              <Building2 size={13} className="text-emerald-600 shrink-0" />
+              <span className="fixed-client-name" style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {userInfo.organizationName || 'आपका चुनावी क्षेत्र'}
               </span>
-              <span className="fixed-client-tag">क्लाइंट डेटा</span>
+              <span className="fixed-client-tag hidden sm:inline-block">क्लाइंट डेटा</span>
             </div>
           )}
         </div>
 
         {/* Right: Live Status + User Profile + Logout */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span className={`connection-pill ${health}`}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+          <span className={`connection-pill ${health}`} style={{ padding: '6px 10px', fontSize: '11px' }}>
             <span className={`status-dot status-${health}`} />
-            {health === 'connected' ? 'Live data' : health === 'offline' ? 'Offline' : 'Checking'}
+            <span className="hidden sm:inline">
+              {health === 'connected' ? 'Live data' : health === 'offline' ? 'Offline' : 'Checking'}
+            </span>
           </span>
 
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              paddingLeft: '10px',
+              gap: '6px',
+              paddingLeft: '6px',
               borderLeft: '1px solid #e2e8f0',
             }}
           >
             <span
               style={{
-                width: '32px',
-                height: '32px',
+                width: '30px',
+                height: '30px',
                 borderRadius: '50%',
                 background: '#ecfdf5',
                 color: '#047857',
@@ -358,16 +362,17 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: 800,
-                fontSize: '13px',
+                fontSize: '12px',
+                flexShrink: 0,
               }}
             >
               {userInfo.name ? userInfo.name.charAt(0).toUpperCase() : 'U'}
             </span>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
+            <div className="hidden md:flex" style={{ flexDirection: 'column' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {userInfo.name || userInfo.email || 'User'}
               </span>
-              <span style={{ fontSize: '10.5px', color: '#64748b' }}>
+              <span style={{ fontSize: '10px', color: '#64748b' }}>
                 {userInfo.role === 'admin' ? 'Super Admin' : 'Operations Desk'}
               </span>
             </div>
@@ -378,21 +383,21 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '5px',
-              padding: '6px 12px',
-              borderRadius: '8px',
+              gap: '4px',
+              padding: '6px 10px',
+              borderRadius: '7px',
               background: '#fef2f2',
               border: '1px solid #fecaca',
               color: '#dc2626',
-              fontSize: '12px',
+              fontSize: '11.5px',
               fontWeight: 600,
               cursor: 'pointer',
-              marginLeft: '4px',
+              marginLeft: '2px',
             }}
             title="लॉगआउट"
           >
-            <LogOut size={14} />
-            <span>लॉगआउट</span>
+            <LogOut size={13} />
+            <span className="hidden sm:inline">लॉगआउट</span>
           </button>
         </div>
       </header>
@@ -403,7 +408,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       </main>
 
       {/* Footer */}
-      <footer className="app-footer" style={{ justifyContent: 'center' }}>
+      <footer className="app-footer" style={{ justifyContent: 'center', textAlign: 'center', flexWrap: 'wrap', gap: '6px' }}>
         <span>&copy; 2026 VijaySetu &bull; Roots Reach Media. All Rights Reserved. &bull; <a href="/privacy" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Privacy Policy</a> &bull; <a href="/terms" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Terms of Service</a> &bull; 📞 7231077770</span>
       </footer>
 
@@ -419,18 +424,20 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '24px',
+            padding: '16px',
           }}
           role="dialog"
           aria-modal="true"
         >
           <div
             style={{
-              maxWidth: '540px',
+              maxWidth: '520px',
               width: '100%',
+              maxHeight: '92vh',
+              overflowY: 'auto',
               background: '#ffffff',
-              borderRadius: '24px',
-              padding: '36px 30px',
+              borderRadius: '20px',
+              padding: '28px 22px',
               textAlign: 'center',
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
               border: '2px solid #ef4444',

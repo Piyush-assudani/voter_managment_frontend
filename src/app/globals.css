@@ -15,12 +15,16 @@
   box-sizing: border-box;
 }
 
+html,
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: var(--font-inter), var(--font-noto-sans-devanagari), sans-serif;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
 }
 
 button,
@@ -547,10 +551,16 @@ a {
 
 .page-content {
   width: 100%;
-  max-width: 1500px;
+  max-width: 1720px;
   flex: 1;
   margin: 0 auto;
-  padding: 28px 30px 32px;
+  padding: 24px 28px 48px;
+}
+
+@media (max-width: 768px) {
+  .page-content {
+    padding: 14px 12px 36px;
+  }
 }
 
 .app-footer {
@@ -574,9 +584,22 @@ a {
 
 .directory-page {
   width: 100%;
-  max-width: 1160px;
+  max-width: 1680px;
   margin: 0 auto;
   color: #26332c;
+  padding: 0 4px;
+}
+
+@media (min-width: 1920px) {
+  .directory-page {
+    max-width: 1840px;
+  }
+}
+
+@media (max-width: 640px) {
+  .directory-page {
+    padding: 0 2px;
+  }
 }
 
 .page-intro {
@@ -854,7 +877,10 @@ a {
 }
 
 .table-scroll {
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .voter-table {
@@ -1183,9 +1209,22 @@ a {
 
 .work-page {
   width: 100%;
-  max-width: 1160px;
+  max-width: 1680px;
   margin: 0 auto;
   color: #26332c;
+  padding: 0 4px;
+}
+
+@media (min-width: 1920px) {
+  .work-page {
+    max-width: 1840px;
+  }
+}
+
+@media (max-width: 640px) {
+  .work-page {
+    padding: 0 2px;
+  }
 }
 
 .intro-actions {
@@ -1205,9 +1244,17 @@ a {
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 11px;
-  margin: 0 0 25px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin: 0 0 24px;
+}
+
+@media (max-width: 640px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin: 0 0 18px;
+  }
 }
 
 .metric-card,
@@ -1491,19 +1538,30 @@ a {
   font-size: 12px;
 }
 
-.vote-button.is-checked {
-  color: #2d6a4d;
-  background: #f2f7f2;
+.slips-studio-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 400px) 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .slips-studio-layout {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
 }
 
 .admin-tabs {
   display: flex;
-  gap: 5px;
+  gap: 6px;
   margin: 0 0 17px;
-  padding: 4px;
-  width: fit-content;
+  padding: 5px;
+  width: 100%;
   max-width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
   background: #ecefeb;
   border-radius: 8px;
 }
@@ -2559,11 +2617,14 @@ a {
 
   .admin-tabs {
     width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .admin-tab {
-    flex: 1;
-    padding: 0 7px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 0 10px;
     font-size: 12px;
   }
 

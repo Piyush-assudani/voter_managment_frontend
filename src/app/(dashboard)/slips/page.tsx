@@ -746,15 +746,7 @@ export default function SlipsPage() {
         </section>
       ) : (
         /* ================= SINGLE VOTER SLIP STUDIO VIEW ================= */
-        <div
-          className="slips-studio-layout"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(300px, 380px) 1fr',
-            gap: '24px',
-            alignItems: 'start',
-          }}
-        >
+        <div className="slips-studio-layout">
           {/* LEFT: Voter List */}
           <section
             style={{
@@ -764,7 +756,7 @@ export default function SlipsPage() {
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
-              maxHeight: 'calc(100vh - 280px)',
+              maxHeight: 'calc(100vh - 260px)',
             }}
           >
             <div
