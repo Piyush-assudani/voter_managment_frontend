@@ -195,6 +195,8 @@ export default function AdminPanel() {
   const [brandingTargetOrgId, setBrandingTargetOrgId] = useState('');
   const [targetSlipConfig, setTargetSlipConfig] = useState<SlipConfig>(defaultSlipConfig);
   const [savingBranding, setSavingBranding] = useState(false);
+  const [studioMode, setStudioMode] = useState<'visual' | 'form'>('visual');
+  const [isVisualEditing, setIsVisualEditing] = useState(true);
 
   const handleStudioImageUpload = (
     file: File,
@@ -1091,7 +1093,7 @@ export default function AdminPanel() {
               borderRadius: '12px',
               border: '1px solid #e2e8f0',
               padding: '12px 18px',
-              marginBottom: '20px',
+              marginBottom: '16px',
               display: 'flex',
               alignItems: 'center',
               flexWrap: 'wrap',
@@ -1126,330 +1128,151 @@ export default function AdminPanel() {
               </div>
             </div>
 
-            {/* Main Studio 2-Column Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 1.15fr) minmax(360px, 1fr)', gap: '24px', alignItems: 'start' }}>
-              
-              {/* Left Column: Form Controls */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                
-                {/* Card 1: प्रत्याशी व पार्टी */}
-                <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px' }}>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#1e3a8a', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <User size={16} />
-                    <span>उम्मीदवार व पार्टी विवरण</span>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600 }}>
-                      प्रत्याशी नाम (हिंदी) *
-                      <input
-                        value={targetSlipConfig.candidateName || ''}
-                        onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, candidateName: e.target.value })}
-                        placeholder="उदा. प्रसन्न चंद मेहता"
-                      />
-                    </label>
-                    <label style={{ fontSize: '12px', fontWeight: 600 }}>
-                      Candidate Name (English)
-                      <input
-                        value={targetSlipConfig.candidateNameEn || ''}
-                        onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, candidateNameEn: e.target.value })}
-                        placeholder="Prasann Chand Mehta"
-                      />
-                    </label>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 0.8fr', gap: '12px', marginBottom: '12px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600 }}>
-                      पार्टी का नाम *
-                      <input
-                        value={targetSlipConfig.partyName || ''}
-                        onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, partyName: e.target.value })}
-                        placeholder="भाजपा प्रत्याशी"
-                      />
-                    </label>
-                    <label style={{ fontSize: '12px', fontWeight: 600 }}>
-                      चुनाव चिन्ह नाम *
-                      <input
-                        value={targetSlipConfig.partySymbolName || ''}
-                        onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, partySymbolName: e.target.value })}
-                        placeholder="कमल का फूल"
-                      />
-                    </label>
-                    <label style={{ fontSize: '12px', fontWeight: 600 }}>
-                      EVM क्रम नं. *
-                      <input
-                        value={targetSlipConfig.evmNumber || ''}
-                        onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, evmNumber: e.target.value })}
-                        placeholder="1"
-                      />
-                    </label>
-                  </div>
-
-                  <label style={{ fontSize: '12px', fontWeight: 600 }}>
-                    उपशीर्षक / क्षेत्र (Ward / Constituency)
-                    <input
-                      value={targetSlipConfig.subTitle || ''}
-                      onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, subTitle: e.target.value })}
-                      placeholder="वार्ड नंबर 82 Jodhpur"
-                    />
-                  </label>
-                </div>
-
-                {/* Card 2: अपील व संदेश */}
-                <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px' }}>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#1e3a8a', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <MessageCircle size={16} />
-                    <span>EVM पट्टी व अपील संदेश</span>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600 }}>
-                      EVM पट्टी अपील संदेश
-                      <input
-                        value={targetSlipConfig.appealText || ''}
-                        onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, appealText: e.target.value })}
-                        placeholder="को अपना अमूल्य वोट देकर भारी मतों से विजय बनाएं।"
-                      />
-                    </label>
-
-                    <label style={{ fontSize: '12px', fontWeight: 600 }}>
-                      बॉटम अपील (Footer Banner)
-                      <input
-                        value={targetSlipConfig.footerAppeal || ''}
-                        onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, footerAppeal: e.target.value })}
-                        placeholder="कमल का बटन दबाएं और भारी मतों से विजयी बनाएं"
-                      />
-                    </label>
-
-                    <label style={{ fontSize: '12px', fontWeight: 600 }}>
-                      डिफ़ॉल्ट मतदान केंद्र (Polling Station Fallback)
-                      <input
-                        value={targetSlipConfig.pollingStationFallback || ''}
-                        onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, pollingStationFallback: e.target.value })}
-                        placeholder="उदा. सामुदायिक भवन, जाटा बास, महामंदिर, जोधपुर"
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                {/* Card 3: दोनों तरफ की फ़ोटो (Styled Image Uploaders) */}
-                <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px' }}>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#1e3a8a', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Upload size={16} />
-                    <span>आधिकारिक फ़ोटो अपलोड (दोनों तरफ)</span>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                    {/* Left: Party Symbol Image Upload */}
-                    <div style={{ padding: '14px', background: '#fff7ed', borderRadius: '10px', border: '1.5px dashed #ea580c', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#ea580c' }}>
-                          🌸 बाएं तरफ: चुनाव चिन्ह
-                        </span>
-                        {targetSlipConfig.partySymbolImage && (
-                          <span style={{ fontSize: '11px', color: '#15803d', fontWeight: 700, background: '#dcfce7', padding: '1px 6px', borderRadius: '4px' }}>
-                            ✓ अपलोड है
-                          </span>
-                        )}
-                      </div>
-
-                      {targetSlipConfig.partySymbolImage ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#ffffff', padding: '8px', borderRadius: '8px', border: '1px solid #fed7aa' }}>
-                          <img
-                            src={targetSlipConfig.partySymbolImage}
-                            alt="Symbol"
-                            style={{ width: '44px', height: '44px', objectFit: 'contain', borderRadius: '4px' }}
-                          />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '11px', fontWeight: 700, color: '#9a3412', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              कस्टम चिन्ह सक्रिय
-                            </div>
-                            <div style={{ fontSize: '10px', color: '#78350f' }}>पर्ची में बाएं दिखेगा</div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setTargetSlipConfig({ ...targetSlipConfig, partySymbolImage: '' })}
-                            style={{ background: '#fee2e2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: '11px', color: '#9a3412', background: '#fff', padding: '6px 8px', borderRadius: '6px', border: '1px solid #fed7aa' }}>
-                          वेक्टर चिन्ह ({targetSlipConfig.partySymbolName || 'कमल'}) सक्रिय है
-                        </div>
-                      )}
-
-                      <label style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        padding: '7px 12px',
-                        background: '#ea580c',
-                        color: '#ffffff',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        textAlign: 'center',
-                      }}>
-                        <Upload size={13} />
-                        <span>{targetSlipConfig.partySymbolImage ? 'चिन्ह फ़ोटो बदलें' : 'चिन्ह फ़ोटो अपलोड करें'}</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleStudioImageUpload(file, 'partySymbolImage');
-                          }}
-                          style={{ display: 'none' }}
-                        />
-                      </label>
-                    </div>
-
-                    {/* Right: Candidate Photo Image Upload */}
-                    <div style={{ padding: '14px', background: '#eff6ff', borderRadius: '10px', border: '1.5px dashed #1e3a8a', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#1e3a8a' }}>
-                          👤 दाएं तरफ: प्रत्याशी फ़ोटो
-                        </span>
-                        {targetSlipConfig.candidateImage && (
-                          <span style={{ fontSize: '11px', color: '#15803d', fontWeight: 700, background: '#dcfce7', padding: '1px 6px', borderRadius: '4px' }}>
-                            ✓ अपलोड है
-                          </span>
-                        )}
-                      </div>
-
-                      {targetSlipConfig.candidateImage ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#ffffff', padding: '8px', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
-                          <img
-                            src={targetSlipConfig.candidateImage}
-                            alt="Candidate"
-                            style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '50%', border: '1.5px solid #3b82f6' }}
-                          />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '11px', fontWeight: 700, color: '#1e40af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              प्रत्याशी फ़ोटो सक्रिय
-                            </div>
-                            <div style={{ fontSize: '10px', color: '#1e3a8a' }}>पर्ची में दाएं दिखेगी</div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setTargetSlipConfig({ ...targetSlipConfig, candidateImage: '' })}
-                            style={{ background: '#fee2e2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: '11px', color: '#1e40af', background: '#fff', padding: '6px 8px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
-                          डिफ़ॉल्ट पोर्ट्रेट आइकन सक्रिय है
-                        </div>
-                      )}
-
-                      <label style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        padding: '7px 12px',
-                        background: '#1e3a8a',
-                        color: '#ffffff',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        textAlign: 'center',
-                      }}>
-                        <Upload size={13} />
-                        <span>{targetSlipConfig.candidateImage ? 'प्रत्याशी फ़ोटो बदलें' : 'प्रत्याशी फ़ोटो अपलोड करें'}</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleStudioImageUpload(file, 'candidateImage');
-                          }}
-                          style={{ display: 'none' }}
-                        />
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Save Button Action */}
-                <div style={{ marginTop: '4px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {/* Studio Mode Selector & Global Save Bar (Sticky on Desktop & Mobile) */}
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0',
+              padding: '12px 16px',
+              marginBottom: '20px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '12px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+            }}>
+              {/* Left: Mode Toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#475569' }}>संपादन शैली:</span>
+                <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: '3px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                   <button
-                    className="button-primary"
                     type="button"
-                    onClick={saveClientBranding}
-                    disabled={savingBranding}
-                    style={{ padding: '12px 24px', fontSize: '14px', fontWeight: 700 }}
-                  >
-                    {savingBranding ? <LoaderCircle size={16} className="spin" /> : <Check size={16} />}
-                    &apos;{organizations.find((o) => o.id === brandingTargetOrgId)?.name || 'क्लाइंट'}&apos; की पर्ची ब्रांडिंग सेव करें
-                  </button>
-                  <button
-                    className="button-secondary"
-                    type="button"
-                    onClick={() => {
-                      const org = organizations.find((o) => o.id === brandingTargetOrgId);
-                      if (org) {
-                        setTargetSlipConfig(org.slipConfig && Object.keys(org.slipConfig).length > 0 ? { ...defaultSlipConfig, ...org.slipConfig } : { ...defaultSlipConfig });
-                      }
+                    onClick={() => setStudioMode('visual')}
+                    style={{
+                      padding: '6px 14px',
+                      fontSize: '12.5px',
+                      fontWeight: studioMode === 'visual' ? 700 : 500,
+                      background: studioMode === 'visual' ? '#0284c7' : 'transparent',
+                      color: studioMode === 'visual' ? '#ffffff' : '#64748b',
+                      borderRadius: '6px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.15s ease',
                     }}
                   >
-                    रीसेट करें
+                    <span>🎨 सीधे पर्ची पर एडिट करें (Visual Editor)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStudioMode('form')}
+                    style={{
+                      padding: '6px 14px',
+                      fontSize: '12.5px',
+                      fontWeight: studioMode === 'form' ? 700 : 500,
+                      background: studioMode === 'form' ? '#0284c7' : 'transparent',
+                      color: studioMode === 'form' ? '#ffffff' : '#64748b',
+                      borderRadius: '6px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span>📝 फॉर्म इनपुट मोड (Form Mode)</span>
                   </button>
                 </div>
-
               </div>
 
-              {/* Right Column: Real-Time Live Voter Slip Preview */}
-              <div style={{
-                background: '#ffffff',
-                borderRadius: '16px',
-                border: '1.5px solid #cbd5e1',
-                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
-                padding: '20px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '14px',
-                position: 'sticky',
-                top: '20px',
-              }}>
-                {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', borderBottom: '1.5px solid #f1f5f9', paddingBottom: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '18px' }}>⚡</span>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>
-                        लाइव पर्ची पूर्वावलोकन (Live Preview)
-                      </h3>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>
-                        संगठन: <strong style={{ color: '#1e3a8a' }}>{organizations.find((o) => o.id === brandingTargetOrgId)?.name || 'क्लाइंट'}</strong>
-                      </span>
-                    </div>
-                  </div>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#16a34a', background: '#dcfce7', border: '1px solid #bbf7d0', padding: '3px 8px', borderRadius: '20px' }}>
-                    ● Real-Time Sync
-                  </span>
-                </div>
+              {/* Right: Save, Reset & Clean Preview Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                {studioMode === 'visual' && (
+                  <button
+                    type="button"
+                    onClick={() => setIsVisualEditing(!isVisualEditing)}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      borderRadius: '6px',
+                      border: isVisualEditing ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
+                      background: isVisualEditing ? '#e0f2fe' : '#ffffff',
+                      color: isVisualEditing ? '#0369a1' : '#475569',
+                      cursor: 'pointer',
+                    }}
+                    title="संपादन आउटलाइन बंद/चालू करें"
+                  >
+                    {isVisualEditing ? '✏️ संपादन मोड चालू' : '👁️ साफ पूर्वावलोकन'}
+                  </button>
+                )}
 
-                <div style={{ fontSize: '12px', color: '#64748b', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  ℹ️ इस क्लाइंट के कार्यकर्ताओं द्वारा पर्ची शेयर या प्रिंट करते समय यही ब्रांडिंग (फ़ोटो, नाम व चुनाव चिन्ह) दिखाई देगी।
-                </div>
+                <button
+                  className="button-primary"
+                  type="button"
+                  onClick={saveClientBranding}
+                  disabled={savingBranding}
+                  style={{ padding: '8px 18px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  {savingBranding ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
+                  <span>&apos;{organizations.find((o) => o.id === brandingTargetOrgId)?.name || 'क्लाइंट'}&apos; की पर्ची सेव करें</span>
+                </button>
 
-                {/* Voter Slip Template Container with ZERO OVERFLOW */}
+                <button
+                  className="button-secondary"
+                  type="button"
+                  onClick={() => {
+                    const org = organizations.find((o) => o.id === brandingTargetOrgId);
+                    if (org) {
+                      setTargetSlipConfig(org.slipConfig && Object.keys(org.slipConfig).length > 0 ? { ...defaultSlipConfig, ...org.slipConfig } : { ...defaultSlipConfig });
+                    }
+                  }}
+                  style={{ padding: '8px 14px', fontSize: '13px' }}
+                >
+                  रीसेट
+                </button>
+              </div>
+            </div>
+
+            {/* ================= MODE 1: DIRECT VISUAL EDITOR ON PARCHI ================= */}
+            {studioMode === 'visual' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Visual Editor Canvas Card */}
                 <div style={{
-                  width: '100%',
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  border: '1.5px solid #cbd5e1',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
+                  padding: '24px 20px',
                   display: 'flex',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                  padding: '4px 0',
+                  flexDirection: 'column',
+                  alignItems: 'center',
                 }}>
-                  <div style={{ width: '100%', maxWidth: '520px' }}>
+                  {/* Top Notification / Instructions */}
+                  <div style={{
+                    width: '100%',
+                    maxWidth: '560px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '14px',
+                    fontSize: '12px',
+                    color: '#64748b',
+                  }}>
+                    <span style={{ fontWeight: 700, color: '#0f172a' }}>
+                      ⚡ सीधा संपादन: <span style={{ fontWeight: 400 }}>पर्ची के किसी भी हिस्से पर क्लिक करके तुरंत एडिट करें</span>
+                    </span>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '2px 8px', borderRadius: '12px' }}>
+                      ● Real-Time Sync
+                    </span>
+                  </div>
+
+                  {/* Responsive Parchi Template with Direct WYSIWYG Editing */}
+                  <div style={{ width: '100%', maxWidth: '560px' }}>
                     <VoterSlipTemplate
                       voter={{
                         epic: 'RLJ1213180',
@@ -1468,12 +1291,458 @@ export default function AdminPanel() {
                       }}
                       config={targetSlipConfig}
                       isInline={true}
+                      isEditable={isVisualEditing}
+                      onConfigChange={setTargetSlipConfig}
+                      onImageUpload={handleStudioImageUpload}
+                      onRemoveImage={(field) => setTargetSlipConfig((prev) => ({ ...prev, [field]: '' }))}
                     />
+                  </div>
+
+                  {/* Quick Photo Upload & Management Dock */}
+                  <div style={{
+                    width: '100%',
+                    maxWidth: '560px',
+                    marginTop: '20px',
+                    padding: '16px',
+                    background: '#f8fafc',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                    gap: '12px',
+                  }}>
+                    {/* Left: Symbol Image Quick Upload */}
+                    <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '8px', padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {targetSlipConfig.partySymbolImage ? (
+                          <img src={targetSlipConfig.partySymbolImage} alt="" style={{ width: '36px', height: '36px', objectFit: 'contain', borderRadius: '4px' }} />
+                        ) : (
+                          <span style={{ fontSize: '24px' }}>🌸</span>
+                        )}
+                        <div>
+                          <div style={{ fontSize: '12px', fontWeight: 700, color: '#9a3412' }}>चुनाव चिन्ह फ़ोटो</div>
+                          <div style={{ fontSize: '11px', color: '#78350f' }}>{targetSlipConfig.partySymbolName || 'कमल का फूल'}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <label style={{ padding: '5px 10px', background: '#ea580c', color: '#fff', fontSize: '11px', fontWeight: 700, borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Upload size={12} />
+                          <span>अपलोड</span>
+                          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleStudioImageUpload(f, 'partySymbolImage'); }} />
+                        </label>
+                        {targetSlipConfig.partySymbolImage && (
+                          <button type="button" onClick={() => setTargetSlipConfig((prev) => ({ ...prev, partySymbolImage: '' }))} style={{ background: '#fee2e2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer' }} title="हटाएं">
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right: Candidate Photo Quick Upload */}
+                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {targetSlipConfig.candidateImage ? (
+                          <img src={targetSlipConfig.candidateImage} alt="" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '50%', border: '1px solid #3b82f6' }} />
+                        ) : (
+                          <span style={{ fontSize: '24px' }}>👤</span>
+                        )}
+                        <div>
+                          <div style={{ fontSize: '12px', fontWeight: 700, color: '#1e40af' }}>प्रत्याशी फ़ोटो</div>
+                          <div style={{ fontSize: '11px', color: '#1e3a8a' }}>{targetSlipConfig.candidateName || 'उम्मीदवार'}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <label style={{ padding: '5px 10px', background: '#1e3a8a', color: '#fff', fontSize: '11px', fontWeight: 700, borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Upload size={12} />
+                          <span>अपलोड</span>
+                          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleStudioImageUpload(f, 'candidateImage'); }} />
+                        </label>
+                        {targetSlipConfig.candidateImage && (
+                          <button type="button" onClick={() => setTargetSlipConfig((prev) => ({ ...prev, candidateImage: '' }))} style={{ background: '#fee2e2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer' }} title="हटाएं">
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Centered Save Action Button for Mobile & Desktop */}
+                  <div style={{ marginTop: '20px', width: '100%', maxWidth: '560px' }}>
+                    <button
+                      className="button-primary"
+                      type="button"
+                      onClick={saveClientBranding}
+                      disabled={savingBranding}
+                      style={{ width: '100%', padding: '14px 20px', fontSize: '15px', fontWeight: 800, justifyContent: 'center' }}
+                    >
+                      {savingBranding ? <LoaderCircle size={18} className="spin" /> : <Check size={18} />}
+                      <span>&apos;{organizations.find((o) => o.id === brandingTargetOrgId)?.name || 'क्लाइंट'}&apos; की पर्ची ब्रांडिंग सेव करें</span>
+                    </button>
                   </div>
                 </div>
               </div>
+            )}
 
-            </div>
+            {/* ================= MODE 2: CLASSIC FORM MODE ================= */}
+            {studioMode === 'form' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px', alignItems: 'start' }}>
+                {/* Form Controls */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Card 1: प्रत्याशी व पार्टी */}
+                  <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#1e3a8a', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <User size={16} />
+                      <span>उम्मीदवार व पार्टी विवरण</span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        प्रत्याशी नाम (हिंदी) *
+                        <input
+                          style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px' }}
+                          value={targetSlipConfig.candidateName || ''}
+                          onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, candidateName: e.target.value })}
+                          placeholder="उदा. प्रसन्न चंद मेहता"
+                        />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        Candidate Name (English)
+                        <input
+                          style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px' }}
+                          value={targetSlipConfig.candidateNameEn || ''}
+                          onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, candidateNameEn: e.target.value })}
+                          placeholder="Prasann Chand Mehta"
+                        />
+                      </label>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 0.8fr', gap: '12px', marginBottom: '12px' }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        पार्टी का नाम *
+                        <input
+                          style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px' }}
+                          value={targetSlipConfig.partyName || ''}
+                          onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, partyName: e.target.value })}
+                          placeholder="भाजपा प्रत्याशी"
+                        />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        चुनाव चिन्ह नाम *
+                        <input
+                          style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px' }}
+                          value={targetSlipConfig.partySymbolName || ''}
+                          onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, partySymbolName: e.target.value })}
+                          placeholder="कमल का फूल"
+                        />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        EVM क्रम नं. *
+                        <input
+                          style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px' }}
+                          value={targetSlipConfig.evmNumber || ''}
+                          onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, evmNumber: e.target.value })}
+                          placeholder="1"
+                        />
+                      </label>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        शीर्षक अपील (Header Appeal)
+                        <input
+                          style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px' }}
+                          value={targetSlipConfig.appealHeadline || ''}
+                          onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, appealHeadline: e.target.value })}
+                          placeholder="(1 नंबर पर कमल का फूल का बटन दबाएं)"
+                        />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        उपशीर्षक / क्षेत्र (Ward / Area)
+                        <input
+                          style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px' }}
+                          value={targetSlipConfig.subTitle || ''}
+                          onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, subTitle: e.target.value })}
+                          placeholder="वार्ड नंबर 82 Jodhpur"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Card 2: EVM पट्टी व अपील */}
+                  <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#1e3a8a', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <MessageCircle size={16} />
+                      <span>EVM पट्टी व अपील संदेश</span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        EVM पट्टी अपील संदेश
+                        <input
+                          style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px' }}
+                          value={targetSlipConfig.appealText || ''}
+                          onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, appealText: e.target.value })}
+                          placeholder="को अपना अमूल्य वोट देकर भारी मतों से विजय बनाएं।"
+                        />
+                      </label>
+
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        बॉटम अपील (Footer Banner)
+                        <input
+                          style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px' }}
+                          value={targetSlipConfig.footerAppeal || ''}
+                          onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, footerAppeal: e.target.value })}
+                          placeholder="कमल का बटन दबाएं और भारी मतों से विजयी बनाएं"
+                        />
+                      </label>
+
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        डिफ़ॉल्ट मतदान केंद्र (Polling Station Fallback)
+                        <input
+                          style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px' }}
+                          value={targetSlipConfig.pollingStationFallback || ''}
+                          onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, pollingStationFallback: e.target.value })}
+                          placeholder="उदा. सामुदायिक भवन, जाटा बास, महामंदिर, जोधपुर"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Card 3: दोनों तरफ की फ़ोटो */}
+                  <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#1e3a8a', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Upload size={16} />
+                      <span>आधिकारिक फ़ोटो अपलोड (दोनों तरफ)</span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px' }}>
+                      {/* Left: Party Symbol Image Upload */}
+                      <div style={{ padding: '14px', background: '#fff7ed', borderRadius: '10px', border: '1.5px dashed #ea580c', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#ea580c' }}>
+                            🌸 बाएं तरफ: चुनाव चिन्ह
+                          </span>
+                          {targetSlipConfig.partySymbolImage && (
+                            <span style={{ fontSize: '11px', color: '#15803d', fontWeight: 700, background: '#dcfce7', padding: '1px 6px', borderRadius: '4px' }}>
+                              ✓ अपलोड है
+                            </span>
+                          )}
+                        </div>
+
+                        {targetSlipConfig.partySymbolImage ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#ffffff', padding: '8px', borderRadius: '8px', border: '1px solid #fed7aa' }}>
+                            <img
+                              src={targetSlipConfig.partySymbolImage}
+                              alt="Symbol"
+                              style={{ width: '44px', height: '44px', objectFit: 'contain', borderRadius: '4px' }}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#9a3412', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                कस्टम चिन्ह सक्रिय
+                              </div>
+                              <div style={{ fontSize: '10px', color: '#78350f' }}>पर्ची में बाएं दिखेगा</div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setTargetSlipConfig({ ...targetSlipConfig, partySymbolImage: '' })}
+                              style={{ background: '#fee2e2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '11px', color: '#9a3412', background: '#fff', padding: '6px 8px', borderRadius: '6px', border: '1px solid #fed7aa' }}>
+                            वेक्टर चिन्ह ({targetSlipConfig.partySymbolName || 'कमल'}) सक्रिय है
+                          </div>
+                        )}
+
+                        <label style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          padding: '7px 12px',
+                          background: '#ea580c',
+                          color: '#ffffff',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          textAlign: 'center',
+                        }}>
+                          <Upload size={13} />
+                          <span>{targetSlipConfig.partySymbolImage ? 'चिन्ह फ़ोटो बदलें' : 'चिन्ह फ़ोटो अपलोड करें'}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleStudioImageUpload(file, 'partySymbolImage');
+                            }}
+                            style={{ display: 'none' }}
+                          />
+                        </label>
+                      </div>
+
+                      {/* Right: Candidate Photo Image Upload */}
+                      <div style={{ padding: '14px', background: '#eff6ff', borderRadius: '10px', border: '1.5px dashed #1e3a8a', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#1e3a8a' }}>
+                            👤 दाएं तरफ: प्रत्याशी फ़ोटो
+                          </span>
+                          {targetSlipConfig.candidateImage && (
+                            <span style={{ fontSize: '11px', color: '#15803d', fontWeight: 700, background: '#dcfce7', padding: '1px 6px', borderRadius: '4px' }}>
+                              ✓ अपलोड है
+                            </span>
+                          )}
+                        </div>
+
+                        {targetSlipConfig.candidateImage ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#ffffff', padding: '8px', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                            <img
+                              src={targetSlipConfig.candidateImage}
+                              alt="Candidate"
+                              style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '50%', border: '1.5px solid #3b82f6' }}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#1e40af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                प्रत्याशी फ़ोटो सक्रिय
+                              </div>
+                              <div style={{ fontSize: '10px', color: '#1e3a8a' }}>पर्ची में दाएं दिखेगी</div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setTargetSlipConfig({ ...targetSlipConfig, candidateImage: '' })}
+                              style={{ background: '#fee2e2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '11px', color: '#1e40af', background: '#fff', padding: '6px 8px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
+                            डिफ़ॉल्ट पोर्ट्रेट आइकन सक्रिय है
+                          </div>
+                        )}
+
+                        <label style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          padding: '7px 12px',
+                          background: '#1e3a8a',
+                          color: '#ffffff',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          textAlign: 'center',
+                        }}>
+                          <Upload size={13} />
+                          <span>{targetSlipConfig.candidateImage ? 'प्रत्याशी फ़ोटो बदलें' : 'प्रत्याशी फ़ोटो अपलोड करें'}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleStudioImageUpload(file, 'candidateImage');
+                            }}
+                            style={{ display: 'none' }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Save Button */}
+                  <div style={{ marginTop: '4px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <button
+                      className="button-primary"
+                      type="button"
+                      onClick={saveClientBranding}
+                      disabled={savingBranding}
+                      style={{ padding: '12px 24px', fontSize: '14px', fontWeight: 700 }}
+                    >
+                      {savingBranding ? <LoaderCircle size={16} className="spin" /> : <Check size={16} />}
+                      &apos;{organizations.find((o) => o.id === brandingTargetOrgId)?.name || 'क्लाइंट'}&apos; की पर्ची ब्रांडिंग सेव करें
+                    </button>
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => {
+                        const org = organizations.find((o) => o.id === brandingTargetOrgId);
+                        if (org) {
+                          setTargetSlipConfig(org.slipConfig && Object.keys(org.slipConfig).length > 0 ? { ...defaultSlipConfig, ...org.slipConfig } : { ...defaultSlipConfig });
+                        }
+                      }}
+                    >
+                      रीसेट करें
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right Column: Real-Time Live Voter Slip Preview */}
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  border: '1.5px solid #cbd5e1',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
+                  padding: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '14px',
+                }}>
+                  {/* Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', borderBottom: '1.5px solid #f1f5f9', paddingBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px' }}>⚡</span>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>
+                          लाइव पर्ची पूर्वावलोकन (Live Preview)
+                        </h3>
+                        <span style={{ fontSize: '12px', color: '#64748b' }}>
+                          संगठन: <strong style={{ color: '#1e3a8a' }}>{organizations.find((o) => o.id === brandingTargetOrgId)?.name || 'क्लाइंट'}</strong>
+                        </span>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#16a34a', background: '#dcfce7', border: '1px solid #bbf7d0', padding: '3px 8px', borderRadius: '20px' }}>
+                      ● Real-Time Sync
+                    </span>
+                  </div>
+
+                  <div style={{
+                    width: '100%',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    padding: '4px 0',
+                  }}>
+                    <div style={{ width: '100%', maxWidth: '520px' }}>
+                      <VoterSlipTemplate
+                        voter={{
+                          epic: 'RLJ1213180',
+                          nameHi: 'जबरा राम',
+                          nameEn: 'Jabra Ram',
+                          relativeNameHi: 'नरिगा राम',
+                          relativeNameEn: 'Nariga Ram',
+                          relationType: 'पिता',
+                          age: 28,
+                          gender: 'पुरुष',
+                          houseNo: '279',
+                          wardNo: (organizations.find((o) => o.id === brandingTargetOrgId)?.wards?.[0] || '82'),
+                          partNo: '1',
+                          serialNo: 1,
+                          boothName: `${organizations.find((o) => o.id === brandingTargetOrgId)?.wards?.[0] || '1'} - राजकीय उच्च प्राथमिक विद्यालय, जोधपुर`,
+                        }}
+                        config={targetSlipConfig}
+                        isInline={true}
+                        isEditable={false}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
 

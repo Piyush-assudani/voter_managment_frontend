@@ -4028,3 +4028,89 @@ a {
     padding: 14px 12px;
   }
 }
+
+/* ========================================================================= */
+/* 🎨 VOTER SLIP TEMPLATE & DIRECT ON-PARCHI VISUAL EDITOR RESPONSIVE STYLES  */
+/* ========================================================================= */
+.voter-slip-printable-card {
+  transition: all 0.2s ease;
+}
+
+.voter-slip-inner-card {
+  transition: all 0.2s ease;
+}
+
+.photo-overlay-prompt {
+  pointer-events: none;
+}
+
+.voter-slip-symbol-box:hover .photo-overlay-prompt,
+.voter-slip-photo-box:hover .photo-overlay-prompt {
+  opacity: 1 !important;
+}
+
+/* Mobile & Tablet Responsive Scaling for Voter Slip */
+@media (max-width: 640px) {
+  .voter-slip-printable-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+  .voter-slip-inner-card {
+    padding: 12px 10px !important;
+    gap: 10px !important;
+    border-width: 2px !important;
+    border-radius: 12px !important;
+  }
+  .voter-slip-header-row {
+    gap: 8px !important;
+  }
+  .voter-slip-symbol-box {
+    width: 84px !important;
+    min-width: 84px !important;
+    border-radius: 8px !important;
+  }
+  .voter-slip-symbol-box img,
+  .voter-slip-symbol-box svg {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .voter-slip-photo-box {
+    width: 84px !important;
+    min-width: 84px !important;
+    height: 112px !important;
+    border-radius: 8px !important;
+  }
+  .voter-slip-candidate-name {
+    font-size: 17px !important;
+  }
+  .voter-slip-ribbon {
+    padding: 6px 8px !important;
+    gap: 8px !important;
+    border-radius: 8px !important;
+  }
+  .voter-slip-metric-grid {
+    gap: 8px !important;
+  }
+  .voter-slip-metric-card {
+    padding: 8px 10px !important;
+  }
+  .voter-slip-metric-num {
+    font-size: 26px !important;
+  }
+  .voter-slip-voter-table {
+    font-size: 12.5px !important;
+  }
+  .voter-slip-voter-row {
+    padding: 5px 2px !important;
+    font-size: 12.5px !important;
+  }
+  .voter-slip-voter-label {
+    width: 105px !important;
+    font-size: 12px !important;
+  }
+  .voter-slip-polling-box {
+    padding: 8px 10px !important;
+  }
+}
+

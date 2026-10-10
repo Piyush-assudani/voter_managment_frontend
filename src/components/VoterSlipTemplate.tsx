@@ -134,20 +134,158 @@ export interface VoterSlipData {
   boothName?: string;
 }
 
-interface VoterSlipTemplateProps {
+export interface VoterSlipTemplateProps {
   voter?: VoterSlipData;
   config?: SlipConfig;
   forwardedRef?: React.RefObject<HTMLDivElement | null>;
   isInline?: boolean;
+  isEditable?: boolean;
+  onConfigChange?: (newConfig: SlipConfig) => void;
+  onImageUpload?: (file: File, field: 'partySymbolImage' | 'candidateImage') => void;
+  onRemoveImage?: (field: 'partySymbolImage' | 'candidateImage') => void;
 }
+
+interface InlineTextProps {
+  value?: string;
+  fallback?: string;
+  isEditable?: boolean;
+  onChange?: (val: string) => void;
+  placeholder?: string;
+  style?: React.CSSProperties;
+  inputStyle?: React.CSSProperties;
+  className?: string;
+  multiline?: boolean;
+  rows?: number;
+  title?: string;
+}
+
+const InlineText: React.FC<InlineTextProps> = ({
+  value,
+  fallback = '',
+  isEditable = false,
+  onChange,
+  placeholder,
+  style,
+  inputStyle,
+  className,
+  multiline = false,
+  rows = 2,
+  title = '✏️ क्लिक करके सीधे बदलें',
+}) => {
+  const currentVal = value !== undefined && value !== null ? value : fallback;
+
+  if (!isEditable) {
+    return (
+      <span style={style} className={className}>
+        {currentVal || placeholder}
+      </span>
+    );
+  }
+
+  if (multiline) {
+    return (
+      <textarea
+        value={currentVal}
+        onChange={(e) => onChange?.(e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        title={title}
+        className={className}
+        style={{
+          width: '100%',
+          fontFamily: 'inherit',
+          fontSize: 'inherit',
+          fontWeight: 'inherit',
+          color: 'inherit',
+          textAlign: (style?.textAlign as any) || 'inherit',
+          lineHeight: 'inherit',
+          background: 'rgba(255, 255, 255, 0.85)',
+          border: '1.5px dashed #0284c7',
+          borderRadius: '6px',
+          padding: '4px 6px',
+          outline: 'none',
+          boxSizing: 'border-box',
+          resize: 'vertical',
+          transition: 'all 0.15s ease',
+          ...style,
+          ...inputStyle,
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = '#0284c7';
+          e.currentTarget.style.background = '#ffffff';
+          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(2, 132, 199, 0.2)';
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = '#0284c7';
+          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.85)';
+          e.currentTarget.style.boxShadow = 'none';
+        }}
+      />
+    );
+  }
+
+  return (
+    <input
+      type="text"
+      value={currentVal}
+      onChange={(e) => onChange?.(e.target.value)}
+      placeholder={placeholder}
+      title={title}
+      className={className}
+      style={{
+        width: '100%',
+        fontFamily: 'inherit',
+        fontSize: 'inherit',
+        fontWeight: 'inherit',
+        color: 'inherit',
+        textAlign: (style?.textAlign as any) || 'inherit',
+        letterSpacing: style?.letterSpacing || 'inherit',
+        background: 'rgba(255, 255, 255, 0.85)',
+        border: '1.5px dashed #0284c7',
+        borderRadius: '5px',
+        padding: '2px 6px',
+        outline: 'none',
+        boxSizing: 'border-box',
+        transition: 'all 0.15s ease',
+        ...style,
+        ...inputStyle,
+      }}
+      onFocus={(e) => {
+        e.currentTarget.style.borderColor = '#0284c7';
+        e.currentTarget.style.background = '#ffffff';
+        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(2, 132, 199, 0.2)';
+      }}
+      onBlur={(e) => {
+        e.currentTarget.style.borderColor = '#0284c7';
+        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.85)';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+    />
+  );
+};
 
 export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
   voter = {},
   config = {},
   forwardedRef,
   isInline = false,
+  isEditable = false,
+  onConfigChange,
+  onImageUpload,
+  onRemoveImage,
 }) => {
   const merged: SlipConfig = { ...defaultSlipConfig, ...config };
+  const symbolFileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const candidateFileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const updateField = (field: keyof SlipConfig, value: string) => {
+    if (onConfigChange) {
+      onConfigChange({
+        ...merged,
+        [field]: value,
+      });
+    }
+  };
   
   const voterName = (voter.nameEn || voter.nameHi) 
     ? `${voter.nameEn || ''}${voter.nameEn && voter.nameHi ? ' / ' : ''}${voter.nameHi || ''}`.trim()
@@ -194,28 +332,103 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
 
   return (
     <div ref={forwardedRef as any} style={containerStyle} className="voter-slip-printable-card">
+      {/* Hidden File Inputs for Direct On-Parchi Uploads */}
+      {isEditable && (
+        <>
+          <input
+            ref={symbolFileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file && onImageUpload) {
+                onImageUpload(file, 'partySymbolImage');
+              }
+              e.target.value = '';
+            }}
+          />
+          <input
+            ref={candidateFileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file && onImageUpload) {
+                onImageUpload(file, 'candidateImage');
+              }
+              e.target.value = '';
+            }}
+          />
+        </>
+      )}
+
+      {/* Direct Editor Informative Banner */}
+      {isEditable && (
+        <div style={{
+          background: 'linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%)',
+          border: '1.5px solid #7dd3fc',
+          borderRadius: '12px',
+          padding: '10px 14px',
+          marginBottom: '12px',
+          fontSize: '12px',
+          color: '#0369a1',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '8px',
+          boxShadow: '0 2px 6px rgba(2, 132, 199, 0.08)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '16px' }}>✨</span>
+            <div>
+              <strong style={{ color: '#0c4a6e' }}>प्रत्यक्ष पर्ची संपादन सक्रिय:</strong>{' '}
+              किसी भी नाम, पार्टी, EVM नंबर या अपील पर क्लिक करके सीधे टाइप करें! फ़ोटो बदलने हेतु फ़ोटो पर क्लिक करें।
+            </div>
+          </div>
+          <span style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            background: '#0284c7',
+            color: '#ffffff',
+            padding: '2px 8px',
+            borderRadius: '12px',
+          }}>
+            WYSIWYG Mode
+          </span>
+        </div>
+      )}
+
       <div
+        className="voter-slip-inner-card"
         style={{
           background: '#ffffff',
           borderRadius: '16px',
-          border: '3px solid #16a34a',
+          border: isEditable ? '3px dashed #16a34a' : '3px solid #16a34a',
           padding: '18px 20px',
           boxShadow: '0 4px 20px -2px rgba(0,0,0,0.06)',
           display: 'flex',
           flexDirection: 'column',
           gap: '14px',
           boxSizing: 'border-box',
+          position: 'relative',
         }}
       >
         {/* ================= 1. TOP HEADER SECTION ================= */}
-        <div style={{ display: 'flex', alignItems: 'stretch', gap: '14px', justifyContent: 'space-between' }}>
+        <div className="voter-slip-header-row" style={{ display: 'flex', alignItems: 'stretch', gap: '14px', justifyContent: 'space-between' }}>
           
           {/* Left: Party Symbol & Candidate Serial Box */}
           <div
+            className="voter-slip-symbol-box"
+            onClick={() => {
+              if (isEditable) symbolFileInputRef.current?.click();
+            }}
             style={{
               width: '110px',
               minWidth: '110px',
-              border: '2px solid #fb923c',
+              border: isEditable ? '2px dashed #ea580c' : '2px solid #fb923c',
               borderRadius: '10px',
               display: 'flex',
               flexDirection: 'column',
@@ -223,10 +436,15 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               justifyContent: 'space-between',
               overflow: 'hidden',
               background: '#fff',
+              position: 'relative',
+              cursor: isEditable ? 'pointer' : 'default',
+              transition: 'all 0.15s ease',
             }}
+            title={isEditable ? '📷 चुनाव चिन्ह फोटो अपलोड करने के लिए क्लिक करें' : undefined}
           >
             {/* Top Serial Badge */}
             <div
+              className="voter-slip-serial-badge"
               style={{
                 width: '100%',
                 background: '#ea580c',
@@ -234,15 +452,41 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                 fontSize: '12px',
                 fontWeight: 800,
                 textAlign: 'center',
-                padding: '4px 0',
+                padding: '4px 2px',
                 letterSpacing: '0.5px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '2px',
               }}
             >
-              क्र. सं. {merged.evmNumber || '1'}
+              <span>क्र. सं.</span>
+              {isEditable ? (
+                <input
+                  type="text"
+                  value={merged.evmNumber || '1'}
+                  onChange={(e) => updateField('evmNumber', e.target.value)}
+                  title="EVM क्रम संख्या बदलें"
+                  style={{
+                    width: '32px',
+                    textAlign: 'center',
+                    background: 'rgba(255, 255, 255, 0.3)',
+                    border: '1px dashed #ffffff',
+                    borderRadius: '4px',
+                    color: '#ffffff',
+                    fontWeight: 900,
+                    fontSize: '12px',
+                    padding: '1px 2px',
+                    outline: 'none',
+                  }}
+                />
+              ) : (
+                <span> {merged.evmNumber || '1'}</span>
+              )}
             </div>
 
-            {/* Symbol Image */}
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px' }}>
+            {/* Symbol Image & Interactive Upload Prompt */}
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', position: 'relative', width: '100%' }}>
               {merged.partySymbolImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -254,81 +498,252 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                 /* Dynamic Symbol Vector (Lotus, Hand, Kite, Bat, Key, Broom, etc.) */
                 renderSymbolVector(merged.partySymbolName)
               )}
+
+              {isEditable && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'rgba(15, 23, 42, 0.45)',
+                    color: '#ffffff',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: 0,
+                    transition: 'opacity 0.15s ease',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    borderRadius: '6px',
+                  }}
+                  className="photo-overlay-prompt"
+                >
+                  <span>📷</span>
+                  <span>फोटो बदलें</span>
+                </div>
+              )}
+
+              {isEditable && merged.partySymbolImage && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onRemoveImage) onRemoveImage('partySymbolImage');
+                    else updateField('partySymbolImage', '');
+                  }}
+                  title="फ़ोटो हटाएं (वेक्टर पर वापस जाएं)"
+                  style={{
+                    position: 'absolute',
+                    top: '2px',
+                    right: '2px',
+                    background: '#fee2e2',
+                    border: '1px solid #fca5a5',
+                    color: '#dc2626',
+                    borderRadius: '50%',
+                    width: '20px',
+                    height: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    zIndex: 10,
+                  }}
+                >
+                  ✕
+                </button>
+              )}
             </div>
 
-            {/* Bottom Symbol Caption */}
+            {/* Bottom Symbol Caption (Directly Editable) */}
             <div
               style={{
-                width: '88%',
+                width: '90%',
                 marginBottom: '6px',
                 background: '#eff6ff',
-                border: '1px solid #bfdbfe',
+                border: isEditable ? '1px dashed #3b82f6' : '1px solid #bfdbfe',
                 borderRadius: '5px',
                 color: '#ea580c',
                 fontSize: '11px',
                 fontWeight: 700,
                 textAlign: 'center',
-                padding: '2px 0',
+                padding: isEditable ? '0' : '2px 0',
+                overflow: 'hidden',
               }}
             >
-              {merged.partySymbolName || 'कमल का फूल'}
+              <InlineText
+                value={merged.partySymbolName}
+                fallback="कमल का फूल"
+                placeholder="चिन्ह नाम"
+                isEditable={isEditable}
+                onChange={(v) => updateField('partySymbolName', v)}
+                title="चुनाव चिन्ह का नाम बदलें (उदा. कमल, हाथ, पतंग, बल्ला)"
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: '#ea580c',
+                  textAlign: 'center',
+                  padding: '2px 4px',
+                  border: 'none',
+                  background: 'transparent',
+                }}
+              />
             </div>
           </div>
 
           {/* Center: Party Headline & Candidate Name */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', padding: '0 4px' }}>
-            <div
-              style={{
-                color: '#ea580c',
-                fontSize: '13px',
-                fontWeight: 700,
-                lineHeight: 1.35,
-                marginBottom: '4px',
-              }}
-            >
-              {merged.partyName || 'भारतीय जनता पार्टी (भाजपा) प्रत्याशी'}
-              {merged.appealHeadline ? ` ${merged.appealHeadline}` : ''}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', padding: '0 4px', minWidth: 0 }}>
+            {/* Party Name & Appeal Headline */}
+            <div style={{ marginBottom: '4px' }}>
+              <InlineText
+                value={merged.partyName}
+                fallback="भारतीय जनता पार्टी (भाजपा) प्रत्याशी"
+                placeholder="पार्टी का नाम"
+                isEditable={isEditable}
+                onChange={(v) => updateField('partyName', v)}
+                title="पार्टी का नाम बदलें"
+                className="voter-slip-party-headline"
+                style={{
+                  color: '#ea580c',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  lineHeight: 1.35,
+                  textAlign: 'center',
+                  background: isEditable ? 'rgba(255, 237, 213, 0.45)' : 'transparent',
+                  border: isEditable ? '1px dashed #ea580c' : 'none',
+                  padding: isEditable ? '2px 4px' : '0',
+                  borderRadius: '4px',
+                }}
+              />
+              {isEditable ? (
+                <div style={{ marginTop: '2px' }}>
+                  <InlineText
+                    value={merged.appealHeadline}
+                    fallback="(1 नंबर पर कमल का फूल का बटन दबाएं)"
+                    placeholder="अपील हैडलाइन"
+                    isEditable={isEditable}
+                    onChange={(v) => updateField('appealHeadline', v)}
+                    title="शीर्षक अपील बदलें"
+                    style={{
+                      color: '#ea580c',
+                      fontSize: '11.5px',
+                      fontWeight: 700,
+                      textAlign: 'center',
+                      background: 'rgba(255, 237, 213, 0.35)',
+                      border: '1px dashed #fdba74',
+                      padding: '2px 4px',
+                      borderRadius: '4px',
+                    }}
+                  />
+                </div>
+              ) : (
+                merged.appealHeadline && (
+                  <span style={{ color: '#ea580c', fontSize: '13px', fontWeight: 700, marginLeft: '4px' }}>
+                    {merged.appealHeadline}
+                  </span>
+                )
+              )}
             </div>
 
-            <div
-              style={{
-                color: '#1e3a8a',
-                fontSize: '22px',
-                fontWeight: 900,
-                letterSpacing: '-0.3px',
-                lineHeight: 1.25,
-                margin: '2px 0 6px',
-              }}
-            >
-              {merged.candidateName || 'प्रसन्न चंद मेहता'}
-              {merged.candidateNameEn ? ` (${merged.candidateNameEn})` : ''}
+            {/* Candidate Hindi & English Names */}
+            <div style={{ margin: '2px 0 4px' }}>
+              <InlineText
+                value={merged.candidateName}
+                fallback="प्रसन्न चंद मेहता"
+                placeholder="प्रत्याशी नाम (हिंदी)"
+                isEditable={isEditable}
+                onChange={(v) => updateField('candidateName', v)}
+                title="प्रत्याशी का हिंदी नाम बदलें"
+                className="voter-slip-candidate-name"
+                style={{
+                  color: '#1e3a8a',
+                  fontSize: '22px',
+                  fontWeight: 900,
+                  letterSpacing: '-0.3px',
+                  lineHeight: 1.25,
+                  textAlign: 'center',
+                  background: isEditable ? 'rgba(219, 234, 254, 0.45)' : 'transparent',
+                  border: isEditable ? '1.5px dashed #2563eb' : 'none',
+                  padding: isEditable ? '2px 6px' : '0',
+                  borderRadius: '6px',
+                }}
+              />
+              {isEditable ? (
+                <div style={{ marginTop: '3px' }}>
+                  <InlineText
+                    value={merged.candidateNameEn}
+                    fallback="Prasann Chand Mehta"
+                    placeholder="Candidate Name (English)"
+                    isEditable={isEditable}
+                    onChange={(v) => updateField('candidateNameEn', v)}
+                    title="Candidate Name in English"
+                    style={{
+                      color: '#1e40af',
+                      fontSize: '13.5px',
+                      fontWeight: 700,
+                      textAlign: 'center',
+                      background: 'rgba(219, 234, 254, 0.35)',
+                      border: '1px dashed #60a5fa',
+                      padding: '2px 4px',
+                      borderRadius: '4px',
+                    }}
+                  />
+                </div>
+              ) : (
+                merged.candidateNameEn && (
+                  <span style={{ color: '#1e3a8a', fontSize: '20px', fontWeight: 800, marginLeft: '4px' }}>
+                    ({merged.candidateNameEn})
+                  </span>
+                )
+              )}
             </div>
 
-            <div
-              style={{
-                color: '#475569',
-                fontSize: '12.5px',
-                fontWeight: 600,
-              }}
-            >
-              {merged.subTitle || `मतदाता सूचना पर्ची (Voter Slip) · वार्ड नंबर ${ward} Jodhpur`}
+            {/* Subtitle / Ward */}
+            <div>
+              <InlineText
+                value={merged.subTitle}
+                fallback={`मतदाता सूचना पर्ची (Voter Slip) · वार्ड नंबर ${ward} Jodhpur`}
+                placeholder="उपशीर्षक / क्षेत्र (वार्ड नंबर)"
+                isEditable={isEditable}
+                onChange={(v) => updateField('subTitle', v)}
+                title="उपशीर्षक / वार्ड विवरण बदलें"
+                style={{
+                  color: '#475569',
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  textAlign: 'center',
+                  background: isEditable ? 'rgba(241, 245, 249, 0.8)' : 'transparent',
+                  border: isEditable ? '1px dashed #94a3b8' : 'none',
+                  padding: isEditable ? '2px 6px' : '0',
+                  borderRadius: '4px',
+                }}
+              />
             </div>
           </div>
 
-          {/* Right: Candidate Photo Box */}
+          {/* Right: Candidate Photo Box & Interactive Upload */}
           <div
+            className="voter-slip-photo-box"
+            onClick={() => {
+              if (isEditable) candidateFileInputRef.current?.click();
+            }}
             style={{
               width: '105px',
               minWidth: '105px',
               height: '125px',
-              border: '2px solid #fb923c',
+              border: isEditable ? '2px dashed #1e3a8a' : '2px solid #fb923c',
               borderRadius: '10px',
               overflow: 'hidden',
               background: '#f8fafc',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              position: 'relative',
+              cursor: isEditable ? 'pointer' : 'default',
+              transition: 'all 0.15s ease',
             }}
+            title={isEditable ? '📷 प्रत्याशी फोटो अपलोड करने के लिए क्लिक करें' : undefined}
           >
             {merged.candidateImage ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -346,11 +761,68 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                 <span style={{ fontSize: '10px', fontWeight: 600, color: '#ea580c', marginTop: '2px' }}>प्रत्याशी फोटो</span>
               </div>
             )}
+
+            {isEditable && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'rgba(15, 23, 42, 0.45)',
+                  color: '#ffffff',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0,
+                  transition: 'opacity 0.15s ease',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  borderRadius: '6px',
+                }}
+                className="photo-overlay-prompt"
+              >
+                <span>📷</span>
+                <span>फोटो बदलें</span>
+              </div>
+            )}
+
+            {isEditable && merged.candidateImage && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onRemoveImage) onRemoveImage('candidateImage');
+                  else updateField('candidateImage', '');
+                }}
+                title="फ़ोटो हटाएं"
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  right: '2px',
+                  background: '#fee2e2',
+                  border: '1px solid #fca5a5',
+                  color: '#dc2626',
+                  borderRadius: '50%',
+                  width: '20px',
+                  height: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  zIndex: 10,
+                }}
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
         {/* ================= 2. MIDDLE EVM / RIBBON STRIPE ================= */}
         <div
+          className="voter-slip-ribbon"
           style={{
             background: 'linear-gradient(90deg, #ea580c 0%, #c2410c 14%, #1d4ed8 40%, #1e3a8a 100%)',
             borderRadius: '10px',
@@ -372,13 +844,32 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '26px',
+              fontSize: '24px',
               fontWeight: 900,
               boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
               flexShrink: 0,
             }}
           >
-            {merged.evmNumber || '1'}
+            {isEditable ? (
+              <input
+                type="text"
+                value={merged.evmNumber || '1'}
+                onChange={(e) => updateField('evmNumber', e.target.value)}
+                title="EVM क्रम संख्या बदलें"
+                style={{
+                  width: '32px',
+                  textAlign: 'center',
+                  color: '#ea580c',
+                  fontSize: '20px',
+                  fontWeight: 900,
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                }}
+              />
+            ) : (
+              merged.evmNumber || '1'
+            )}
           </div>
 
           {/* EVM Message */}
@@ -387,7 +878,25 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               ईवीएम / मतपत्र क्रम संख्या: {merged.evmNumber || '1'}
             </div>
             <div style={{ fontSize: '11px', fontWeight: 500, opacity: 0.95, lineHeight: 1.3, marginTop: '2px' }}>
-              {merged.appealText || `वार्ड नंबर ${ward} से प्रत्याशी ${merged.candidateName || ''} को अपना अमूल्य वोट देकर भारी मतों से विजय बनाएं।`}
+              <InlineText
+                value={merged.appealText}
+                fallback={`वार्ड नंबर ${ward} से प्रत्याशी ${merged.candidateName || ''} को अपना अमूल्य वोट देकर भारी मतों से विजय बनाएं।`}
+                placeholder="EVM पट्टी अपील संदेश"
+                multiline={true}
+                rows={2}
+                isEditable={isEditable}
+                onChange={(v) => updateField('appealText', v)}
+                title="EVM पट्टी अपील संदेश बदलें"
+                style={{
+                  color: '#ffffff',
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  background: isEditable ? 'rgba(0, 0, 0, 0.3)' : 'transparent',
+                  border: isEditable ? '1px dashed #fed7aa' : 'none',
+                  borderRadius: '4px',
+                  padding: isEditable ? '3px 6px' : '0',
+                }}
+              />
             </div>
           </div>
 
@@ -417,9 +926,10 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
         </div>
 
         {/* ================= 3. TWO BIG HIGHLIGHT METRIC CARDS ================= */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+        <div className="voter-slip-metric-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
           {/* Part Card */}
           <div
+            className="voter-slip-metric-card"
             style={{
               background: '#f0f7ff',
               border: '2px solid #60a5fa',
@@ -431,13 +941,14 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             <div style={{ color: '#1e3a8a', fontSize: '12.5px', fontWeight: 700, letterSpacing: '0.3px' }}>
               भाग संख्या (PART)
             </div>
-            <div style={{ color: '#1e3a8a', fontSize: '36px', fontWeight: 900, lineHeight: 1.1, marginTop: '4px' }}>
+            <div className="voter-slip-metric-num" style={{ color: '#1e3a8a', fontSize: '36px', fontWeight: 900, lineHeight: 1.1, marginTop: '4px' }}>
               {part}
             </div>
           </div>
 
           {/* Serial Card */}
           <div
+            className="voter-slip-metric-card"
             style={{
               background: '#f0f7ff',
               border: '2px solid #60a5fa',
@@ -449,7 +960,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             <div style={{ color: '#ea580c', fontSize: '12.5px', fontWeight: 700, letterSpacing: '0.3px' }}>
               क्रम संख्या (SL. NO.)
             </div>
-            <div style={{ color: '#ea580c', fontSize: '36px', fontWeight: 900, lineHeight: 1.1, marginTop: '4px' }}>
+            <div className="voter-slip-metric-num" style={{ color: '#ea580c', fontSize: '36px', fontWeight: 900, lineHeight: 1.1, marginTop: '4px' }}>
               {serial}
             </div>
           </div>
@@ -457,6 +968,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
 
         {/* ================= 4. VOTER DETAILS TABLE ================= */}
         <div
+          className="voter-slip-voter-table"
           style={{
             background: '#ffffff',
             borderRadius: '8px',
@@ -464,8 +976,27 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             flexDirection: 'column',
           }}
         >
+          {isEditable && (
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '6px',
+              padding: '4px 10px',
+              fontSize: '11px',
+              color: '#64748b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '6px',
+            }}>
+              <span>📋 <strong>मतदाता विवरण (सैंपल)</strong>: वास्तविक पर्चियों में यह डेटाबेस से स्वतः भरा जाता है</span>
+              <span style={{ fontSize: '10px', color: '#0284c7', fontWeight: 600 }}>गतिशील (Dynamic)</span>
+            </div>
+          )}
+
           {/* Row 1: Voter Name */}
           <div
+            className="voter-slip-voter-row"
             style={{
               display: 'flex',
               padding: '7px 4px',
@@ -473,12 +1004,13 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               fontSize: '14px',
             }}
           >
-            <span style={{ width: '130px', color: '#334155', fontWeight: 600 }}>मतदाता का नाम:</span>
+            <span className="voter-slip-voter-label" style={{ width: '130px', color: '#334155', fontWeight: 600 }}>मतदाता का नाम:</span>
             <strong style={{ flex: 1, color: '#0f172a', fontWeight: 800 }}>{voterName}</strong>
           </div>
 
           {/* Row 2: Relative Name */}
           <div
+            className="voter-slip-voter-row"
             style={{
               display: 'flex',
               padding: '7px 4px',
@@ -486,12 +1018,13 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               fontSize: '14px',
             }}
           >
-            <span style={{ width: '130px', color: '#334155', fontWeight: 600 }}>{relLabel}:</span>
+            <span className="voter-slip-voter-label" style={{ width: '130px', color: '#334155', fontWeight: 600 }}>{relLabel}:</span>
             <strong style={{ flex: 1, color: '#0f172a', fontWeight: 700 }}>{relativeName}</strong>
           </div>
 
           {/* Row 3: House No */}
           <div
+            className="voter-slip-voter-row"
             style={{
               display: 'flex',
               padding: '7px 4px',
@@ -499,12 +1032,13 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               fontSize: '14px',
             }}
           >
-            <span style={{ width: '130px', color: '#334155', fontWeight: 600 }}>मकान संख्या:</span>
+            <span className="voter-slip-voter-label" style={{ width: '130px', color: '#334155', fontWeight: 600 }}>मकान संख्या:</span>
             <strong style={{ flex: 1, color: '#0f172a', fontWeight: 800 }}>{house}</strong>
           </div>
 
           {/* Row 4: Age & Gender */}
           <div
+            className="voter-slip-voter-row"
             style={{
               display: 'flex',
               padding: '7px 4px',
@@ -512,12 +1046,13 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               fontSize: '14px',
             }}
           >
-            <span style={{ width: '130px', color: '#334155', fontWeight: 600 }}>आयु / लिंग:</span>
+            <span className="voter-slip-voter-label" style={{ width: '130px', color: '#334155', fontWeight: 600 }}>आयु / लिंग:</span>
             <strong style={{ flex: 1, color: '#0f172a', fontWeight: 700 }}>{ageGender}</strong>
           </div>
 
           {/* Row 5: EPIC ID */}
           <div
+            className="voter-slip-voter-row"
             style={{
               display: 'flex',
               padding: '7px 4px',
@@ -525,13 +1060,14 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               alignItems: 'center',
             }}
           >
-            <span style={{ width: '130px', color: '#334155', fontWeight: 600 }}>पहचान पत्र (EPIC):</span>
+            <span className="voter-slip-voter-label" style={{ width: '130px', color: '#334155', fontWeight: 600 }}>पहचान पत्र (EPIC):</span>
             <strong style={{ flex: 1, color: '#1d4ed8', fontWeight: 900, fontSize: '15px', letterSpacing: '0.6px' }}>{epic}</strong>
           </div>
         </div>
 
         {/* ================= 5. POLLING STATION CARD ================= */}
         <div
+          className="voter-slip-polling-box"
           style={{
             background: '#ffffff',
             border: '1.5px solid #93c5fd',
@@ -546,8 +1082,24 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             <span>📍</span>
             <span>मतदान केंद्र (Polling Station):</span>
           </div>
-          <div style={{ color: '#0f172a', fontSize: '14px', fontWeight: 800, paddingLeft: '22px' }}>
-            {pollingStation}
+          <div style={{ paddingLeft: isEditable ? '0' : '22px' }}>
+            <InlineText
+              value={merged.pollingStationFallback}
+              fallback={pollingStation}
+              placeholder="डिफ़ॉल्ट मतदान केंद्र पता / नाम"
+              isEditable={isEditable}
+              onChange={(v) => updateField('pollingStationFallback', v)}
+              title="मतदान केंद्र विवरण बदलें"
+              style={{
+                color: '#0f172a',
+                fontSize: '13.5px',
+                fontWeight: 800,
+                background: isEditable ? '#eff6ff' : 'transparent',
+                border: isEditable ? '1px dashed #60a5fa' : 'none',
+                padding: isEditable ? '4px 8px' : '0',
+                borderRadius: '4px',
+              }}
+            />
           </div>
         </div>
 
@@ -555,7 +1107,24 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
         <div style={{ textAlign: 'center', marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div style={{ color: '#ea580c', fontSize: '13px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
             <span>🗳️</span>
-            <span>{merged.footerAppeal || `${merged.partySymbolName || 'कमल'} का बटन दबाएं और भारी मतों से विजयी बनाएं`}</span>
+            <InlineText
+              value={merged.footerAppeal}
+              fallback={`${merged.partySymbolName || 'कमल'} का बटन दबाएं और भारी मतों से विजयी बनाएं`}
+              placeholder="बॉटम अपील (Footer Banner)"
+              isEditable={isEditable}
+              onChange={(v) => updateField('footerAppeal', v)}
+              title="बॉटम अपील बदलें"
+              style={{
+                color: '#ea580c',
+                fontSize: '13px',
+                fontWeight: 800,
+                textAlign: 'center',
+                background: isEditable ? '#fff7ed' : 'transparent',
+                border: isEditable ? '1px dashed #f97316' : 'none',
+                padding: isEditable ? '3px 8px' : '0',
+                borderRadius: '4px',
+              }}
+            />
             <span>🗳️</span>
           </div>
           <div style={{ color: '#475569', fontSize: '11px', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
@@ -568,3 +1137,4 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
     </div>
   );
 };
+
