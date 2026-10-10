@@ -1245,19 +1245,15 @@ export default function AdminPanel() {
               style={{
                 padding: '24px',
                 marginBottom: '24px',
-                background: '#ffffff',
-                borderRadius: '16px',
-                border: '1.5px solid #bfdbfe',
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.05)',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <div className="eyebrow-label" style={{ color: '#2563eb' }}>INSTANT DEMO GENERATOR</div>
-                  <h2 style={{ fontSize: '19px', fontWeight: 800, color: '#0f172a', margin: '2px 0 4px' }}>
+                  <div className="eyebrow-label"><span className="eyebrow-mark" /> INSTANT DEMO GENERATOR</div>
+                  <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', margin: '4px 0' }}>
                     नया डेमो खाता व सैंपल डेटा जनरेट करें
                   </h2>
-                  <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
+                  <p style={{ fontSize: '14px', color: '#7d8981', margin: 0 }}>
                     1-क्लिक में आईडी व पासवर्ड तैयार होगा और खाते में 25 यथार्थवादी सैंपल मतदाताओं का डेटा स्वतः लोड हो जाएगा।
                   </p>
                 </div>
@@ -1298,12 +1294,12 @@ export default function AdminPanel() {
                     className="button-primary"
                     type="submit"
                     disabled={demoGenerating}
-                    style={{ background: '#2563eb', padding: '10px 22px', fontSize: '14px', fontWeight: 800 }}
+                    style={{ padding: '9px 20px', fontSize: '13px', fontWeight: 600 }}
                   >
                     {demoGenerating ? <LoaderCircle size={16} className="spin" /> : <Sparkles size={16} />}
                     {demoGenerating ? 'डेमो तैयार हो रहा है…' : '🚀 नया डेमो खाता जनरेट करें'}
                   </button>
-                  <span style={{ fontSize: '13px', color: '#64748b' }}>
+                  <span style={{ fontSize: '13px', color: '#7d8981' }}>
                     *खाते में 25 वोटर्स, 1-सेकंड पर्ची, पोल-डेस्क व जातिगत समीकरण स्वतः लोड होंगे।
                   </span>
                 </div>
@@ -1444,7 +1440,7 @@ export default function AdminPanel() {
                             </code>
                           </td>
                           <td>
-                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#225e46' }}>
                               {user.voterCount} मतदाता
                             </span>
                           </td>
