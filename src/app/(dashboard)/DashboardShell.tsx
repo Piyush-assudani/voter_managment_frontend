@@ -295,10 +295,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                   className="topbar-client-select"
                   aria-label="क्लाइंट चुनें"
                 >
-                  <option value="">🌐 सभी क्लाइंट्स ({clients.length} सक्रिय)</option>
+                  <option value="">सभी क्लाइंट्स ({clients.length} सक्रिय)</option>
                   {clients.map((c) => (
                     <option key={c.id} value={c.id}>
-                      🏢 {c.name} {c.candidateName ? `(${c.candidateName})` : ''} • {c.voterCount ? `${c.voterCount.toLocaleString('hi-IN')} वोटर` : '0 वोटर'}
+                      {c.name} {c.candidateName ? `(${c.candidateName})` : ''} • {c.voterCount ? `${c.voterCount.toLocaleString('hi-IN')} वोटर` : '0 वोटर'}
                     </option>
                   ))}
                 </select>
@@ -310,7 +310,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                     title="सभी क्लाइंट्स देखें"
                     aria-label="फिल्टर हटाएं"
                   >
-                    ✕
+                    ×
                   </button>
                 )}
               </div>

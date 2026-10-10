@@ -13,7 +13,10 @@ import {
   UsersRound,
   X,
   Download,
-  Trash2
+  Trash2,
+  Tag,
+  Pencil,
+  MessageSquare
 } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
@@ -178,6 +181,15 @@ export default function DashboardPage() {
 
   useEffect(() => {
     void loadOrgDetails();
+    try {
+      const cached = localStorage.getItem('cachedSlipConfig');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && typeof parsed === 'object') {
+          setSlipConfig((prev) => ({ ...prev, ...parsed }));
+        }
+      }
+    } catch {}
     void loadSlipConfig();
     const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
     if (token) {
@@ -188,6 +200,16 @@ export default function DashboardPage() {
         setIsAdmin(payload?.user?.role === 'admin');
       } catch {}
     }
+
+    const handleSlipConfigChange = (e: any) => {
+      if (e.detail) {
+        setSlipConfig({ ...defaultSlipConfig, ...e.detail });
+      } else {
+        void loadSlipConfig();
+      }
+    };
+    window.addEventListener('slip-config-changed', handleSlipConfigChange);
+    return () => window.removeEventListener('slip-config-changed', handleSlipConfigChange);
   }, [loadOrgDetails, loadSlipConfig]);
 
   const loadVoters = useCallback(async (
@@ -389,7 +411,7 @@ export default function DashboardPage() {
         current.map((voter) => (voter._id === tagVoter._id ? { ...voter, ...tagValues } : voter))
       );
       setTagVoter(null);
-      setActionMessage('✅ मतदाता टैग सफलतापूर्वक अपडेट हो गए!');
+      setActionMessage('मतदाता टैग सफलतापूर्वक अपडेट हो गए!');
     } catch (saveError) {
       setActionMessage(saveError instanceof Error ? saveError.message : 'टैग विवरण सेव नहीं हुए।');
     } finally {
@@ -420,7 +442,7 @@ export default function DashboardPage() {
         current.map((voter) => (voter._id === editVoter._id ? { ...voter, ...updatedValues } : voter))
       );
       setEditVoter(null);
-      setActionMessage('✅ मतदाता विवरण सफलतापूर्वक सेव हो गए!');
+      setActionMessage('मतदाता विवरण सफलतापूर्वक सेव हो गए!');
     } catch (saveError) {
       setActionMessage(saveError instanceof Error ? saveError.message : 'मतदाता विवरण सेव नहीं हुए।');
     } finally {
@@ -753,7 +775,7 @@ export default function DashboardPage() {
                         transition: 'all 0.15s ease',
                       }}
                     >
-                      🏷️ टैग
+                      <Tag size={13} /> टैग
                     </button>
                     <button
                       className="vc-btn-edit"
@@ -775,7 +797,7 @@ export default function DashboardPage() {
                         transition: 'all 0.15s ease',
                       }}
                     >
-                      ✏️ एडिट
+                      <Pencil size={13} /> एडिट
                     </button>
                   </div>
                   <div className="vc-footer-right">
@@ -784,8 +806,8 @@ export default function DashboardPage() {
                       setSearchQuery('');
                       void loadVoters('', voter.houseNo || '', 1, voter.wardNo || '', voter.partNo || '');
                     }} title="परिवार देखें"><UsersRound size={16} /></button>
-                    <button className="vc-btn-slip" onClick={() => { setSlipPhone(voter.phone || ''); setSlipVoter(voter); setActionMessage(''); void loadWhatsappQuota(); }} title="WhatsApp पर्ची">💬</button>
-                    <button className="vc-btn-slip" style={{ marginLeft: '4px', background: '#eff6ff', color: '#1e3a8a', borderColor: '#bfdbfe' }} onClick={() => void downloadSlip(voter, slipConfig)} title="पर्ची डाउनलोड करें">⬇️</button>
+                    <button className="vc-btn-slip" onClick={() => { setSlipPhone(voter.phone || ''); setSlipVoter(voter); setActionMessage(''); void loadWhatsappQuota(); }} title="WhatsApp पर्ची"><MessageSquare size={15} /></button>
+                    <button className="vc-btn-slip" style={{ marginLeft: '4px', background: '#eff6ff', color: '#1e3a8a', borderColor: '#bfdbfe' }} onClick={() => void downloadSlip(voter, slipConfig)} title="पर्ची डाउनलोड करें"><Download size={15} /></button>
                     {isAdmin && (
                       <button className="vc-btn-slip" style={{ marginLeft: '4px', background: '#fef2f2', color: '#b91c1c', borderColor: '#fecaca' }} onClick={() => void deleteSingleVoter(voter)} title="मतदाता हटाएं">
                         <Trash2 size={15} />
@@ -814,7 +836,7 @@ export default function DashboardPage() {
             <div className="modal-heading">
               <div>
                 <span className="eyebrow-label" style={{ color: '#0284c7' }}>VOTER CAMPAIGN TAGS</span>
-                <h2 id="tag-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>🏷️ मतदाता चुनाव टैग व प्रबंधन</h2>
+                <h2 id="tag-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Tag size={18} color="#0284c7" /> मतदाता चुनाव टैग व प्रबंधन</h2>
                 <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
                   {tagVoter.nameHi || tagVoter.nameEn} · EPIC: {tagVoter.epic || 'N/A'} · भाग: {tagVoter.partNo || '-'} / क्र.: {tagVoter.serialNo || '-'}
                 </p>
@@ -947,7 +969,7 @@ export default function DashboardPage() {
             <div className="modal-heading">
               <div>
                 <span className="eyebrow-label">VOTER DETAILS</span>
-                <h2 id="edit-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>✏️ मतदाता जानकारी संपादित करें</h2>
+                <h2 id="edit-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Pencil size={18} color="#334155" /> मतदाता जानकारी संपादित करें</h2>
                 <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>{editVoter.nameHi || editVoter.nameEn} · {editVoter.epic}</p>
               </div>
               <button className="icon-button" onClick={() => setEditVoter(null)} aria-label="बंद करें"><X size={18} /></button>
@@ -1094,10 +1116,10 @@ export default function DashboardPage() {
               }}>
                 <span style={{ fontWeight: 600, color: !whatsappQuota.whatsappEnabled ? '#991b1b' : whatsappQuota.whatsappCredits <= 0 ? '#92400e' : '#166534' }}>
                   {!whatsappQuota.whatsappEnabled
-                    ? '🚫 संगठन के लिए WhatsApp मैसेजिंग सेवा बंद (Disabled) है'
+                    ? 'संगठन के लिए WhatsApp मैसेजिंग सेवा बंद (Disabled) है'
                     : whatsappQuota.whatsappCredits <= 0
-                    ? '⚠️ WhatsApp क्रेडिट समाप्त (0 शेष)'
-                    : `💬 उपलब्ध WhatsApp क्रेडिट: ${whatsappQuota.whatsappCredits}`}
+                    ? 'WhatsApp क्रेडिट समाप्त (0 शेष)'
+                    : `उपलब्ध WhatsApp क्रेडिट: ${whatsappQuota.whatsappCredits}`}
                 </span>
                 <span style={{ fontSize: '11px', color: '#64748b' }}>
                   प्रयुक्त: {whatsappQuota.whatsappUsed || 0} संदेश

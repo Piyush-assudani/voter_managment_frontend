@@ -14,7 +14,7 @@ import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/V
 
 const partyPresets: Record<string, { label: string; config: Partial<SlipConfig> }> = {
   bjp: {
-    label: '🌸 भाजपा (कमल)',
+    label: 'भाजपा (कमल)',
     config: {
       partyName: 'भारतीय जनता पार्टी (भाजपा) प्रत्याशी',
       partySymbolName: 'कमल का फूल',
@@ -25,7 +25,7 @@ const partyPresets: Record<string, { label: string; config: Partial<SlipConfig> 
     },
   },
   inc: {
-    label: '✋ कांग्रेस (पंजा)',
+    label: 'कांग्रेस (पंजा)',
     config: {
       partyName: 'भारतीय राष्ट्रीय कांग्रेस (INC) प्रत्याशी',
       partySymbolName: 'हाथ का पंजा',
@@ -36,7 +36,7 @@ const partyPresets: Record<string, { label: string; config: Partial<SlipConfig> 
     },
   },
   aap: {
-    label: '🧹 आप (झाड़ू)',
+    label: 'आप (झाड़ू)',
     config: {
       partyName: 'आम आदमी पार्टी (आप) प्रत्याशी',
       partySymbolName: 'झाड़ू',
@@ -47,7 +47,7 @@ const partyPresets: Record<string, { label: string; config: Partial<SlipConfig> 
     },
   },
   ind_kite: {
-    label: '🪁 निर्दलीय (पतंग)',
+    label: 'निर्दलीय (पतंग)',
     config: {
       partyName: 'निर्दलीय प्रत्याशी',
       partySymbolName: 'पतंग',
@@ -58,7 +58,7 @@ const partyPresets: Record<string, { label: string; config: Partial<SlipConfig> 
     },
   },
   ind_bat: {
-    label: '🏏 निर्दलीय (बल्ला)',
+    label: 'निर्दलीय (बल्ला)',
     config: {
       partyName: 'निर्दलीय प्रत्याशी',
       partySymbolName: 'बल्ला',
@@ -69,7 +69,7 @@ const partyPresets: Record<string, { label: string; config: Partial<SlipConfig> 
     },
   },
   ind_key: {
-    label: '🔑 निर्दलीय (चाबी)',
+    label: 'निर्दलीय (चाबी)',
     config: {
       partyName: 'निर्दलीय प्रत्याशी',
       partySymbolName: 'चाबी',
@@ -272,6 +272,10 @@ export default function AdminPanel() {
       setOrganizations((prev) =>
         prev.map((o) => (o.id === brandingTargetOrgId ? { ...o, slipConfig: targetSlipConfig } : o))
       );
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('cachedSlipConfig', JSON.stringify(targetSlipConfig));
+        window.dispatchEvent(new CustomEvent('slip-config-changed', { detail: targetSlipConfig }));
+      }
       const org = organizations.find((o) => o.id === brandingTargetOrgId);
       setNotice(`'${org?.name || 'क्लाइंट'}' की पर्ची ब्रांडिंग सफलतापूर्वक सुरक्षित कर दी गई!`);
     } catch (err) {
@@ -573,6 +577,10 @@ export default function AdminPanel() {
       });
       if (!response.ok) throw new Error(await getApiError(response, 'क्लाइंट सेटिंग सेव नहीं हुई।'));
       setNotice('क्लाइंट के फीचर और वार्ड access अपडेट हुए।');
+      if (typeof window !== 'undefined' && editingTenant.slipConfig) {
+        localStorage.setItem('cachedSlipConfig', JSON.stringify(editingTenant.slipConfig));
+        window.dispatchEvent(new CustomEvent('slip-config-changed', { detail: editingTenant.slipConfig }));
+      }
       setEditingTenant(null);
       await loadOrganizations();
     } catch (updateError) {
@@ -736,7 +744,7 @@ export default function AdminPanel() {
         <nav className="admin-tabs" aria-label="एडमिन सेक्शन">
           {([
             { key: 'tenants', label: 'क्लाइंट व संगठन', Icon: UsersRound },
-            { key: 'branding', label: '🎨 पर्ची ब्रांडिंग', Icon: Ticket },
+            { key: 'branding', label: 'पर्ची ब्रांडिंग', Icon: Ticket },
             { key: 'leads', label: `लीड्स व पूछताछ ${leads.length > 0 ? `(${leads.length})` : ''}`, Icon: MessageCircle },
             { key: 'records', label: 'वोटर डेटा', Icon: FileSpreadsheet },
             { key: 'users', label: 'सभी अकाउंट', Icon: UserPlus },
@@ -825,7 +833,7 @@ export default function AdminPanel() {
                 <div style={{ marginTop: '16px', padding: '14px 18px', background: '#f0fdf4', borderRadius: '10px', border: '1px solid #bbf7d0', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: '#166534', cursor: 'pointer', margin: 0 }}>
                     <input type="checkbox" checked={tenantWhatsappEnabled} onChange={(e) => setTenantWhatsappEnabled(e.target.checked)} />
-                    💬 WhatsApp मैसेजिंग सेवा सक्षम करें
+                    WhatsApp मैसेजिंग सेवा सक्षम करें
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '13px', color: '#166534' }}>
                     प्रारंभिक WhatsApp क्रेडिट्स:
@@ -833,7 +841,7 @@ export default function AdminPanel() {
                   </label>
                 </div>
 
-                {/* 🎨 वैकल्पिक प्रारंभिक पर्ची विवरण */}
+                {/* वैकल्पिक प्रारंभिक पर्ची विवरण */}
                 <div style={{ marginTop: '20px', padding: '16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -841,7 +849,7 @@ export default function AdminPanel() {
                       <strong style={{ fontSize: '13px', color: '#0f172a' }}>प्रारंभिक पर्ची ब्रांडिंग (वैकल्पिक)</strong>
                     </div>
                     <span style={{ fontSize: '11px', color: '#64748b' }}>
-                      संगठन बनने के बाद &apos;🎨 पर्ची ब्रांडिंग&apos; टैब से दोनों फ़ोटो, अपील व लाइव पूर्वावलोकन कस्टमाइज़ करें
+                      संगठन बनने के बाद &apos;पर्ची ब्रांडिंग&apos; टैब से दोनों फ़ोटो, अपील व लाइव पूर्वावलोकन कस्टमाइज़ करें
                     </span>
                   </div>
 
@@ -951,11 +959,11 @@ export default function AdminPanel() {
                           <td>
                             {tenant.whatsappEnabled !== false ? (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#15803d', background: '#dcfce7', padding: '2px 8px', borderRadius: '12px' }}>
-                                🟢 {(tenant.whatsappCredits ?? 0).toLocaleString('hi-IN')} क्रेडिट
+                                {(tenant.whatsappCredits ?? 0).toLocaleString('hi-IN')} क्रेडिट
                               </span>
                             ) : (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#b91c1c', background: '#fee2e2', padding: '2px 8px', borderRadius: '12px' }}>
-                                🔴 अक्षम
+                                अक्षम
                               </span>
                             )}
                           </td>
@@ -1000,7 +1008,7 @@ export default function AdminPanel() {
         )}
 
         {/* ================================================================= */}
-        {/* 🎨 DEDICATED PER-CLIENT SLIP BRANDING STUDIO TAB                 */}
+        {/* DEDICATED PER-CLIENT SLIP BRANDING STUDIO TAB                 */}
         {/* ================================================================= */}
         {activeView === 'branding' && (
           <>
@@ -1010,7 +1018,7 @@ export default function AdminPanel() {
                 <div>
                   <div className="eyebrow-label" style={{ color: '#0284c7' }}>PER-CLIENT SLIP STUDIO</div>
                   <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: '2px 0 4px' }}>
-                    🎨 क्लाइंट मतदाता पर्ची ब्रांडिंग
+                    क्लाइंट मतदाता पर्ची ब्रांडिंग
                   </h2>
                   <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
                     हर उम्मीदवार/क्लाइंट संगठन के लिए अलग पार्टी, फोटो, चुनाव चिन्ह व अपील कस्टमाइज़ करें।
@@ -1020,7 +1028,7 @@ export default function AdminPanel() {
                 {/* Client Selector Dropdown */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#f8fafc', padding: '8px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}>
                   <label htmlFor="client-selector" style={{ fontSize: '13px', fontWeight: 700, color: '#334155', whiteSpace: 'nowrap' }}>
-                    🏢 कार्यशील क्लाइंट:
+                    कार्यशील क्लाइंट:
                   </label>
                   <select
                     id="client-selector"
@@ -1164,7 +1172,7 @@ export default function AdminPanel() {
                       transition: 'all 0.15s ease',
                     }}
                   >
-                    <span>🎨 सीधे पर्ची पर एडिट करें (Visual Editor)</span>
+                    <span>सीधे पर्ची पर एडिट करें (Visual Editor)</span>
                   </button>
                   <button
                     type="button"
@@ -1184,7 +1192,7 @@ export default function AdminPanel() {
                       transition: 'all 0.15s ease',
                     }}
                   >
-                    <span>📝 फॉर्म इनपुट मोड (Form Mode)</span>
+                    <span>फॉर्म इनपुट मोड (Form Mode)</span>
                   </button>
                 </div>
               </div>
@@ -1207,7 +1215,7 @@ export default function AdminPanel() {
                     }}
                     title="संपादन आउटलाइन बंद/चालू करें"
                   >
-                    {isVisualEditing ? '✏️ संपादन मोड चालू' : '👁️ साफ पूर्वावलोकन'}
+                    {isVisualEditing ? 'संपादन मोड चालू' : 'साफ पूर्वावलोकन'}
                   </button>
                 )}
 
@@ -1267,7 +1275,7 @@ export default function AdminPanel() {
                     color: '#64748b',
                   }}>
                     <span style={{ fontWeight: 700, color: '#0f172a' }}>
-                      ⚡ सीधा संपादन: <span style={{ fontWeight: 400 }}>पर्ची के किसी भी हिस्से पर क्लिक करके तुरंत एडिट करें</span>
+                      सीधा संपादन: <span style={{ fontWeight: 400 }}>पर्ची के किसी भी हिस्से पर क्लिक करके तुरंत एडिट करें</span>
                     </span>
                     <span style={{ fontSize: '11px', fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '2px 8px', borderRadius: '12px' }}>
                       ● Real-Time Sync
@@ -1320,7 +1328,7 @@ export default function AdminPanel() {
                         {targetSlipConfig.partySymbolImage ? (
                           <img src={targetSlipConfig.partySymbolImage} alt="" style={{ width: '36px', height: '36px', objectFit: 'contain', borderRadius: '4px' }} />
                         ) : (
-                          <span style={{ fontSize: '24px' }}>🌸</span>
+                          <div style={{ width: '36px', height: '36px', borderRadius: '4px', background: '#fed7aa', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ea580c', fontWeight: 800, fontSize: '11px' }}>चिन्ह</div>
                         )}
                         <div>
                           <div style={{ fontSize: '12px', fontWeight: 700, color: '#9a3412' }}>चुनाव चिन्ह फ़ोटो</div>
@@ -1347,7 +1355,7 @@ export default function AdminPanel() {
                         {targetSlipConfig.candidateImage ? (
                           <img src={targetSlipConfig.candidateImage} alt="" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '50%', border: '1px solid #3b82f6' }} />
                         ) : (
-                          <span style={{ fontSize: '24px' }}>👤</span>
+                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1e3a8a', fontWeight: 800, fontSize: '11px' }}>फोटो</div>
                         )}
                         <div>
                           <div style={{ fontSize: '12px', fontWeight: 700, color: '#1e40af' }}>प्रत्याशी फ़ोटो</div>
@@ -1523,11 +1531,11 @@ export default function AdminPanel() {
                       <div style={{ padding: '14px', background: '#fff7ed', borderRadius: '10px', border: '1.5px dashed #ea580c', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <span style={{ fontSize: '12px', fontWeight: 700, color: '#ea580c' }}>
-                            🌸 बाएं तरफ: चुनाव चिन्ह
+                            बाएं तरफ: चुनाव चिन्ह
                           </span>
                           {targetSlipConfig.partySymbolImage && (
                             <span style={{ fontSize: '11px', color: '#15803d', fontWeight: 700, background: '#dcfce7', padding: '1px 6px', borderRadius: '4px' }}>
-                              ✓ अपलोड है
+                              अपलोड है
                             </span>
                           )}
                         </div>
@@ -1591,11 +1599,11 @@ export default function AdminPanel() {
                       <div style={{ padding: '14px', background: '#eff6ff', borderRadius: '10px', border: '1.5px dashed #1e3a8a', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <span style={{ fontSize: '12px', fontWeight: 700, color: '#1e3a8a' }}>
-                            👤 दाएं तरफ: प्रत्याशी फ़ोटो
+                            दाएं तरफ: प्रत्याशी फ़ोटो
                           </span>
                           {targetSlipConfig.candidateImage && (
                             <span style={{ fontSize: '11px', color: '#15803d', fontWeight: 700, background: '#dcfce7', padding: '1px 6px', borderRadius: '4px' }}>
-                              ✓ अपलोड है
+                              अपलोड है
                             </span>
                           )}
                         </div>
@@ -1698,7 +1706,6 @@ export default function AdminPanel() {
                   {/* Header */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', borderBottom: '1.5px solid #f1f5f9', paddingBottom: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '18px' }}>⚡</span>
                       <div>
                         <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>
                           लाइव पर्ची पूर्वावलोकन (Live Preview)
@@ -2041,7 +2048,7 @@ export default function AdminPanel() {
                           {availableWards.map((w) => (
                             <option key={w} value={w}>वार्ड {w}</option>
                           ))}
-                          <option value="__NEW__">➕ नया वार्ड बनाएं...</option>
+                          <option value="__NEW__">+ नया वार्ड बनाएं...</option>
                         </select>
                         <button
                           type="button"
@@ -2167,7 +2174,7 @@ export default function AdminPanel() {
                           {availableWards.map((w) => (
                             <option key={w} value={w}>वार्ड {w}</option>
                           ))}
-                          <option value="__NEW__">➕ नया वार्ड बनाएं...</option>
+                          <option value="__NEW__">+ नया वार्ड बनाएं...</option>
                         </select>
                         <button
                           type="button"
@@ -2251,7 +2258,7 @@ export default function AdminPanel() {
                     <input type="checkbox" name="useOcr" defaultChecked style={{ marginTop: '3px', accentColor: '#00875a', width: '16px', height: '16px' }} />
                     <div>
                       <div style={{ fontSize: '13px', fontWeight: '600', color: '#006644' }}>
-                        ✓ स्मार्ट OCR इंजन (Smart Visual OCR - सभी भारतीय व ECI फॉन्ट के लिए अनुशंसित)
+                        स्मार्ट OCR इंजन (Smart Visual OCR - सभी भारतीय व ECI फॉन्ट के लिए अनुशंसित)
                       </div>
                       <div style={{ fontSize: '12px', color: '#2d5743', marginTop: '2px', lineHeight: '1.4' }}>
                         यह राजस्थान/ECI जैसी पीडीएफ में करप्टेड/अनसपोर्टेड फॉन्ट (KrutiDev, DevLys, Subset Arial) को सीधे इमेज से 100% सही हिंदी में पढ़ता है।
@@ -2384,28 +2391,28 @@ export default function AdminPanel() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', paddingTop: '8px', borderTop: '1px solid #f0f3f1', fontSize: '12px', color: '#4a5568' }}>
                           {job.wardNo ? (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#e8f0fe', color: '#1967d2', padding: '3px 8px', borderRadius: '5px', fontWeight: '500' }}>
-                              🏛️ वार्ड: <strong>{job.wardNo}</strong>
+                              वार्ड: <strong>{job.wardNo}</strong>
                             </span>
                           ) : (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f1f3f4', color: '#5f6368', padding: '3px 8px', borderRadius: '5px' }}>
-                              🏛️ वार्ड: सामान्य / सभी
+                              वार्ड: सामान्य / सभी
                             </span>
                           )}
 
                           {job.boothNo && (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fef7e0', color: '#b06000', padding: '3px 8px', borderRadius: '5px', fontWeight: '500' }}>
-                              🗳️ बूथ/भाग: <strong>{job.boothNo}</strong>
+                              बूथ/भाग: <strong>{job.boothNo}</strong>
                             </span>
                           )}
 
                           {job.uploadedBy && (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f3e8fd', color: '#7627bb', padding: '3px 8px', borderRadius: '5px', fontWeight: '500' }}>
-                              👤 प्रभारी: <strong>{job.uploadedBy}</strong>
+                              प्रभारी: <strong>{job.uploadedBy}</strong>
                             </span>
                           )}
 
                           <span style={{ marginLeft: 'auto', color: '#9aa0a6', fontSize: '11px' }}>
-                            🕒 {new Date(job.uploadedAt).toLocaleString('hi-IN', { dateStyle: 'short', timeStyle: 'short' })}
+                            {new Date(job.uploadedAt).toLocaleString('hi-IN', { dateStyle: 'short', timeStyle: 'short' })}
                           </span>
                         </div>
                       </div>
@@ -2478,7 +2485,7 @@ export default function AdminPanel() {
                 <div style={{ marginTop: '16px', padding: '14px 18px', background: '#f0fdf4', borderRadius: '10px', border: '1px solid #bbf7d0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: '#166534', cursor: 'pointer', margin: 0 }}>
                     <input type="checkbox" checked={editingTenant.whatsappEnabled ?? true} onChange={(e) => setEditingTenant({ ...editingTenant, whatsappEnabled: e.target.checked })} />
-                    💬 WhatsApp मैसेजिंग सेवा सक्षम रखें
+                    WhatsApp मैसेजिंग सेवा सक्षम रखें
                   </label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', fontSize: '13px', color: '#166534' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
@@ -2500,10 +2507,10 @@ export default function AdminPanel() {
                   </div>
                 </div>
 
-                {/* 🎨 पर्ची ब्रांडिंग संपादन व लाइव पूर्वावलोकन */}
+                {/* पर्ची ब्रांडिंग संपादन व लाइव पूर्वावलोकन */}
                 <fieldset className="feature-module-fieldset" style={{ marginTop: '20px', padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1.5px solid #cbd5e1' }}>
                   <legend style={{ fontWeight: 800, color: '#1e3a8a', fontSize: '15px', padding: '0 8px' }}>
-                    🎨 मतदाता पर्ची ब्रांडिंग (फोटो व विवरण संपादन)
+                    मतदाता पर्ची ब्रांडिंग (फोटो व विवरण संपादन)
                   </legend>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '20px', alignItems: 'start' }}>
@@ -2613,11 +2620,11 @@ export default function AdminPanel() {
                         <div style={{ padding: '12px', background: '#fff7ed', borderRadius: '10px', border: '1.5px dashed #ea580c', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <span style={{ fontSize: '11px', fontWeight: 700, color: '#ea580c' }}>
-                              🌸 चुनाव चिन्ह फ़ोटो
+                              चुनाव चिन्ह फ़ोटो
                             </span>
                             {editingTenant.slipConfig?.partySymbolImage && (
                               <span style={{ fontSize: '10px', color: '#15803d', fontWeight: 700, background: '#dcfce7', padding: '1px 5px', borderRadius: '4px' }}>
-                                ✓ अपलोड है
+                                अपलोड है
                               </span>
                             )}
                           </div>
@@ -2657,11 +2664,11 @@ export default function AdminPanel() {
                         <div style={{ padding: '12px', background: '#eff6ff', borderRadius: '10px', border: '1.5px dashed #1e3a8a', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <span style={{ fontSize: '11px', fontWeight: 700, color: '#1e3a8a' }}>
-                              👤 प्रत्याशी फ़ोटो
+                              प्रत्याशी फ़ोटो
                             </span>
                             {editingTenant.slipConfig?.candidateImage && (
                               <span style={{ fontSize: '10px', color: '#15803d', fontWeight: 700, background: '#dcfce7', padding: '1px 5px', borderRadius: '4px' }}>
-                                ✓ अपलोड है
+                                अपलोड है
                               </span>
                             )}
                           </div>
@@ -2702,7 +2709,7 @@ export default function AdminPanel() {
                     {/* Live Preview Container (Fully Contained, Zero Overflow) */}
                     <div style={{ background: '#ffffff', borderRadius: '12px', padding: '14px', border: '1px solid #cbd5e1', overflow: 'hidden' }}>
                       <div style={{ fontSize: '12px', fontWeight: 700, color: '#16a34a', marginBottom: '8px' }}>
-                        ⚡ लाइव पूर्वावलोकन (Live Preview)
+                        लाइव पूर्वावलोकन (Live Preview)
                       </div>
                       <div style={{ width: '100%', maxWidth: '480px', margin: '0 auto', overflow: 'hidden' }}>
                         <VoterSlipTemplate config={editingTenant.slipConfig || defaultSlipConfig} isInline={true} />

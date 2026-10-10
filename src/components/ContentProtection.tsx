@@ -31,7 +31,7 @@ export const ContentProtection: React.FC = () => {
     // 1. Disable Right-Click Context Menu
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
-      showSecurityWarning('🔒 सुरक्षा नीति: राइट-क्लिक और इमेज डाउनलोड प्रतिबंधित है');
+      showSecurityWarning('सुरक्षा नीति: राइट-क्लिक और इमेज डाउनलोड प्रतिबंधित है');
       return false;
     };
 
@@ -43,7 +43,7 @@ export const ContentProtection: React.FC = () => {
       
       // Block copying data out
       e.preventDefault();
-      showSecurityWarning('⚠️ डेटा सुरक्षा: सामग्री कॉपी करना प्रतिबंधित है');
+      showSecurityWarning('डेटा सुरक्षा: सामग्री कॉपी करना प्रतिबंधित है');
       return false;
     };
 
@@ -53,7 +53,7 @@ export const ContentProtection: React.FC = () => {
       if (isInput) return;
 
       e.preventDefault();
-      showSecurityWarning('⚠️ डेटा सुरक्षा: कट / कॉपी प्रतिबंधित है');
+      showSecurityWarning('डेटा सुरक्षा: कट / कॉपी प्रतिबंधित है');
       return false;
     };
 
@@ -72,7 +72,7 @@ export const ContentProtection: React.FC = () => {
       if (e.key === 'F12') {
         e.preventDefault();
         e.stopPropagation();
-        showSecurityWarning('🔒 सुरक्षा नीति: डेवलपर टूल्स प्रतिबंधित हैं');
+        showSecurityWarning('सुरक्षा नीति: डेवलपर टूल्स प्रतिबंधित हैं');
         return false;
       }
 
@@ -82,7 +82,7 @@ export const ContentProtection: React.FC = () => {
       if (isCtrlOrCmd && (e.shiftKey || e.altKey) && (key === 'i' || key === 'j' || key === 'c')) {
         e.preventDefault();
         e.stopPropagation();
-        showSecurityWarning('🔒 सुरक्षा नीति: इंस्पेक्ट टूल प्रतिबंधित है');
+        showSecurityWarning('सुरक्षा नीति: इंस्पेक्ट टूल प्रतिबंधित है');
         return false;
       }
 
@@ -90,7 +90,7 @@ export const ContentProtection: React.FC = () => {
       if (isCtrlOrCmd && key === 'u') {
         e.preventDefault();
         e.stopPropagation();
-        showSecurityWarning('🔒 सुरक्षा नीति: सोर्स कोड देखना प्रतिबंधित है');
+        showSecurityWarning('सुरक्षा नीति: सोर्स कोड देखना प्रतिबंधित है');
         return false;
       }
 
@@ -98,7 +98,7 @@ export const ContentProtection: React.FC = () => {
       if (isCtrlOrCmd && key === 's') {
         e.preventDefault();
         e.stopPropagation();
-        showSecurityWarning('🔒 सुरक्षा नीति: पेज सेव करना प्रतिबंधित है');
+        showSecurityWarning('सुरक्षा नीति: पेज सेव करना प्रतिबंधित है');
         return false;
       }
 
@@ -108,7 +108,7 @@ export const ContentProtection: React.FC = () => {
         const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || (activeEl as HTMLElement).isContentEditable);
         if (!isInput) {
           e.preventDefault();
-          showSecurityWarning('⚠️ डेटा सुरक्षा: कॉपी करना प्रतिबंधित है');
+          showSecurityWarning('डेटा सुरक्षा: कॉपी करना प्रतिबंधित है');
           return false;
         }
       }

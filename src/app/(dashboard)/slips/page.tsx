@@ -257,8 +257,19 @@ export default function SlipsPage() {
       void loadWhatsappQuota();
       void loadVoters();
     };
+    const handleSlipConfigChange = (e: any) => {
+      if (e.detail) {
+        setSlipConfig({ ...defaultSlipConfig, ...e.detail });
+      } else {
+        void loadSlipConfig();
+      }
+    };
     window.addEventListener('client-changed', handleClientChange);
-    return () => window.removeEventListener('client-changed', handleClientChange);
+    window.addEventListener('slip-config-changed', handleSlipConfigChange);
+    return () => {
+      window.removeEventListener('client-changed', handleClientChange);
+      window.removeEventListener('slip-config-changed', handleSlipConfigChange);
+    };
   }, [loadSlipConfig, loadWhatsappQuota, loadVoters]);
 
   // Image Upload handler for Branding Modal
@@ -341,7 +352,11 @@ export default function SlipsPage() {
       }
 
       setSlipConfig(editingConfig);
-      setBrandingSaveMsg('✅ पर्ची ब्रांडिंग सफलतापूर्वक अपडेट हो गई!');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('cachedSlipConfig', JSON.stringify(editingConfig));
+        window.dispatchEvent(new CustomEvent('slip-config-changed', { detail: editingConfig }));
+      }
+      setBrandingSaveMsg('पर्ची ब्रांडिंग सफलतापूर्वक अपडेट हो गई!');
       setTimeout(() => {
         setIsCustomizing(false);
         setBrandingSaveMsg('');
@@ -554,7 +569,7 @@ export default function SlipsPage() {
                 cursor: 'pointer',
               }}
             >
-              ⚙️ बदलाव करें
+              बदलाव करें
             </button>
           )}
 
@@ -574,7 +589,7 @@ export default function SlipsPage() {
                 color: !whatsappQuota.whatsappEnabled ? '#991b1b' : whatsappQuota.whatsappCredits <= 0 ? '#92400e' : '#166534',
               }}
             >
-              <span>💬 कोटा: {whatsappQuota.whatsappCredits} क्रेडिट</span>
+              <span>कोटा: {whatsappQuota.whatsappCredits} क्रेडिट</span>
             </div>
           )}
         </div>
@@ -898,7 +913,7 @@ export default function SlipsPage() {
                   ADMIN ACCESS ONLY · BRANDING STUDIO
                 </span>
                 <h2 style={{ fontSize: '20px', margin: '4px 0', color: '#0f172a' }}>
-                  ⚙️ पर्ची ब्रांडिंग व प्रत्याशी सेटिंग्स
+                  पर्ची ब्रांडिंग व प्रत्याशी सेटिंग्स
                 </h2>
                 <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
                   प्रत्याशी, पार्टी, चुनाव चिन्ह, दोनों फ़ोटो व अपील कस्टमाइज़ करें। यहाँ के बदलाव लाइव पर्ची पर तुरंत लागू होंगे।
@@ -951,7 +966,7 @@ export default function SlipsPage() {
             {/* Quick Party Presets */}
             <div style={{ marginBottom: '16px' }}>
               <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '8px' }}>
-                ⚡ त्वरित पार्टी प्रीसेट्स (Quick Presets):
+                त्वरित पार्टी प्रीसेट्स (Quick Presets):
               </div>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button
@@ -968,7 +983,7 @@ export default function SlipsPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  🌸 भाजपा (BJP - कमल)
+                  भाजपा (BJP - कमल)
                 </button>
 
                 <button
@@ -985,7 +1000,7 @@ export default function SlipsPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  ✋ कांग्रेस (INC - हाथ)
+                  कांग्रेस (INC - हाथ)
                 </button>
 
                 <button
@@ -1002,7 +1017,7 @@ export default function SlipsPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  🪁 निर्दलीय (पतंग)
+                  निर्दलीय (पतंग)
                 </button>
 
                 <button
@@ -1019,7 +1034,7 @@ export default function SlipsPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  🏏 निर्दलीय (बल्ला)
+                  निर्दलीय (बल्ला)
                 </button>
 
                 <button
@@ -1036,7 +1051,7 @@ export default function SlipsPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  🔑 निर्दलीय (चाबी)
+                  निर्दलीय (चाबी)
                 </button>
 
                 <button
@@ -1053,7 +1068,7 @@ export default function SlipsPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  🧹 आप (AAP - झाड़ू)
+                  आप (AAP - झाड़ू)
                 </button>
               </div>
             </div>
@@ -1080,7 +1095,7 @@ export default function SlipsPage() {
                   }}
                 >
                   <span style={{ fontSize: '13px', fontWeight: 800, color: '#c2410c', display: 'block', marginBottom: '10px' }}>
-                    📸 दोनों साइड की फोटो अपलोड (Left & Right Column Images)
+                    दोनों साइड की फोटो अपलोड (Left & Right Column Images)
                   </span>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: '14px' }}>
@@ -1348,7 +1363,7 @@ export default function SlipsPage() {
                     <span>रियल-टाइम लाइव प्रीव्यू (Live Preview)</span>
                   </div>
                   <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700 }}>
-                    ⚡ लाइव अपडेट
+                    लाइव अपडेट
                   </span>
                 </div>
 

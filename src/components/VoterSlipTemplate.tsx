@@ -35,16 +35,6 @@ export const defaultSlipConfig: SlipConfig = {
 };
 
 
-function getSymbolEmoji(symbolName?: string): string {
-  const norm = (symbolName || '').toLowerCase();
-  if (norm.includes('हाथ') || norm.includes('hand') || norm.includes('पंजा')) return '✋';
-  if (norm.includes('पतंग') || norm.includes('kite')) return '🪁';
-  if (norm.includes('बल्ला') || norm.includes('bat')) return '🏏';
-  if (norm.includes('चाबी') || norm.includes('key')) return '🔑';
-  if (norm.includes('झाड़ू') || norm.includes('broom')) return '🧹';
-  if (norm.includes('कमल') || norm.includes('lotus')) return '🌸';
-  return '🗳️';
-}
 
 export interface VoterSlipData {
   epic?: string;
@@ -98,7 +88,7 @@ const InlineText: React.FC<InlineTextProps> = ({
   className,
   multiline = false,
   rows = 2,
-  title = '✏️ क्लिक करके सीधे बदलें',
+  title = 'क्लिक करके सीधे बदलें',
 }) => {
   const currentVal = value !== undefined && value !== null ? value : fallback;
 
@@ -344,7 +334,6 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '16px' }}>✨</span>
               <div>
                 <strong style={{ color: '#0c4a6e' }}>प्रत्यक्ष पर्ची संपादन सक्रिय:</strong>{' '}
                 किसी भी नाम, पार्टी, EVM नंबर पर क्लिक करके टाइप करें, या पूरा हेडर ग्राफ़िक अपलोड करें।
@@ -365,7 +354,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
           {/* Mode Switcher Buttons */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingTop: '6px', borderTop: '1px solid #bae6fd' }}>
             <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#075985' }}>
-              📐 हेडर डिज़ाइन मोड चुनें:
+              हेडर डिज़ाइन मोड चुनें:
             </span>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               <button
@@ -383,7 +372,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                   transition: 'all 0.15s ease',
                 }}
               >
-                🧩 अलग-अलग घटक (Symbol + Text + Photo)
+                अलग-अलग घटक (Symbol + Text + Photo)
               </button>
               <button
                 type="button"
@@ -400,7 +389,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                   transition: 'all 0.15s ease',
                 }}
               >
-                🖼️ पूरा हेडर ग्राफ़िक (Single Custom Banner)
+                पूरा हेडर ग्राफ़िक (Single Custom Banner)
               </button>
             </div>
           </div>
@@ -480,7 +469,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                         boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                       }}
                     >
-                      📷 ग्राफ़िक बदलें
+                      ग्राफ़िक बदलें
                     </button>
                     <button
                       type="button"
@@ -500,7 +489,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                         cursor: 'pointer',
                       }}
                     >
-                      ✕ हटाएं
+                      × हटाएं
                     </button>
                   </div>
                 )}
@@ -521,7 +510,13 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                   width: '100%',
                 }}
               >
-                <div style={{ fontSize: '32px' }}>🖼️</div>
+                <div style={{ color: '#0284c7', marginBottom: '2px' }}>
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                </div>
                 <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0369a1' }}>
                   संपूर्ण हेडर ग्राफ़िक (Full Banner) अपलोड करें
                 </div>
@@ -547,7 +542,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                       bannerFileInputRef.current?.click();
                     }}
                   >
-                    📁 बैनर इमेज चुनें
+                    बैनर इमेज चुनें
                   </button>
                 )}
               </div>
@@ -582,7 +577,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               transition: 'all 0.15s ease',
               flexShrink: 0,
             }}
-            title={isEditable ? '📷 चुनाव चिन्ह फोटो अपलोड करने के लिए क्लिक करें' : undefined}
+            title={isEditable ? 'चुनाव चिन्ह फोटो अपलोड करने के लिए क्लिक करें' : undefined}
           >
             {/* Top Serial Badge */}
             <div
@@ -671,10 +666,14 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                     fontSize: '10px',
                     fontWeight: 700,
                     borderRadius: '6px',
+                    gap: '2px',
                   }}
                   className="photo-overlay-prompt"
                 >
-                  <span>📷</span>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
                   <span>{merged.partySymbolImage ? 'फोटो बदलें' : 'फोटो अपलोड'}</span>
                 </div>
               )}
@@ -707,7 +706,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                     zIndex: 10,
                   }}
                 >
-                  ✕
+                  ×
                 </button>
               )}
             </div>
@@ -950,7 +949,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               transition: 'all 0.15s ease',
               flexShrink: 0,
             }}
-            title={isEditable ? '📷 प्रत्याशी फोटो अपलोड करने के लिए क्लिक करें' : undefined}
+            title={isEditable ? 'प्रत्याशी फोटो अपलोड करने के लिए क्लिक करें' : undefined}
           >
             {merged.candidateImage ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -991,7 +990,10 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                 }}
                 className="photo-overlay-prompt"
               >
-                <span>📷</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
                 <span>{merged.candidateImage ? 'फोटो बदलें' : 'फोटो अपलोड'}</span>
               </div>
             )}
@@ -1024,7 +1026,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                   zIndex: 10,
                 }}
               >
-                ✕
+                ×
               </button>
             )}
           </div>
@@ -1132,11 +1134,9 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               flexShrink: 0,
             }}
           >
-            {merged.partySymbolImage ? (
+            {merged.partySymbolImage && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={merged.partySymbolImage} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain' }} />
-            ) : (
-              <span>{getSymbolEmoji(merged.partySymbolName)}</span>
             )}
             <span>{merged.partySymbolName || 'कमल का फूल'}</span>
           </div>
@@ -1206,7 +1206,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               justifyContent: 'space-between',
               marginBottom: '6px',
             }}>
-              <span>📋 <strong>मतदाता विवरण (सैंपल)</strong>: वास्तविक पर्चियों में यह डेटाबेस से स्वतः भरा जाता है</span>
+              <span><strong>मतदाता विवरण (सैंपल)</strong>: वास्तविक पर्चियों में यह डेटाबेस से स्वतः भरा जाता है</span>
               <span style={{ fontSize: '10px', color: '#0284c7', fontWeight: 600 }}>गतिशील (Dynamic)</span>
             </div>
           )}
@@ -1301,10 +1301,13 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ea580c', fontSize: '12.5px', fontWeight: 700 }}>
-            <span>📍</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
             <span>मतदान केंद्र (Polling Station):</span>
           </div>
-          <div style={{ paddingLeft: isEditable ? '0' : '22px' }}>
+          <div style={{ paddingLeft: isEditable ? '0' : '20px' }}>
             <InlineText
               value={merged.pollingStationFallback}
               fallback={pollingStation}
@@ -1328,7 +1331,6 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
         {/* ================= 6. BOTTOM APPEAL FOOTER ================= */}
         <div className="voter-slip-footer-appeal" style={{ textAlign: 'center', marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div style={{ color: '#ea580c', fontSize: '13px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            <span>🗳️</span>
             <InlineText
               value={merged.footerAppeal}
               fallback={`${merged.partySymbolName || 'कमल'} का बटन दबाएं और भारी मतों से विजयी बनाएं`}
@@ -1347,10 +1349,8 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                 borderRadius: '4px',
               }}
             />
-            <span>🗳️</span>
           </div>
           <div style={{ color: '#475569', fontSize: '11px', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-            <span>🙏</span>
             <span>कृपया मतदान के दिन अपना पहचान पत्र (Voter ID / आधार कार्ड) साथ लाएं।</span>
           </div>
         </div>
