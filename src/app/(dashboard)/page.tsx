@@ -65,6 +65,17 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [familyHouse, setFamilyHouse] = useState('');
+  const [tagVoter, setTagVoter] = useState<Voter | null>(null);
+  const [tagValues, setTagValues] = useState({
+    caste: '',
+    surety: '',
+    supportStatus: 'unmarked',
+    assignedWorker: '',
+    isMigrant: false,
+    migrantLocation: '',
+    notes: '',
+  });
+  const [workersList, setWorkersList] = useState<Array<{ id: string; name: string }>>([]);
   const [editVoter, setEditVoter] = useState<Voter | null>(null);
   const [slipVoter, setSlipVoter] = useState<Voter | null>(null);
   const [editValues, setEditValues] = useState({
@@ -250,6 +261,24 @@ export default function DashboardPage() {
 
   useEffect(() => () => recognitionRef.current?.stop(), []);
 
+  useEffect(() => {
+    void apiFetch('/users/workers', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: unknown) => {
+        if (Array.isArray(data)) {
+          setWorkersList(
+            data
+              .map((w: Record<string, unknown>) => ({
+                id: String(w.id || w._id || ''),
+                name: String(w.name || w.fullName || w.email || ''),
+              }))
+              .filter((w) => w.name.trim().length > 0)
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     filtersRef.current = {
@@ -301,7 +330,21 @@ export default function DashboardPage() {
     setSelectedIds((current) => current.length === voters.length ? [] : voters.map((voter) => voter._id));
   };
 
-  const openEditor = (voter: Voter) => {
+  const openTagModal = (voter: Voter) => {
+    setActionMessage('');
+    setTagValues({
+      caste: voter.caste || '',
+      surety: voter.surety || '',
+      supportStatus: voter.supportStatus || 'unmarked',
+      assignedWorker: voter.assignedWorker || '',
+      isMigrant: Boolean(voter.isMigrant),
+      migrantLocation: voter.migrantLocation || '',
+      notes: voter.notes || '',
+    });
+    setTagVoter(voter);
+  };
+
+  const openEditModal = (voter: Voter) => {
     setActionMessage('');
     setEditValues({
       nameEn: voter.nameEn || '',
@@ -328,7 +371,33 @@ export default function DashboardPage() {
     setEditVoter(voter);
   };
 
-  const saveVoter = async (event: FormEvent<HTMLFormElement>) => {
+  const saveTag = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!tagVoter) return;
+    setSaving(true);
+    setActionMessage('');
+    try {
+      const response = await apiFetch(`/voters/${encodeURIComponent(tagVoter._id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tagValues),
+      });
+      if (!response.ok) {
+        throw new Error(await getApiError(response, 'टैग विवरण सेव नहीं हुए।'));
+      }
+      setVoters((current) =>
+        current.map((voter) => (voter._id === tagVoter._id ? { ...voter, ...tagValues } : voter))
+      );
+      setTagVoter(null);
+      setActionMessage('✅ मतदाता टैग सफलतापूर्वक अपडेट हो गए!');
+    } catch (saveError) {
+      setActionMessage(saveError instanceof Error ? saveError.message : 'टैग विवरण सेव नहीं हुए।');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveEdit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!editVoter) return;
     setSaving(true);
@@ -342,10 +411,16 @@ export default function DashboardPage() {
       if (!response.ok) {
         throw new Error(await getApiError(response, 'मतदाता विवरण सेव नहीं हुए।'));
       }
-      const updatedValues = { ...editValues, age: Number(editValues.age) || 0, serialNo: Number(editValues.serialNo) || 0 };
-      setVoters((current) => current.map((voter) => voter._id === editVoter._id ? { ...voter, ...updatedValues } : voter));
+      const updatedValues = {
+        ...editValues,
+        age: Number(editValues.age) || 0,
+        serialNo: Number(editValues.serialNo) || 0,
+      };
+      setVoters((current) =>
+        current.map((voter) => (voter._id === editVoter._id ? { ...voter, ...updatedValues } : voter))
+      );
       setEditVoter(null);
-      setActionMessage('मतदाता विवरण सेव हो गए।');
+      setActionMessage('✅ मतदाता विवरण सफलतापूर्वक सेव हो गए!');
     } catch (saveError) {
       setActionMessage(saveError instanceof Error ? saveError.message : 'मतदाता विवरण सेव नहीं हुए।');
     } finally {
@@ -657,7 +732,52 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="vc-footer">
-                  <button className="vc-btn-edit" onClick={() => openEditor(voter)}>✏️ टैग / एडिट</button>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      className="vc-btn-tag"
+                      type="button"
+                      onClick={() => openTagModal(voter)}
+                      title="मतदाता चुनाव टैग व प्रबंधन (जाति, समर्थन, कार्यकर्ता)"
+                      style={{
+                        background: '#ecfdf5',
+                        color: '#047857',
+                        border: '1.5px solid #a7f3d0',
+                        fontWeight: 700,
+                        fontSize: '12px',
+                        padding: '5px 10px',
+                        borderRadius: '7px',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      🏷️ टैग
+                    </button>
+                    <button
+                      className="vc-btn-edit"
+                      type="button"
+                      onClick={() => openEditModal(voter)}
+                      title="मतदाता विवरण संपादित करें (नाम, पता, फ़ोन)"
+                      style={{
+                        background: '#f8fafc',
+                        color: '#334155',
+                        border: '1.5px solid #cbd5e1',
+                        fontWeight: 700,
+                        fontSize: '12px',
+                        padding: '5px 10px',
+                        borderRadius: '7px',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      ✏️ एडिट
+                    </button>
+                  </div>
                   <div className="vc-footer-right">
                     <button className="vc-btn-family" onClick={() => {
                       setHouseQuery(voter.houseNo || '');
@@ -688,18 +808,151 @@ export default function DashboardPage() {
         <div className="records-footnote">रिकॉर्ड और अपडेट आपके कॉन्फ़िगर किए गए डेटाबेस से आते हैं।</div>
       </section>
 
+      {tagVoter && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setTagVoter(null); }}>
+          <section className="form-modal" role="dialog" aria-modal="true" aria-labelledby="tag-title" style={{ maxWidth: '640px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="modal-heading">
+              <div>
+                <span className="eyebrow-label" style={{ color: '#0284c7' }}>VOTER CAMPAIGN TAGS</span>
+                <h2 id="tag-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>🏷️ मतदाता चुनाव टैग व प्रबंधन</h2>
+                <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                  {tagVoter.nameHi || tagVoter.nameEn} · EPIC: {tagVoter.epic || 'N/A'} · भाग: {tagVoter.partNo || '-'} / क्र.: {tagVoter.serialNo || '-'}
+                </p>
+              </div>
+              <button className="icon-button" onClick={() => setTagVoter(null)} aria-label="बंद करें"><X size={18} /></button>
+            </div>
+            <form onSubmit={saveTag} className="modal-form" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ maxHeight: '65vh', overflowY: 'auto', paddingRight: '8px', paddingBottom: '12px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                
+                <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em', color: '#64748b', textTransform: 'uppercase', marginBottom: '12px' }}>
+                    3. संपर्क व चुनाव प्रबंधन
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    
+                    {/* Row 1: जाति / समुदाय (phone number is in Edit modal as requested) */}
+                    <div>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        जाति / समुदाय
+                        <input
+                          value={tagValues.caste}
+                          onChange={(event) => setTagValues({ ...tagValues, caste: event.target.value })}
+                          placeholder="उदा. वैष्णव, शर्मा, जाट, राजपूत आदि"
+                          style={{ marginTop: '4px', height: '38px' }}
+                        />
+                      </label>
+                    </div>
+
+                    {/* Row 2: समर्थन वर्ग, मतदाता स्थिति, जिम्मेदार कार्यकर्ता */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '12px' }}>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        समर्थन वर्ग
+                        <select
+                          value={tagValues.supportStatus}
+                          onChange={(event) => setTagValues({ ...tagValues, supportStatus: event.target.value })}
+                          style={{ marginTop: '4px', height: '38px' }}
+                        >
+                          <option value="unmarked">अवर्गीकृत</option>
+                          <option value="core">समर्थन चिह्नित</option>
+                          <option value="swing">अनिर्णीत चिह्नित</option>
+                          <option value="opposition">विरोध चिह्नित</option>
+                        </select>
+                      </label>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        मतदाता स्थिति
+                        <select
+                          value={tagValues.surety}
+                          onChange={(event) => setTagValues({ ...tagValues, surety: event.target.value })}
+                          style={{ marginTop: '4px', height: '38px' }}
+                        >
+                          <option value="">चुनें</option>
+                          <option value="100% पक्का">100% पक्का</option>
+                          <option value="50-50">50-50</option>
+                          <option value="विरोधी">विरोधी</option>
+                          <option value="सामान्य">सामान्य</option>
+                        </select>
+                      </label>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        जिम्मेदार कार्यकर्ता
+                        <input
+                          list="workers-tag-options"
+                          value={tagValues.assignedWorker}
+                          onChange={(event) => setTagValues({ ...tagValues, assignedWorker: event.target.value })}
+                          placeholder="कार्यकर्ता नाम लिखें / चुनें"
+                          style={{ marginTop: '4px', height: '38px' }}
+                        />
+                        <datalist id="workers-tag-options">
+                          {workersList.map((w) => (
+                            <option key={w.id} value={w.name}>{w.name}</option>
+                          ))}
+                        </datalist>
+                      </label>
+                    </div>
+
+                    {/* Row 3: प्रवासी मतदाता */}
+                    <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <label className="checkbox-label" style={{ fontWeight: 600, margin: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          checked={tagValues.isMigrant}
+                          onChange={(event) => setTagValues({ ...tagValues, isMigrant: event.target.checked })}
+                        /> 
+                        प्रवासी मतदाता (शहर से बाहर)
+                      </label>
+                      {tagValues.isMigrant && (
+                        <label style={{ marginTop: '8px', fontSize: '12px', fontWeight: 600, color: '#334155', display: 'block' }}>
+                          वर्तमान स्थान
+                          <input
+                            value={tagValues.migrantLocation}
+                            onChange={(event) => setTagValues({ ...tagValues, migrantLocation: event.target.value })}
+                            placeholder="वैकल्पिक स्थान (उदा. सूरत, मुंबई, दिल्ली)"
+                            style={{ marginTop: '4px', height: '36px' }}
+                          />
+                        </label>
+                      )}
+                    </div>
+
+                    {/* Row 4: अतिरिक्त नोट्स */}
+                    <label className="notes-field" style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      अतिरिक्त नोट्स
+                      <textarea
+                        value={tagValues.notes}
+                        onChange={(event) => setTagValues({ ...tagValues, notes: event.target.value })}
+                        rows={3}
+                        placeholder="मतदाता से संबंधित चुनाव या संपर्क नोट्स..."
+                        style={{ marginTop: '4px' }}
+                      />
+                    </label>
+
+                  </div>
+                </fieldset>
+
+              </div>
+
+              {actionMessage && <p className="form-error" role="alert">{actionMessage}</p>}
+              <div className="modal-actions" style={{ marginTop: '12px' }}>
+                <button className="button-secondary" type="button" onClick={() => setTagVoter(null)}>रद्द करें</button>
+                <button className="button-primary" type="submit" disabled={saving}>
+                  {saving ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />} टैग सेव करें
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+
       {editVoter && (
         <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setEditVoter(null); }}>
           <section className="form-modal" role="dialog" aria-modal="true" aria-labelledby="edit-title" style={{ maxWidth: '680px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-heading">
               <div>
                 <span className="eyebrow-label">VOTER DETAILS</span>
-                <h2 id="edit-title">मतदाता जानकारी संपादित करें</h2>
+                <h2 id="edit-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>✏️ मतदाता जानकारी संपादित करें</h2>
                 <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>{editVoter.nameHi || editVoter.nameEn} · {editVoter.epic}</p>
               </div>
               <button className="icon-button" onClick={() => setEditVoter(null)} aria-label="बंद करें"><X size={18} /></button>
             </div>
-            <form onSubmit={saveVoter} className="modal-form" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <form onSubmit={saveEdit} className="modal-form" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div style={{ maxHeight: '65vh', overflowY: 'auto', paddingRight: '8px', paddingBottom: '12px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 
                 {/* 1. व्यक्तिगत जानकारी */}
@@ -763,6 +1016,20 @@ export default function DashboardPage() {
                         <input value={editValues.relativeNameHi} onChange={(event) => setEditValues({ ...editValues, relativeNameHi: event.target.value.replace(/[a-zA-Z\d]/g, '').replace(/[^\u0900-\u097F\s]/g, '') })} placeholder="केवल हिंदी" style={{ marginTop: '4px', height: '38px' }} />
                       </label>
                     </div>
+
+                    {/* Row 4: Phone Number (Moved to Edit as requested) */}
+                    <div>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        फोन नंबर (Phone Number)
+                        <input
+                          type="tel"
+                          value={editValues.phone}
+                          onChange={(event) => setEditValues({ ...editValues, phone: event.target.value.replace(/\D/g, '').slice(0, 10) })}
+                          placeholder="10 अंक का मोबाइल नंबर"
+                          style={{ marginTop: '4px', height: '38px' }}
+                        />
+                      </label>
+                    </div>
                   </div>
                 </fieldset>
 
@@ -791,75 +1058,12 @@ export default function DashboardPage() {
                   </div>
                 </fieldset>
 
-                {/* 3. संपर्क व चुनाव प्रबंधन */}
-                <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em', color: '#64748b', textTransform: 'uppercase', marginBottom: '10px' }}>
-                    3. संपर्क व चुनाव प्रबंधन
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                        फोन नंबर
-                        <input type="tel" value={editValues.phone} onChange={(event) => setEditValues({ ...editValues, phone: event.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="10 अंक" style={{ marginTop: '4px', height: '38px' }} />
-                      </label>
-                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                        जाति / समुदाय
-                        <input value={editValues.caste} onChange={(event) => setEditValues({ ...editValues, caste: event.target.value })} style={{ marginTop: '4px', height: '38px' }} />
-                      </label>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                        समर्थन वर्ग
-                        <select value={editValues.supportStatus} onChange={(event) => setEditValues({ ...editValues, supportStatus: event.target.value })} style={{ marginTop: '4px', height: '38px' }}>
-                          <option value="unmarked">अवर्गीकृत</option>
-                          <option value="core">समर्थन चिह्नित</option>
-                          <option value="swing">अनिर्णीत चिह्नित</option>
-                          <option value="opposition">विरोध चिह्नित</option>
-                        </select>
-                      </label>
-                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                        मतदाता स्थिति
-                        <select value={editValues.surety} onChange={(event) => setEditValues({ ...editValues, surety: event.target.value })} style={{ marginTop: '4px', height: '38px' }}>
-                          <option value="">चुनें</option>
-                          <option value="100% पक्का">100% पक्का</option>
-                          <option value="50-50">50-50</option>
-                          <option value="विरोधी">विरोधी</option>
-                          <option value="सामान्य">सामान्य</option>
-                        </select>
-                      </label>
-                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                        जिम्मेदार कार्यकर्ता
-                        <input value={editValues.assignedWorker} onChange={(event) => setEditValues({ ...editValues, assignedWorker: event.target.value })} style={{ marginTop: '4px', height: '38px' }} />
-                      </label>
-                    </div>
-
-                    <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <label className="checkbox-label" style={{ fontWeight: 600, margin: 0, cursor: 'pointer' }}>
-                        <input type="checkbox" checked={editValues.isMigrant} onChange={(event) => setEditValues({ ...editValues, isMigrant: event.target.checked })} /> 
-                        प्रवासी मतदाता (शहर से बाहर)
-                      </label>
-                      {editValues.isMigrant && (
-                        <label style={{ marginTop: '8px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                          वर्तमान स्थान
-                          <input value={editValues.migrantLocation} onChange={(event) => setEditValues({ ...editValues, migrantLocation: event.target.value })} placeholder="वैकल्पिक स्थान (उदा. सूरत)" style={{ marginTop: '4px', height: '36px' }} />
-                        </label>
-                      )}
-                    </div>
-
-                    <label className="notes-field" style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                      अतिरिक्त नोट्स
-                      <textarea value={editValues.notes} onChange={(event) => setEditValues({ ...editValues, notes: event.target.value })} rows={2} style={{ marginTop: '4px' }} />
-                    </label>
-                  </div>
-                </fieldset>
-
               </div>
 
               {actionMessage && <p className="form-error" role="alert">{actionMessage}</p>}
               <div className="modal-actions">
                 <button className="button-secondary" type="button" onClick={() => setEditVoter(null)}>रद्द करें</button>
-                <button className="button-primary" type="submit" disabled={saving}>{saving ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />} सेव करें</button>
+                <button className="button-primary" type="submit" disabled={saving}>{saving ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />} विवरण सेव करें</button>
               </div>
             </form>
           </section>

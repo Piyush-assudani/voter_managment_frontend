@@ -264,7 +264,7 @@ export default function SlipsPage() {
   // Image Upload handler for Branding Modal
   const handleImageUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
-    field: 'partySymbolImage' | 'candidateImage'
+    field: 'partySymbolImage' | 'candidateImage' | 'headerGraphicImage'
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -275,7 +275,11 @@ export default function SlipsPage() {
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = reader.result as string;
-      setEditingConfig((prev) => ({ ...prev, [field]: base64 }));
+      setEditingConfig((prev) => ({
+        ...prev,
+        [field]: base64,
+        ...(field === 'headerGraphicImage' ? { useHeaderGraphic: true } : {}),
+      }));
     };
     reader.readAsDataURL(file);
   };

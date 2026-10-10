@@ -13,6 +13,8 @@ export interface SlipConfig {
   subTitle?: string;
   footerAppeal?: string;
   pollingStationFallback?: string;
+  useHeaderGraphic?: boolean;
+  headerGraphicImage?: string;
 }
 
 export const defaultSlipConfig: SlipConfig = {
@@ -28,6 +30,8 @@ export const defaultSlipConfig: SlipConfig = {
   appealText: 'वार्ड नंबर 82 से भाजपा प्रत्याशी प्रसन्न चंद मेहता को अपना अमूल्य वोट देकर भारी मतों से विजय बनाएं।',
   footerAppeal: 'कमल का बटन दबाएं और भारी मतों से विजयी बनाएं',
   pollingStationFallback: '569 - सामुदायिक भवन, जाटा बास, महामंदिर, जोधपुर',
+  useHeaderGraphic: false,
+  headerGraphicImage: '',
 };
 
 
@@ -65,8 +69,8 @@ export interface VoterSlipTemplateProps {
   isInline?: boolean;
   isEditable?: boolean;
   onConfigChange?: (newConfig: SlipConfig) => void;
-  onImageUpload?: (file: File, field: 'partySymbolImage' | 'candidateImage') => void;
-  onRemoveImage?: (field: 'partySymbolImage' | 'candidateImage') => void;
+  onImageUpload?: (file: File, field: 'partySymbolImage' | 'candidateImage' | 'headerGraphicImage') => void;
+  onRemoveImage?: (field: 'partySymbolImage' | 'candidateImage' | 'headerGraphicImage') => void;
 }
 
 interface InlineTextProps {
@@ -201,8 +205,9 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
   const merged: SlipConfig = { ...defaultSlipConfig, ...config };
   const symbolFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const candidateFileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const bannerFileInputRef = React.useRef<HTMLInputElement | null>(null);
 
-  const updateField = (field: keyof SlipConfig, value: string) => {
+  const updateField = (field: keyof SlipConfig, value: string | boolean) => {
     if (onConfigChange) {
       onConfigChange({
         ...merged,
@@ -285,10 +290,38 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               e.target.value = '';
             }}
           />
+          <input
+            ref={bannerFileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                if (onImageUpload) {
+                  onImageUpload(file, 'headerGraphicImage');
+                } else {
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    const base64 = ev.target?.result as string;
+                    if (onConfigChange) {
+                      onConfigChange({
+                        ...merged,
+                        useHeaderGraphic: true,
+                        headerGraphicImage: base64,
+                      });
+                    }
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }
+              e.target.value = '';
+            }}
+          />
         </>
       )}
 
-      {/* Direct Editor Informative Banner */}
+      {/* Direct Editor Informative Banner & Mode Switcher */}
       {isEditable && (
         <div style={{
           background: 'linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%)',
@@ -299,29 +332,72 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
           fontSize: '12px',
           color: '#0369a1',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
+          flexDirection: 'column',
           gap: '8px',
           boxShadow: '0 2px 6px rgba(2, 132, 199, 0.08)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '16px' }}>✨</span>
-            <div>
-              <strong style={{ color: '#0c4a6e' }}>प्रत्यक्ष पर्ची संपादन सक्रिय:</strong>{' '}
-              किसी भी नाम, पार्टी, EVM नंबर या अपील पर क्लिक करके सीधे टाइप करें! फ़ोटो बदलने हेतु फ़ोटो पर क्लिक करें।
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '16px' }}>✨</span>
+              <div>
+                <strong style={{ color: '#0c4a6e' }}>प्रत्यक्ष पर्ची संपादन सक्रिय:</strong>{' '}
+                किसी भी नाम, पार्टी, EVM नंबर पर क्लिक करके टाइप करें, या पूरा हेडर ग्राफ़िक अपलोड करें।
+              </div>
+            </div>
+            <span style={{
+              fontSize: '11px',
+              fontWeight: 700,
+              background: '#0284c7',
+              color: '#ffffff',
+              padding: '2px 8px',
+              borderRadius: '12px',
+            }}>
+              WYSIWYG Mode
+            </span>
+          </div>
+
+          {/* Mode Switcher Buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingTop: '6px', borderTop: '1px solid #bae6fd' }}>
+            <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#075985' }}>
+              📐 हेडर डिज़ाइन मोड चुनें:
+            </span>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => updateField('useHeaderGraphic', false)}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: !merged.useHeaderGraphic ? '#0284c7' : '#ffffff',
+                  color: !merged.useHeaderGraphic ? '#ffffff' : '#0369a1',
+                  border: '1.5px solid #0284c7',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                🧩 अलग-अलग घटक (Symbol + Text + Photo)
+              </button>
+              <button
+                type="button"
+                onClick={() => updateField('useHeaderGraphic', true)}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: merged.useHeaderGraphic ? '#0284c7' : '#ffffff',
+                  color: merged.useHeaderGraphic ? '#ffffff' : '#0369a1',
+                  border: '1.5px solid #0284c7',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                🖼️ पूरा हेडर ग्राफ़िक (Single Custom Banner)
+              </button>
             </div>
           </div>
-          <span style={{
-            fontSize: '11px',
-            fontWeight: 700,
-            background: '#0284c7',
-            color: '#ffffff',
-            padding: '2px 8px',
-            borderRadius: '12px',
-          }}>
-            WYSIWYG Mode
-          </span>
         </div>
       )}
 
@@ -341,11 +417,141 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
         }}
       >
         {/* ================= 1. TOP HEADER SECTION ================= */}
-        <div className="voter-slip-header-row" style={{ display: 'flex', alignItems: 'center', gap: '14px', justifyContent: 'space-between' }}>
-          
-          {/* Left: Party Symbol & Candidate Serial Box (Strictly Upload-Only, Identical Size with Photo Box) */}
+        {merged.useHeaderGraphic ? (
           <div
-            className="voter-slip-symbol-box"
+            className="voter-slip-header-banner-card"
+            style={{
+              width: '100%',
+              minHeight: '120px',
+              border: isEditable ? '2px dashed #0284c7' : 'none',
+              borderRadius: '10px',
+              background: '#f8fafc',
+              position: 'relative',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {merged.headerGraphicImage ? (
+              <div style={{ width: '100%', position: 'relative' }}>
+                <img
+                  src={merged.headerGraphicImage}
+                  alt="Campaign Header Graphic"
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    maxHeight: '170px',
+                    objectFit: 'contain',
+                    display: 'block',
+                    borderRadius: '8px',
+                  }}
+                />
+                {isEditable && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '6px',
+                      right: '6px',
+                      display: 'flex',
+                      gap: '6px',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => bannerFileInputRef.current?.click()}
+                      title="ग्राफ़िक बदलें"
+                      style={{
+                        background: '#0284c7',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '4px 8px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                      }}
+                    >
+                      📷 ग्राफ़िक बदलें
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onRemoveImage) onRemoveImage('headerGraphicImage');
+                        else updateField('headerGraphicImage', '');
+                      }}
+                      title="ग्राफ़िक हटाएं"
+                      style={{
+                        background: '#fee2e2',
+                        color: '#dc2626',
+                        border: '1px solid #fecaca',
+                        borderRadius: '6px',
+                        padding: '4px 8px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ✕ हटाएं
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div
+                onClick={() => {
+                  if (isEditable) bannerFileInputRef.current?.click();
+                }}
+                style={{
+                  padding: '24px 16px',
+                  textAlign: 'center',
+                  cursor: isEditable ? 'pointer' : 'default',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '6px',
+                  width: '100%',
+                }}
+              >
+                <div style={{ fontSize: '32px' }}>🖼️</div>
+                <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0369a1' }}>
+                  संपूर्ण हेडर ग्राफ़िक (Full Banner) अपलोड करें
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', maxWidth: '420px', lineHeight: 1.35 }}>
+                  Canva या Photoshop से डिज़ाइन किया हुआ पूरा हेडर बैनर (चुनाव चिन्ह, प्रत्याशी फ़ोटो, नाम व पार्टी सहित) यहाँ एक साथ अपलोड करें।
+                </div>
+                {isEditable && (
+                  <button
+                    type="button"
+                    style={{
+                      marginTop: '6px',
+                      padding: '7px 16px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      background: '#0284c7',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      bannerFileInputRef.current?.click();
+                    }}
+                  >
+                    📁 बैनर इमेज चुनें
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="voter-slip-header-row" style={{ display: 'flex', alignItems: 'center', gap: '14px', justifyContent: 'space-between' }}>
+            {/* Left: Party Symbol & Candidate Serial Box (Strictly Upload-Only, Identical Size with Photo Box) */}
+            <div
+              className="voter-slip-symbol-box"
             onClick={() => {
               if (isEditable) symbolFileInputRef.current?.click();
             }}
@@ -781,6 +987,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             )}
           </div>
         </div>
+      )}
 
         {/* ================= 2. MIDDLE EVM / RIBBON STRIPE ================= */}
         <div

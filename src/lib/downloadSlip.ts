@@ -22,13 +22,29 @@ export const generateSlipImage = async (voter: VoterSlipData, slipConfig?: SlipC
       try {
         if (!ref.current) throw new Error("Template not mounted");
         
+        // Wait for all candidate and symbol images to fully decode
+        const imgs = Array.from(ref.current.querySelectorAll('img'));
+        await Promise.all(
+          imgs.map((img) => {
+            if (img.complete && img.naturalHeight !== 0) return Promise.resolve(true);
+            return new Promise((resolve) => {
+              img.onload = () => resolve(true);
+              img.onerror = () => resolve(true);
+            });
+          })
+        );
+
+        // Allow styling and web fonts to settle
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
         const canvas = await html2canvas(ref.current, {
-          scale: 2,
+          scale: 3,
           useCORS: true,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          logging: false,
         });
         
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
         
         root.unmount();
         document.body.removeChild(container);
@@ -38,7 +54,7 @@ export const generateSlipImage = async (voter: VoterSlipData, slipConfig?: SlipC
         if(document.body.contains(container)) document.body.removeChild(container);
         reject(err);
       }
-    }, 200);
+    }, 220);
   });
 };
 

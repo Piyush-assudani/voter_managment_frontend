@@ -200,20 +200,20 @@ export default function AdminPanel() {
 
   const handleStudioImageUpload = (
     file: File,
-    field: 'partySymbolImage' | 'candidateImage'
+    field: 'partySymbolImage' | 'candidateImage' | 'headerGraphicImage'
   ) => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
       const base64 = e.target?.result as string;
-      setTargetSlipConfig((prev) => ({ ...prev, [field]: base64 }));
+      setTargetSlipConfig((prev) => ({ ...prev, [field]: base64, ...(field === 'headerGraphicImage' ? { useHeaderGraphic: true } : {}) }));
     };
     reader.readAsDataURL(file);
   };
 
   const handleImageUpload = (
     file: File,
-    field: 'partySymbolImage' | 'candidateImage',
+    field: 'partySymbolImage' | 'candidateImage' | 'headerGraphicImage',
     isEditing = false
   ) => {
     if (!file) return;
