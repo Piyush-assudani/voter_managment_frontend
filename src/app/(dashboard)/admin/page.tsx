@@ -11,6 +11,7 @@ import AccountsManager from '@/components/AccountsManager';
 import { apiFetch, getApiError } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
+import { ImageCropModal } from '@/components/ImageCropModal';
 
 const partyPresets: Record<string, { label: string; config: Partial<SlipConfig> }> = {
   bjp: {
@@ -198,42 +199,80 @@ export default function AdminPanel() {
   const [studioMode, setStudioMode] = useState<'visual' | 'form'>('visual');
   const [isVisualEditing, setIsVisualEditing] = useState(true);
 
+  // Meta-style Interactive Image Cropper for Admin Studio & Tenant Branding
+  const [adminCropModalOpen, setAdminCropModalOpen] = useState(false);
+  const [adminCropSrc, setAdminCropSrc] = useState('');
+  const [adminCropField, setAdminCropField] = useState<'partySymbolImage' | 'candidateImage' | 'headerGraphicImage'>('candidateImage');
+  const [adminCropContext, setAdminCropContext] = useState<'studio' | 'tenantCreate' | 'tenantEdit'>('studio');
+
   const handleStudioImageUpload = (
-    file: File,
+    file: File | string,
     field: 'partySymbolImage' | 'candidateImage' | 'headerGraphicImage'
   ) => {
     if (!file) return;
+    if (typeof file === 'string') {
+      setTargetSlipConfig((prev) => ({ ...prev, [field]: file, ...(field === 'headerGraphicImage' ? { useHeaderGraphic: true } : {}) }));
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (e) => {
       const base64 = e.target?.result as string;
-      setTargetSlipConfig((prev) => ({ ...prev, [field]: base64, ...(field === 'headerGraphicImage' ? { useHeaderGraphic: true } : {}) }));
+      setAdminCropSrc(base64);
+      setAdminCropField(field);
+      setAdminCropContext('studio');
+      setAdminCropModalOpen(true);
     };
     reader.readAsDataURL(file);
   };
 
   const handleImageUpload = (
-    file: File,
+    file: File | string,
     field: 'partySymbolImage' | 'candidateImage' | 'headerGraphicImage',
     isEditing = false
   ) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = e.target?.result as string;
+    if (typeof file === 'string') {
       if (isEditing) {
         setEditingTenant((prev) => {
           if (!prev) return null;
           const currentConfig = prev.slipConfig || { ...defaultSlipConfig };
-          return {
-            ...prev,
-            slipConfig: { ...currentConfig, [field]: base64 },
-          };
+          return { ...prev, slipConfig: { ...currentConfig, [field]: file } };
         });
       } else {
-        setTenantSlipConfig((prev) => ({ ...prev, [field]: base64 }));
+        setTenantSlipConfig((prev) => ({ ...prev, [field]: file }));
       }
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      setAdminCropSrc(base64);
+      setAdminCropField(field);
+      setAdminCropContext(isEditing ? 'tenantEdit' : 'tenantCreate');
+      setAdminCropModalOpen(true);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleAdminCropComplete = (croppedBase64: string) => {
+    if (adminCropContext === 'studio') {
+      setTargetSlipConfig((prev) => ({
+        ...prev,
+        [adminCropField]: croppedBase64,
+        ...(adminCropField === 'headerGraphicImage' ? { useHeaderGraphic: true } : {}),
+      }));
+    } else if (adminCropContext === 'tenantEdit') {
+      setEditingTenant((prev) => {
+        if (!prev) return null;
+        const currentConfig = prev.slipConfig || { ...defaultSlipConfig };
+        return {
+          ...prev,
+          slipConfig: { ...currentConfig, [adminCropField]: croppedBase64 },
+        };
+      });
+    } else {
+      setTenantSlipConfig((prev) => ({ ...prev, [adminCropField]: croppedBase64 }));
+    }
   };
 
   const handleSelectBrandingOrg = (orgId: string) => {
@@ -2725,6 +2764,23 @@ export default function AdminPanel() {
           </div>
         )}
       </div>
+
+      {/* Meta-style Interactive Image Cropper for Admin Studio & Tenant Config */}
+      <ImageCropModal
+        isOpen={adminCropModalOpen}
+        imageSrc={adminCropSrc}
+        title={
+          adminCropField === 'candidateImage'
+            ? 'प्रत्याशी फ़ोटो क्रॉप करें (Crop Candidate Photo)'
+            : adminCropField === 'partySymbolImage'
+            ? 'चुनाव चिन्ह फ़ोटो क्रॉप करें (Crop Symbol Photo)'
+            : 'हेडर ग्राफ़िक क्रॉप करें (Crop Header Graphic)'
+        }
+        subtitle="फोटो को सही स्थिति में लाने के लिए ड्रैग करें, ज़ूम स्लाइडर से आकार सेट करें और एरिया चुनें।"
+        initialAspectRatio={adminCropField === 'headerGraphicImage' ? 0 : 1}
+        onCropComplete={handleAdminCropComplete}
+        onClose={() => setAdminCropModalOpen(false)}
+      />
     </>
   );
 }

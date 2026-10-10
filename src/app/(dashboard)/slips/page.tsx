@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
+import { ImageCropModal } from '@/components/ImageCropModal';
 import { downloadSlip } from '@/lib/downloadSlip';
 
 interface Voter {
@@ -274,27 +275,39 @@ export default function SlipsPage() {
     };
   }, [loadSlipConfig, loadWhatsappQuota, loadVoters]);
 
-  // Image Upload handler for Branding Modal
+  // Image Cropper Modal state (Meta style)
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState('');
+  const [cropField, setCropField] = useState<'partySymbolImage' | 'candidateImage' | 'headerGraphicImage'>('candidateImage');
+
+  // Image Upload handler - Opens Meta-style interactive Cropper
   const handleImageUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
     field: 'partySymbolImage' | 'candidateImage' | 'headerGraphicImage'
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 8 * 1024 * 1024) {
-      alert('फाइल 8MB से छोटी होनी चाहिए।');
+    if (file.size > 15 * 1024 * 1024) {
+      alert('फाइल 15MB से छोटी होनी चाहिए।');
       return;
     }
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = reader.result as string;
-      setEditingConfig((prev) => ({
-        ...prev,
-        [field]: base64,
-        ...(field === 'headerGraphicImage' ? { useHeaderGraphic: true } : {}),
-      }));
+      setCropImageSrc(base64);
+      setCropField(field);
+      setCropModalOpen(true);
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleCropComplete = (croppedBase64: string) => {
+    setEditingConfig((prev) => ({
+      ...prev,
+      [cropField]: croppedBase64,
+      ...(cropField === 'headerGraphicImage' ? { useHeaderGraphic: true } : {}),
+    }));
   };
 
   // Open Customization Modal (Admin only)
@@ -1496,6 +1509,23 @@ export default function SlipsPage() {
           </section>
         </div>
       )}
+
+      {/* Interactive Meta-style Image Crop Modal */}
+      <ImageCropModal
+        isOpen={cropModalOpen}
+        imageSrc={cropImageSrc}
+        title={
+          cropField === 'candidateImage'
+            ? 'प्रत्याशी फ़ोटो क्रॉप करें (Crop Candidate Photo)'
+            : cropField === 'partySymbolImage'
+            ? 'चुनाव चिन्ह फ़ोटो क्रॉप करें (Crop Symbol Photo)'
+            : 'हेडर ग्राफ़िक क्रॉप करें (Crop Header Banner)'
+        }
+        subtitle="फोटो को सही स्थिति में लाने के लिए ड्रैग करें, ज़ूम स्लाइडर से आकार सेट करें और एरिया चुनें।"
+        initialAspectRatio={cropField === 'headerGraphicImage' ? 0 : 1}
+        onCropComplete={handleCropComplete}
+        onClose={() => setCropModalOpen(false)}
+      />
     </div>
   );
 }

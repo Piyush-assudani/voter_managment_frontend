@@ -1,4 +1,5 @@
 import React from 'react';
+import { ImageCropModal } from './ImageCropModal';
 
 export interface SlipConfig {
   candidateName?: string;
@@ -59,7 +60,7 @@ export interface VoterSlipTemplateProps {
   isInline?: boolean;
   isEditable?: boolean;
   onConfigChange?: (newConfig: SlipConfig) => void;
-  onImageUpload?: (file: File, field: 'partySymbolImage' | 'candidateImage' | 'headerGraphicImage') => void;
+  onImageUpload?: (file: File | string, field: 'partySymbolImage' | 'candidateImage' | 'headerGraphicImage') => void;
   onRemoveImage?: (field: 'partySymbolImage' | 'candidateImage' | 'headerGraphicImage') => void;
 }
 
@@ -197,6 +198,32 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
   const candidateFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const bannerFileInputRef = React.useRef<HTMLInputElement | null>(null);
 
+  const [cropModalOpen, setCropModalOpen] = React.useState(false);
+  const [cropImageSrc, setCropImageSrc] = React.useState('');
+  const [cropField, setCropField] = React.useState<'partySymbolImage' | 'candidateImage' | 'headerGraphicImage'>('candidateImage');
+
+  const handleFileSelectForCrop = (file: File, field: 'partySymbolImage' | 'candidateImage' | 'headerGraphicImage') => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImageSrc(reader.result as string);
+      setCropField(field);
+      setCropModalOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropComplete = (croppedBase64: string) => {
+    if (onImageUpload) {
+      onImageUpload(croppedBase64, cropField);
+    } else if (onConfigChange) {
+      onConfigChange({
+        ...merged,
+        [cropField]: croppedBase64,
+        ...(cropField === 'headerGraphicImage' ? { useHeaderGraphic: true } : {}),
+      });
+    }
+  };
+
   const updateField = (field: keyof SlipConfig, value: string | boolean) => {
     if (onConfigChange) {
       onConfigChange({
@@ -267,9 +294,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             style={{ display: 'none' }}
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file && onImageUpload) {
-                onImageUpload(file, 'partySymbolImage');
-              }
+              if (file) handleFileSelectForCrop(file, 'partySymbolImage');
               e.target.value = '';
             }}
           />
@@ -280,9 +305,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             style={{ display: 'none' }}
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file && onImageUpload) {
-                onImageUpload(file, 'candidateImage');
-              }
+              if (file) handleFileSelectForCrop(file, 'candidateImage');
               e.target.value = '';
             }}
           />
@@ -293,24 +316,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             style={{ display: 'none' }}
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) {
-                if (onImageUpload) {
-                  onImageUpload(file, 'headerGraphicImage');
-                } else {
-                  const reader = new FileReader();
-                  reader.onload = (ev) => {
-                    const base64 = ev.target?.result as string;
-                    if (onConfigChange) {
-                      onConfigChange({
-                        ...merged,
-                        useHeaderGraphic: true,
-                        headerGraphicImage: base64,
-                      });
-                    }
-                  };
-                  reader.readAsDataURL(file);
-                }
-              }
+              if (file) handleFileSelectForCrop(file, 'headerGraphicImage');
               e.target.value = '';
             }}
           />
@@ -1364,6 +1370,25 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
         </div>
 
       </div>
+
+      {/* Meta-style Interactive Image Crop Modal for On-Parchi Direct Uploads */}
+      {isEditable && (
+        <ImageCropModal
+          isOpen={cropModalOpen}
+          imageSrc={cropImageSrc}
+          title={
+            cropField === 'candidateImage'
+              ? 'प्रत्याशी फ़ोटो क्रॉप करें (Crop Candidate Photo)'
+              : cropField === 'partySymbolImage'
+              ? 'चुनाव चिन्ह फ़ोटो क्रॉप करें (Crop Symbol Photo)'
+              : 'हेडर ग्राफ़िक क्रॉप करें (Crop Header Graphic)'
+          }
+          subtitle="फोटो को सही स्थिति में लाने के लिए ड्रैग करें, ज़ूम स्लाइडर से आकार सेट करें और एरिया चुनें।"
+          initialAspectRatio={cropField === 'headerGraphicImage' ? 0 : 1}
+          onCropComplete={handleCropComplete}
+          onClose={() => setCropModalOpen(false)}
+        />
+      )}
     </div>
   );
 };
