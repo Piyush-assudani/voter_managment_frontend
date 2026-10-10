@@ -8,8 +8,10 @@ export const generateSlipImage = async (voter: VoterSlipData, slipConfig?: SlipC
   return new Promise((resolve, reject) => {
     const container = document.createElement('div');
     container.style.position = 'fixed';
-    container.style.top = '-9999px';
+    container.style.top = '0';
     container.style.left = '-9999px';
+    container.style.width = '600px';
+    container.style.zIndex = '-9999';
     container.dir = 'ltr';
     document.body.appendChild(container);
     
