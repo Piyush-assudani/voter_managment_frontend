@@ -18,6 +18,7 @@ import {
 import { apiFetch, getApiError } from '@/lib/api';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
 import { downloadSlip } from '@/lib/downloadSlip';
+import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
 
 interface Voter {
   _id: string;
@@ -101,6 +102,17 @@ export default function DashboardPage() {
     canSend: boolean;
     metaConfigured: boolean;
   } | null>(null);
+  const [slipConfig, setSlipConfig] = useState<SlipConfig>(defaultSlipConfig);
+
+  const loadSlipConfig = useCallback(async () => {
+    try {
+      const res = await apiFetch('/features/slip-config');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.slipConfig) setSlipConfig({ ...defaultSlipConfig, ...data.slipConfig });
+      }
+    } catch {}
+  }, []);
 
   const loadWhatsappQuota = useCallback(async () => {
     try {
@@ -113,6 +125,7 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    void loadSlipConfig();
     const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
     if (token) {
       try {
@@ -359,7 +372,7 @@ export default function DashboardPage() {
     const selectedVoters = voters.filter(v => selectedIds.includes(v._id));
     
     for (const voter of selectedVoters) {
-      await downloadSlip(voter);
+      await downloadSlip(voter, slipConfig);
       await new Promise(r => setTimeout(r, 400));
     }
     
@@ -602,7 +615,7 @@ export default function DashboardPage() {
                       void loadVoters('', voter.houseNo || '', 1, voter.wardNo || '', voter.partNo || '');
                     }} title="परिवार देखें"><UsersRound size={16} /></button>
                     <button className="vc-btn-slip" onClick={() => { setSlipPhone(voter.phone || ''); setSlipVoter(voter); setActionMessage(''); void loadWhatsappQuota(); }} title="WhatsApp पर्ची">💬</button>
-                    <button className="vc-btn-slip" style={{ marginLeft: '4px', background: '#eff6ff', color: '#1e3a8a', borderColor: '#bfdbfe' }} onClick={() => void downloadSlip(voter)} title="पर्ची डाउनलोड करें">⬇️</button>
+                    <button className="vc-btn-slip" style={{ marginLeft: '4px', background: '#eff6ff', color: '#1e3a8a', borderColor: '#bfdbfe' }} onClick={() => void downloadSlip(voter, slipConfig)} title="पर्ची डाउनलोड करें">⬇️</button>
                     {isAdmin && (
                       <button className="vc-btn-slip" style={{ marginLeft: '4px', background: '#fef2f2', color: '#b91c1c', borderColor: '#fecaca' }} onClick={() => void deleteSingleVoter(voter)} title="मतदाता हटाएं">
                         <Trash2 size={15} />
@@ -627,83 +640,167 @@ export default function DashboardPage() {
 
       {editVoter && (
         <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setEditVoter(null); }}>
-          <section className="form-modal" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+          <section className="form-modal" role="dialog" aria-modal="true" aria-labelledby="edit-title" style={{ maxWidth: '680px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-heading">
-              <div><span className="eyebrow-label">VOTER DETAILS</span><h2 id="edit-title">मतदाता जानकारी संपादित करें</h2><p>{editVoter.nameHi || editVoter.nameEn} · {editVoter.epic}</p></div>
+              <div>
+                <span className="eyebrow-label">VOTER DETAILS</span>
+                <h2 id="edit-title">मतदाता जानकारी संपादित करें</h2>
+                <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>{editVoter.nameHi || editVoter.nameEn} · {editVoter.epic}</p>
+              </div>
               <button className="icon-button" onClick={() => setEditVoter(null)} aria-label="बंद करें"><X size={18} /></button>
             </div>
-            <form onSubmit={saveVoter} className="modal-form">
-              <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '8px', paddingBottom: '16px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <form onSubmit={saveVoter} className="modal-form" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ maxHeight: '65vh', overflowY: 'auto', paddingRight: '8px', paddingBottom: '12px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 
+                {/* 1. व्यक्तिगत जानकारी */}
                 <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-                  <legend className="eyebrow-label" style={{ marginBottom: '12px' }}>व्यक्तिगत जानकारी</legend>
-                  <div className="feature-form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <label>EPIC (Voter ID)<input value={editValues.epic} onChange={(event) => setEditValues({ ...editValues, epic: event.target.value.toUpperCase().trim() })} /></label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <label style={{ flex: 1 }}>उम्र<input type="text" inputMode="numeric" pattern="[0-9]*" value={editValues.age} onChange={(event) => setEditValues({ ...editValues, age: event.target.value.replace(/\D/g, '').slice(0, 3) })} placeholder="उदा. 35" /></label>
-                      <label style={{ flex: 1 }}>लिंग
-                        <select value={editValues.gender} onChange={(event) => setEditValues({ ...editValues, gender: event.target.value })}>
-                          <option value="">चुनें</option><option value="पुरुष">पुरुष</option><option value="स्त्री">स्त्री</option><option value="अन्य">अन्य</option>
+                  <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em', color: '#64748b', textTransform: 'uppercase', marginBottom: '10px' }}>
+                    1. व्यक्तिगत जानकारी
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Row 1: EPIC, Age, Gender */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr', gap: '12px' }}>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        EPIC (Voter ID)
+                        <input value={editValues.epic} onChange={(event) => setEditValues({ ...editValues, epic: event.target.value.toUpperCase().trim() })} style={{ marginTop: '4px', height: '38px' }} />
+                      </label>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        उम्र
+                        <input type="text" inputMode="numeric" pattern="[0-9]*" value={editValues.age} onChange={(event) => setEditValues({ ...editValues, age: event.target.value.replace(/\D/g, '').slice(0, 3) })} placeholder="उदा. 35" style={{ marginTop: '4px', height: '38px' }} />
+                      </label>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        लिंग
+                        <select value={editValues.gender} onChange={(event) => setEditValues({ ...editValues, gender: event.target.value })} style={{ marginTop: '4px', height: '38px' }}>
+                          <option value="">चुनें</option>
+                          <option value="पुरुष">पुरुष</option>
+                          <option value="स्त्री">स्त्री</option>
+                          <option value="अन्य">अन्य</option>
                         </select>
                       </label>
                     </div>
-                    <label>नाम (English)<input value={editValues.nameEn} onChange={(event) => setEditValues({ ...editValues, nameEn: event.target.value })} /></label>
-                    <label>नाम (हिंदी - केवल देवनागरी)<input value={editValues.nameHi} onChange={(event) => setEditValues({ ...editValues, nameHi: event.target.value.replace(/[a-zA-Z\d]/g, '').replace(/[^\u0900-\u097F\s]/g, '') })} placeholder="केवल हिंदी" /></label>
-                    <label>संबंध प्रकार
-                      <select value={editValues.relationType} onChange={(event) => setEditValues({ ...editValues, relationType: event.target.value })}>
-                        <option value="">चुनें</option><option value="पिता">पिता</option><option value="पति">पति</option><option value="माता">माता</option><option value="पत्नी">पत्नी</option><option value="अन्य">अन्य</option>
-                      </select>
-                    </label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <label style={{ flex: 1 }}>रिश्तेदार का नाम (En)<input value={editValues.relativeNameEn} onChange={(event) => setEditValues({ ...editValues, relativeNameEn: event.target.value })} /></label>
-                      <label style={{ flex: 1 }}>रिश्तेदार का नाम (Hi - केवल देवनागरी)<input value={editValues.relativeNameHi} onChange={(event) => setEditValues({ ...editValues, relativeNameHi: event.target.value.replace(/[a-zA-Z\d]/g, '').replace(/[^\u0900-\u097F\s]/g, '') })} placeholder="केवल हिंदी" /></label>
+
+                    {/* Row 2: Names */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        नाम (English)
+                        <input value={editValues.nameEn} onChange={(event) => setEditValues({ ...editValues, nameEn: event.target.value })} style={{ marginTop: '4px', height: '38px' }} />
+                      </label>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        नाम (हिंदी - केवल देवनागरी)
+                        <input value={editValues.nameHi} onChange={(event) => setEditValues({ ...editValues, nameHi: event.target.value.replace(/[a-zA-Z\d]/g, '').replace(/[^\u0900-\u097F\s]/g, '') })} placeholder="केवल हिंदी" style={{ marginTop: '4px', height: '38px' }} />
+                      </label>
+                    </div>
+
+                    {/* Row 3: Relation, Relative Names */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1.2fr', gap: '12px' }}>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        संबंध प्रकार
+                        <select value={editValues.relationType} onChange={(event) => setEditValues({ ...editValues, relationType: event.target.value })} style={{ marginTop: '4px', height: '38px' }}>
+                          <option value="">चुनें</option>
+                          <option value="पिता">पिता</option>
+                          <option value="पति">पति</option>
+                          <option value="माता">माता</option>
+                          <option value="पत्नी">पत्नी</option>
+                          <option value="अन्य">अन्य</option>
+                        </select>
+                      </label>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        रिश्तेदार का नाम (En)
+                        <input value={editValues.relativeNameEn} onChange={(event) => setEditValues({ ...editValues, relativeNameEn: event.target.value })} style={{ marginTop: '4px', height: '38px' }} />
+                      </label>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        रिश्तेदार का नाम (Hi)
+                        <input value={editValues.relativeNameHi} onChange={(event) => setEditValues({ ...editValues, relativeNameHi: event.target.value.replace(/[a-zA-Z\d]/g, '').replace(/[^\u0900-\u097F\s]/g, '') })} placeholder="केवल हिंदी" style={{ marginTop: '4px', height: '38px' }} />
+                      </label>
                     </div>
                   </div>
                 </fieldset>
 
+                {/* 2. मतदान व निवास */}
                 <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-                  <legend className="eyebrow-label" style={{ marginBottom: '12px' }}>मतदान व निवास</legend>
-                  <div className="feature-form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <label>मकान नंबर<input value={editValues.houseNo} onChange={(event) => setEditValues({ ...editValues, houseNo: event.target.value.replace(/[^\w\d\/\-]/g, '') })} /></label>
-                    <label>वार्ड नं<input value={editValues.wardNo} onChange={(event) => setEditValues({ ...editValues, wardNo: event.target.value })} /></label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <label style={{ flex: 1 }}>भाग (Part) नं<input value={editValues.partNo} onChange={(event) => setEditValues({ ...editValues, partNo: event.target.value })} /></label>
-                      <label style={{ flex: 1 }}>क्रम (Serial) नं<input type="text" inputMode="numeric" pattern="[0-9]*" value={editValues.serialNo} onChange={(event) => setEditValues({ ...editValues, serialNo: event.target.value.replace(/\D/g, '') })} /></label>
-                    </div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em', color: '#64748b', textTransform: 'uppercase', marginBottom: '10px' }}>
+                    2. मतदान व निवास
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      मकान नंबर
+                      <input value={editValues.houseNo} onChange={(event) => setEditValues({ ...editValues, houseNo: event.target.value.replace(/[^\w\d\/\-]/g, '') })} style={{ marginTop: '4px', height: '38px' }} />
+                    </label>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      वार्ड नं.
+                      <input value={editValues.wardNo} onChange={(event) => setEditValues({ ...editValues, wardNo: event.target.value })} style={{ marginTop: '4px', height: '38px' }} />
+                    </label>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      भाग (Part) नं.
+                      <input value={editValues.partNo} onChange={(event) => setEditValues({ ...editValues, partNo: event.target.value })} style={{ marginTop: '4px', height: '38px' }} />
+                    </label>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      क्रम (Serial) नं.
+                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={editValues.serialNo} onChange={(event) => setEditValues({ ...editValues, serialNo: event.target.value.replace(/\D/g, '') })} style={{ marginTop: '4px', height: '38px' }} />
+                    </label>
                   </div>
                 </fieldset>
 
+                {/* 3. संपर्क व चुनाव प्रबंधन */}
                 <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-                  <legend className="eyebrow-label" style={{ marginBottom: '12px' }}>संपर्क व चुनाव प्रबंधन</legend>
-                  <div className="feature-form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <label>फोन नंबर<input type="tel" value={editValues.phone} onChange={(event) => setEditValues({ ...editValues, phone: event.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="10 अंक" /></label>
-                    <label>जाति / समुदाय<input value={editValues.caste} onChange={(event) => setEditValues({ ...editValues, caste: event.target.value })} /></label>
-                    <label>समर्थन वर्ग
-                      <select value={editValues.supportStatus} onChange={(event) => setEditValues({ ...editValues, supportStatus: event.target.value })}>
-                        <option value="unmarked">अवर्गीकृत</option><option value="core">समर्थन चिह्नित</option><option value="swing">अनिर्णीत चिह्नित</option><option value="opposition">विरोध चिह्नित</option>
-                      </select>
-                    </label>
-                    <label>मतदाता स्थिति
-                      <select value={editValues.surety} onChange={(event) => setEditValues({ ...editValues, surety: event.target.value })}>
-                        <option value="">चुनें</option><option value="100% पक्का">100% पक्का</option><option value="50-50">50-50</option><option value="विरोधी">विरोधी</option><option value="सामान्य">सामान्य</option>
-                      </select>
-                    </label>
-                    <label>जिम्मेदार कार्यकर्ता<input value={editValues.assignedWorker} onChange={(event) => setEditValues({ ...editValues, assignedWorker: event.target.value })} /></label>
-                    
-                    <div style={{ gridColumn: '1 / -1', padding: '12px', background: 'var(--surface-color, #f8f9fa)', borderRadius: '8px', border: '1px solid var(--border-color, #e5e7eb)' }}>
-                      <label className="checkbox-label" style={{ fontWeight: '500' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em', color: '#64748b', textTransform: 'uppercase', marginBottom: '10px' }}>
+                    3. संपर्क व चुनाव प्रबंधन
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        फोन नंबर
+                        <input type="tel" value={editValues.phone} onChange={(event) => setEditValues({ ...editValues, phone: event.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="10 अंक" style={{ marginTop: '4px', height: '38px' }} />
+                      </label>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        जाति / समुदाय
+                        <input value={editValues.caste} onChange={(event) => setEditValues({ ...editValues, caste: event.target.value })} style={{ marginTop: '4px', height: '38px' }} />
+                      </label>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        समर्थन वर्ग
+                        <select value={editValues.supportStatus} onChange={(event) => setEditValues({ ...editValues, supportStatus: event.target.value })} style={{ marginTop: '4px', height: '38px' }}>
+                          <option value="unmarked">अवर्गीकृत</option>
+                          <option value="core">समर्थन चिह्नित</option>
+                          <option value="swing">अनिर्णीत चिह्नित</option>
+                          <option value="opposition">विरोध चिह्नित</option>
+                        </select>
+                      </label>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        मतदाता स्थिति
+                        <select value={editValues.surety} onChange={(event) => setEditValues({ ...editValues, surety: event.target.value })} style={{ marginTop: '4px', height: '38px' }}>
+                          <option value="">चुनें</option>
+                          <option value="100% पक्का">100% पक्का</option>
+                          <option value="50-50">50-50</option>
+                          <option value="विरोधी">विरोधी</option>
+                          <option value="सामान्य">सामान्य</option>
+                        </select>
+                      </label>
+                      <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        जिम्मेदार कार्यकर्ता
+                        <input value={editValues.assignedWorker} onChange={(event) => setEditValues({ ...editValues, assignedWorker: event.target.value })} style={{ marginTop: '4px', height: '38px' }} />
+                      </label>
+                    </div>
+
+                    <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <label className="checkbox-label" style={{ fontWeight: 600, margin: 0, cursor: 'pointer' }}>
                         <input type="checkbox" checked={editValues.isMigrant} onChange={(event) => setEditValues({ ...editValues, isMigrant: event.target.checked })} /> 
-                        प्रवासी मतदाता
+                        प्रवासी मतदाता (शहर से बाहर)
                       </label>
                       {editValues.isMigrant && (
-                        <label style={{ marginTop: '12px' }}>
+                        <label style={{ marginTop: '8px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
                           वर्तमान स्थान
-                          <input value={editValues.migrantLocation} onChange={(event) => setEditValues({ ...editValues, migrantLocation: event.target.value })} placeholder="वैकल्पिक स्थान (उदा. सूरत)" style={{ marginTop: '4px' }} />
+                          <input value={editValues.migrantLocation} onChange={(event) => setEditValues({ ...editValues, migrantLocation: event.target.value })} placeholder="वैकल्पिक स्थान (उदा. सूरत)" style={{ marginTop: '4px', height: '36px' }} />
                         </label>
                       )}
                     </div>
-                    
-                    <label className="notes-field" style={{ gridColumn: '1 / -1' }}>नोट्स<textarea value={editValues.notes} onChange={(event) => setEditValues({ ...editValues, notes: event.target.value })} rows={2} /></label>
+
+                    <label className="notes-field" style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      अतिरिक्त नोट्स
+                      <textarea value={editValues.notes} onChange={(event) => setEditValues({ ...editValues, notes: event.target.value })} rows={2} style={{ marginTop: '4px' }} />
+                    </label>
                   </div>
                 </fieldset>
 
@@ -721,15 +818,15 @@ export default function DashboardPage() {
 
       {slipVoter && (
         <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSlipVoter(null); }}>
-          <section className="form-modal slip-modal" role="dialog" aria-modal="true" aria-labelledby="slip-title">
+          <section className="form-modal slip-modal" role="dialog" aria-modal="true" aria-labelledby="slip-title" style={{ maxWidth: '620px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-heading">
-              <div><span className="eyebrow-label">VOTER SLIP</span><h2 id="slip-title">डिजिटल मतदाता पर्ची</h2><p>भेजने से पहले नीचे दी गई जानकारी जाँचें।</p></div>
+              <div><span className="eyebrow-label">VOTER SLIP</span><h2 id="slip-title">डिजिटल मतदाता पर्ची</h2><p>भेजने या प्रिंट करने से पहले नीचे पर्ची का पूर्वावलोकन जाँचें।</p></div>
               <button className="icon-button" onClick={() => setSlipVoter(null)} aria-label="बंद करें"><X size={18} /></button>
             </div>
 
             {whatsappQuota && (
               <div style={{
-                margin: '12px 0',
+                margin: '10px 0',
                 padding: '10px 14px',
                 borderRadius: '8px',
                 background: !whatsappQuota.whatsappEnabled ? '#fee2e2' : whatsappQuota.whatsappCredits <= 0 ? '#fef3c7' : '#f0fdf4',
@@ -754,15 +851,10 @@ export default function DashboardPage() {
               </div>
             )}
 
-            <div className="slip-preview">
-              <div className="slip-preview-title"><strong>{slipVoter.nameHi || slipVoter.nameEn}</strong><span>{slipVoter.epic}</span></div>
-              <div className="slip-details">
-                <span>वार्ड<strong>{slipVoter.wardNo || '—'}</strong></span>
-                <span>मकान<strong>{slipVoter.houseNo || '—'}</strong></span>
-                <span>भाग / क्रम<strong>{slipVoter.partNo || '—'} · {slipVoter.serialNo || '—'}</strong></span>
-                <span>आयु / लिंग<strong>{slipVoter.age || '—'} · {slipVoter.gender || '—'}</strong></span>
-              </div>
+            <div style={{ margin: '8px 0', width: '100%', display: 'flex', justifyContent: 'center' }}>
+              <VoterSlipTemplate voter={slipVoter} config={slipConfig} isInline={true} />
             </div>
+
             <form onSubmit={sendSlip} className="modal-form">
               <label>WhatsApp नंबर<input required inputMode="tel" value={slipPhone} onChange={(event) => setSlipPhone(event.target.value)} placeholder="+91 98765 43210" /></label>
               {actionMessage && <p className="form-error" role="alert" style={{ whiteSpace: 'pre-wrap' }}>{actionMessage}</p>}

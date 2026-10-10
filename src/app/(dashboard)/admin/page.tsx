@@ -10,6 +10,7 @@ import DashboardShell from '@/app/(dashboard)/DashboardShell';
 import AccountsManager from '@/components/AccountsManager';
 import { apiFetch, getApiError } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
+import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
 
 const moduleOptions = [
   ['voters', 'मतदाता सूची'],
@@ -33,6 +34,7 @@ interface Tenant {
   whatsappEnabled?: boolean;
   whatsappCredits?: number;
   whatsappUsed?: number;
+  slipConfig?: SlipConfig;
 }
 
 interface AdminVoter {
@@ -105,6 +107,46 @@ export default function AdminPanel() {
   const [tenantWards, setTenantWards] = useState('');
   const [tenantWhatsappEnabled, setTenantWhatsappEnabled] = useState(true);
   const [tenantWhatsappCredits, setTenantWhatsappCredits] = useState('500');
+  const [tenantSlipConfig, setTenantSlipConfig] = useState<SlipConfig>({
+    candidateName: '',
+    candidateNameEn: '',
+    partyName: '',
+    partySymbolName: 'कमल का फूल',
+    partySymbolImage: '',
+    candidateImage: '',
+    evmNumber: '1',
+    appealHeadline: '(1 नंबर पर बटन दबाएं)',
+    appealText: '',
+    subTitle: '',
+    footerAppeal: '',
+    pollingStationFallback: '',
+  });
+
+  const handleImageUpload = (
+    file: File,
+    field: 'partySymbolImage' | 'candidateImage',
+    isEditing = false
+  ) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      if (isEditing) {
+        setEditingTenant((prev) => {
+          if (!prev) return null;
+          const currentConfig = prev.slipConfig || { ...defaultSlipConfig };
+          return {
+            ...prev,
+            slipConfig: { ...currentConfig, [field]: base64 },
+          };
+        });
+      } else {
+        setTenantSlipConfig((prev) => ({ ...prev, [field]: base64 }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [importing, setImporting] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
@@ -327,6 +369,7 @@ export default function AdminPanel() {
           wards: tenantWards.split(',').map((ward) => ward.trim()).filter(Boolean),
           whatsappEnabled: tenantWhatsappEnabled,
           whatsappCredits: Number.parseInt(tenantWhatsappCredits, 10) || 0,
+          slipConfig: tenantSlipConfig,
         }),
       });
       if (!response.ok) throw new Error(await getApiError(response, 'क्लाइंट खाता नहीं बन सका।'));
@@ -336,6 +379,20 @@ export default function AdminPanel() {
       setTenantPassword('');
       setTenantWards('');
       setTenantWhatsappCredits('500');
+      setTenantSlipConfig({
+        candidateName: '',
+        candidateNameEn: '',
+        partyName: '',
+        partySymbolName: 'कमल का फूल',
+        partySymbolImage: '',
+        candidateImage: '',
+        evmNumber: '1',
+        appealHeadline: '(1 नंबर पर बटन दबाएं)',
+        appealText: '',
+        subTitle: '',
+        footerAppeal: '',
+        pollingStationFallback: '',
+      });
       await loadOrganizations();
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : 'क्लाइंट खाता नहीं बन सका।');
@@ -361,6 +418,7 @@ export default function AdminPanel() {
           isActive: editingTenant.isActive,
           whatsappEnabled: editingTenant.whatsappEnabled ?? true,
           whatsappCredits: editingTenant.whatsappCredits ?? 0,
+          slipConfig: editingTenant.slipConfig || {},
         }),
       });
       if (!response.ok) throw new Error(await getApiError(response, 'क्लाइंट सेटिंग सेव नहीं हुई।'));
@@ -624,6 +682,167 @@ export default function AdminPanel() {
                   </label>
                 </div>
 
+                {/* 🎨 मतदाता पर्ची ब्रांडिंग व रियल-टाइम लाइव पूर्वावलोकन */}
+                <fieldset className="feature-module-fieldset" style={{ marginTop: '24px', padding: '18px', background: '#f8fafc', borderRadius: '12px', border: '1.5px solid #cbd5e1' }}>
+                  <legend style={{ fontWeight: 800, color: '#1e3a8a', fontSize: '15px', padding: '0 8px' }}>
+                    🎨 मतदाता पर्ची ब्रांडिंग व लाइव पूर्वावलोकन (Slip Branding & Live Preview)
+                  </legend>
+                  <p style={{ margin: '4px 0 16px', fontSize: '13px', color: '#64748b' }}>
+                    इस क्लाइंट/संगठन के लिए आधिकारिक मतदाता पर्ची की फोटो, प्रत्याशी नाम, पार्टी व चुनाव चिन्ह सेट करें। फोटो अपलोड करते ही दाईं तरफ लाइव पर्ची में तुरंत दिखेगा।
+                  </p>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1.1fr) minmax(320px, 1fr)', gap: '24px', alignItems: 'start' }}>
+                    {/* Left: Input fields & Image Uploaders */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: 600 }}>
+                          प्रत्याशी नाम (हिंदी)
+                          <input
+                            value={tenantSlipConfig.candidateName || ''}
+                            onChange={(e) => setTenantSlipConfig({ ...tenantSlipConfig, candidateName: e.target.value })}
+                            placeholder="उदा. प्रसन्न चंद मेहता"
+                          />
+                        </label>
+                        <label style={{ fontSize: '12px', fontWeight: 600 }}>
+                          Candidate Name (En)
+                          <input
+                            value={tenantSlipConfig.candidateNameEn || ''}
+                            onChange={(e) => setTenantSlipConfig({ ...tenantSlipConfig, candidateNameEn: e.target.value })}
+                            placeholder="Prasann Chand Mehta"
+                          />
+                        </label>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 0.8fr', gap: '10px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: 600 }}>
+                          पार्टी का नाम
+                          <input
+                            value={tenantSlipConfig.partyName || ''}
+                            onChange={(e) => setTenantSlipConfig({ ...tenantSlipConfig, partyName: e.target.value })}
+                            placeholder="भाजपा प्रत्याशी"
+                          />
+                        </label>
+                        <label style={{ fontSize: '12px', fontWeight: 600 }}>
+                          चुनाव चिन्ह नाम
+                          <input
+                            value={tenantSlipConfig.partySymbolName || ''}
+                            onChange={(e) => setTenantSlipConfig({ ...tenantSlipConfig, partySymbolName: e.target.value })}
+                            placeholder="कमल का फूल"
+                          />
+                        </label>
+                        <label style={{ fontSize: '12px', fontWeight: 600 }}>
+                          EVM क्रम नं.
+                          <input
+                            value={tenantSlipConfig.evmNumber || ''}
+                            onChange={(e) => setTenantSlipConfig({ ...tenantSlipConfig, evmNumber: e.target.value })}
+                            placeholder="1"
+                          />
+                        </label>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: 600 }}>
+                          उपशीर्षक / क्षेत्र
+                          <input
+                            value={tenantSlipConfig.subTitle || ''}
+                            onChange={(e) => setTenantSlipConfig({ ...tenantSlipConfig, subTitle: e.target.value })}
+                            placeholder="वार्ड नंबर 82 Jodhpur"
+                          />
+                        </label>
+                        <label style={{ fontSize: '12px', fontWeight: 600 }}>
+                          EVM पट्टी अपील संदेश
+                          <input
+                            value={tenantSlipConfig.appealText || ''}
+                            onChange={(e) => setTenantSlipConfig({ ...tenantSlipConfig, appealText: e.target.value })}
+                            placeholder="को अपना अमूल्य वोट देकर भारी मतों से विजय बनाएं।"
+                          />
+                        </label>
+                      </div>
+
+                      <label style={{ fontSize: '12px', fontWeight: 600 }}>
+                        बॉटम अपील (Footer)
+                        <input
+                          value={tenantSlipConfig.footerAppeal || ''}
+                          onChange={(e) => setTenantSlipConfig({ ...tenantSlipConfig, footerAppeal: e.target.value })}
+                          placeholder="कमल का बटन दबाएं और भारी मतों से विजयी बनाएं"
+                        />
+                      </label>
+
+                      {/* Photo Uploaders (Both sides) */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '6px' }}>
+                        {/* Left: Party Symbol Image Upload */}
+                        <div style={{ padding: '12px', background: '#fff', borderRadius: '10px', border: '1.5px dashed #ea580c' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#ea580c', display: 'block', marginBottom: '6px' }}>
+                            🌸 बाएं तरफ: चुनाव चिन्ह फोटो
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleImageUpload(file, 'partySymbolImage', false);
+                            }}
+                            style={{ fontSize: '12px', width: '100%' }}
+                          />
+                          {tenantSlipConfig.partySymbolImage && (
+                            <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <img src={tenantSlipConfig.partySymbolImage} alt="Symbol Preview" style={{ width: '40px', height: '40px', objectFit: 'contain', border: '1px solid #fed7aa', borderRadius: '6px' }} />
+                              <button
+                                type="button"
+                                className="button-quiet"
+                                style={{ fontSize: '11px', color: '#b91c1c' }}
+                                onClick={() => setTenantSlipConfig({ ...tenantSlipConfig, partySymbolImage: '' })}
+                              >
+                                फोटो हटाएं
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Right: Candidate Photo Image Upload */}
+                        <div style={{ padding: '12px', background: '#fff', borderRadius: '10px', border: '1.5px dashed #1e3a8a' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#1e3a8a', display: 'block', marginBottom: '6px' }}>
+                            👤 दाएं तरफ: प्रत्याशी फोटो
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleImageUpload(file, 'candidateImage', false);
+                            }}
+                            style={{ fontSize: '12px', width: '100%' }}
+                          />
+                          {tenantSlipConfig.candidateImage && (
+                            <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <img src={tenantSlipConfig.candidateImage} alt="Candidate Preview" style={{ width: '40px', height: '40px', objectFit: 'cover', border: '1px solid #bfdbfe', borderRadius: '6px' }} />
+                              <button
+                                type="button"
+                                className="button-quiet"
+                                style={{ fontSize: '11px', color: '#b91c1c' }}
+                                onClick={() => setTenantSlipConfig({ ...tenantSlipConfig, candidateImage: '' })}
+                              >
+                                फोटो हटाएं
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Real-time Live Slip Preview */}
+                    <div style={{ background: '#ffffff', borderRadius: '12px', padding: '14px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#16a34a', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>⚡</span>
+                        <span>रियल-टाइम पर्ची पूर्वावलोकन (Live Preview)</span>
+                      </div>
+                      <div style={{ transform: 'scale(0.82)', transformOrigin: 'top center', width: '122%' }}>
+                        <VoterSlipTemplate config={tenantSlipConfig} isInline={true} />
+                      </div>
+                    </div>
+                  </div>
+                </fieldset>
+
                 <div className="admin-form-actions" style={{ marginTop: '20px' }}><button className="button-primary" type="submit" disabled={saving}>{saving ? <LoaderCircle size={15} className="spin" /> : <UserPlus size={15} />} क्लाइंट बनाएँ</button></div>
               </form>
             </section>
@@ -649,7 +868,7 @@ export default function AdminPanel() {
                       )}
                     </td>
                     <td><span className={`record-status ${tenant.isActive ? 'status-voted' : 'status-pending'}`}>{tenant.isActive ? 'सक्रिय' : 'बंद'}</span></td>
-                    <td><button className="button-quiet" type="button" onClick={() => setEditingTenant({ ...tenant })}><Settings2 size={14} /> कस्टमाइज़</button></td>
+                    <td><button className="button-quiet" type="button" onClick={() => setEditingTenant({ ...tenant, slipConfig: tenant.slipConfig || { ...defaultSlipConfig } })}><Settings2 size={14} /> कस्टमाइज़</button></td>
                   </tr>)}</tbody>
                 </table></div>
               ) : <div className="empty-state"><strong>अभी कोई क्लाइंट नहीं</strong><p>पहला संगठन बनाने पर वह इस सूची में दिखेगा।</p></div>}
@@ -1362,8 +1581,15 @@ export default function AdminPanel() {
 
         {editingTenant && (
           <div className="feature-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setEditingTenant(null); }}>
-            <section className="form-modal" role="dialog" aria-modal="true" aria-labelledby="tenant-edit-title">
-              <div className="modal-heading"><div><span className="eyebrow-label">TENANT CONFIGURATION</span><h2 id="tenant-edit-title">क्लाइंट access कस्टमाइज़ करें</h2><p>{editingTenant.name}</p></div><button className="icon-button" type="button" onClick={() => setEditingTenant(null)} aria-label="बंद करें"><X size={18} /></button></div>
+            <section className="form-modal" role="dialog" aria-modal="true" aria-labelledby="tenant-edit-title" style={{ maxWidth: '960px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+              <div className="modal-heading">
+                <div>
+                  <span className="eyebrow-label">TENANT CONFIGURATION</span>
+                  <h2 id="tenant-edit-title">क्लाइंट access व पर्ची कस्टमाइज़ करें</h2>
+                  <p>{editingTenant.name}</p>
+                </div>
+                <button className="icon-button" type="button" onClick={() => setEditingTenant(null)} aria-label="बंद करें"><X size={18} /></button>
+              </div>
               <form className="modal-form" onSubmit={updateTenant}>
                 <div className="feature-form-grid">
                   <label>क्लाइंट नाम<input required value={editingTenant.name} onChange={(event) => setEditingTenant({ ...editingTenant, name: event.target.value })} /></label>
@@ -1401,7 +1627,194 @@ export default function AdminPanel() {
                   </div>
                 </div>
 
-                <label className="checkbox-label" style={{ marginTop: '12px' }}><input type="checkbox" checked={editingTenant.isActive} onChange={(event) => setEditingTenant({ ...editingTenant, isActive: event.target.checked })} /> क्लाइंट खाते को सक्रिय रखें</label>
+                {/* 🎨 पर्ची ब्रांडिंग संपादन व लाइव पूर्वावलोकन */}
+                <fieldset className="feature-module-fieldset" style={{ marginTop: '20px', padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1.5px solid #cbd5e1' }}>
+                  <legend style={{ fontWeight: 800, color: '#1e3a8a', fontSize: '15px', padding: '0 8px' }}>
+                    🎨 मतदाता पर्ची ब्रांडिंग (फोटो व विवरण संपादन)
+                  </legend>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1.1fr) minmax(320px, 1fr)', gap: '20px', alignItems: 'start' }}>
+                    {/* Inputs */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: 600 }}>
+                          प्रत्याशी नाम (हिंदी)
+                          <input
+                            value={editingTenant.slipConfig?.candidateName || ''}
+                            onChange={(e) => setEditingTenant({
+                              ...editingTenant,
+                              slipConfig: { ...(editingTenant.slipConfig || defaultSlipConfig), candidateName: e.target.value }
+                            })}
+                            placeholder="प्रसन्न चंद मेहता"
+                          />
+                        </label>
+                        <label style={{ fontSize: '12px', fontWeight: 600 }}>
+                          Candidate Name (En)
+                          <input
+                            value={editingTenant.slipConfig?.candidateNameEn || ''}
+                            onChange={(e) => setEditingTenant({
+                              ...editingTenant,
+                              slipConfig: { ...(editingTenant.slipConfig || defaultSlipConfig), candidateNameEn: e.target.value }
+                            })}
+                            placeholder="Prasann Chand Mehta"
+                          />
+                        </label>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 0.8fr', gap: '10px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: 600 }}>
+                          पार्टी का नाम
+                          <input
+                            value={editingTenant.slipConfig?.partyName || ''}
+                            onChange={(e) => setEditingTenant({
+                              ...editingTenant,
+                              slipConfig: { ...(editingTenant.slipConfig || defaultSlipConfig), partyName: e.target.value }
+                            })}
+                            placeholder="भाजपा प्रत्याशी"
+                          />
+                        </label>
+                        <label style={{ fontSize: '12px', fontWeight: 600 }}>
+                          चुनाव चिन्ह नाम
+                          <input
+                            value={editingTenant.slipConfig?.partySymbolName || ''}
+                            onChange={(e) => setEditingTenant({
+                              ...editingTenant,
+                              slipConfig: { ...(editingTenant.slipConfig || defaultSlipConfig), partySymbolName: e.target.value }
+                            })}
+                            placeholder="कमल का फूल"
+                          />
+                        </label>
+                        <label style={{ fontSize: '12px', fontWeight: 600 }}>
+                          EVM क्रम नं.
+                          <input
+                            value={editingTenant.slipConfig?.evmNumber || ''}
+                            onChange={(e) => setEditingTenant({
+                              ...editingTenant,
+                              slipConfig: { ...(editingTenant.slipConfig || defaultSlipConfig), evmNumber: e.target.value }
+                            })}
+                            placeholder="1"
+                          />
+                        </label>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: 600 }}>
+                          उपशीर्षक / क्षेत्र
+                          <input
+                            value={editingTenant.slipConfig?.subTitle || ''}
+                            onChange={(e) => setEditingTenant({
+                              ...editingTenant,
+                              slipConfig: { ...(editingTenant.slipConfig || defaultSlipConfig), subTitle: e.target.value }
+                            })}
+                            placeholder="वार्ड नंबर 82 Jodhpur"
+                          />
+                        </label>
+                        <label style={{ fontSize: '12px', fontWeight: 600 }}>
+                          EVM पट्टी संदेश
+                          <input
+                            value={editingTenant.slipConfig?.appealText || ''}
+                            onChange={(e) => setEditingTenant({
+                              ...editingTenant,
+                              slipConfig: { ...(editingTenant.slipConfig || defaultSlipConfig), appealText: e.target.value }
+                            })}
+                            placeholder="को अपना अमूल्य वोट देकर भारी मतों से विजय बनाएं।"
+                          />
+                        </label>
+                      </div>
+
+                      <label style={{ fontSize: '12px', fontWeight: 600 }}>
+                        बॉटम अपील (Footer)
+                        <input
+                          value={editingTenant.slipConfig?.footerAppeal || ''}
+                          onChange={(e) => setEditingTenant({
+                            ...editingTenant,
+                            slipConfig: { ...(editingTenant.slipConfig || defaultSlipConfig), footerAppeal: e.target.value }
+                          })}
+                          placeholder="कमल का बटन दबाएं और भारी मतों से विजयी बनाएं"
+                        />
+                      </label>
+
+                      {/* Photo Uploaders */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '6px' }}>
+                        {/* Left Party Symbol */}
+                        <div style={{ padding: '10px', background: '#fff', borderRadius: '8px', border: '1.5px dashed #ea580c' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#ea580c', display: 'block', marginBottom: '4px' }}>
+                            🌸 बाएं तरफ: चुनाव चिन्ह फोटो
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleImageUpload(file, 'partySymbolImage', true);
+                            }}
+                            style={{ fontSize: '11px', width: '100%' }}
+                          />
+                          {editingTenant.slipConfig?.partySymbolImage && (
+                            <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <img src={editingTenant.slipConfig.partySymbolImage} alt="" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+                              <button
+                                type="button"
+                                className="button-quiet"
+                                style={{ fontSize: '10px', color: '#b91c1c' }}
+                                onClick={() => setEditingTenant({
+                                  ...editingTenant,
+                                  slipConfig: { ...(editingTenant.slipConfig || defaultSlipConfig), partySymbolImage: '' }
+                                })}
+                              >
+                                हटाएं
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Right Candidate Photo */}
+                        <div style={{ padding: '10px', background: '#fff', borderRadius: '8px', border: '1.5px dashed #1e3a8a' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#1e3a8a', display: 'block', marginBottom: '4px' }}>
+                            👤 दाएं तरफ: प्रत्याशी फोटो
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleImageUpload(file, 'candidateImage', true);
+                            }}
+                            style={{ fontSize: '11px', width: '100%' }}
+                          />
+                          {editingTenant.slipConfig?.candidateImage && (
+                            <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <img src={editingTenant.slipConfig.candidateImage} alt="" style={{ width: '32px', height: '32px', objectFit: 'cover' }} />
+                              <button
+                                type="button"
+                                className="button-quiet"
+                                style={{ fontSize: '10px', color: '#b91c1c' }}
+                                onClick={() => setEditingTenant({
+                                  ...editingTenant,
+                                  slipConfig: { ...(editingTenant.slipConfig || defaultSlipConfig), candidateImage: '' }
+                                })}
+                              >
+                                हटाएं
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Live Preview */}
+                    <div style={{ background: '#ffffff', borderRadius: '12px', padding: '12px', border: '1px solid #cbd5e1' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#16a34a', marginBottom: '6px' }}>
+                        ⚡ लाइव पूर्वावलोकन (Live Preview)
+                      </div>
+                      <div style={{ transform: 'scale(0.80)', transformOrigin: 'top center', width: '125%' }}>
+                        <VoterSlipTemplate config={editingTenant.slipConfig || defaultSlipConfig} isInline={true} />
+                      </div>
+                    </div>
+                  </div>
+                </fieldset>
+
+                <label className="checkbox-label" style={{ marginTop: '14px' }}><input type="checkbox" checked={editingTenant.isActive} onChange={(event) => setEditingTenant({ ...editingTenant, isActive: event.target.checked })} /> क्लाइंट खाते को सक्रिय रखें</label>
                 <div className="modal-actions"><button className="button-secondary" type="button" onClick={() => setEditingTenant(null)}>रद्द करें</button><button className="button-primary" type="submit" disabled={saving}>{saving ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />} सेव करें</button></div>
               </form>
             </section>

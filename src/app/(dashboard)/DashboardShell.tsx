@@ -18,6 +18,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ShieldCheck,
+  Ticket,
   UserCog,
   UsersRound,
   X,
@@ -27,6 +28,7 @@ import { apiFetch } from '@/lib/api';
 
 const navigation = [
   { module: 'voters', label: 'मतदाता सूची', subtitle: 'Voter directory', href: '/', icon: UsersRound },
+  { module: 'voters', label: 'मतदाता पर्ची', subtitle: 'Slip studio & print', href: '/slips', icon: Ticket },
   { module: 'poll-desk', label: 'मतदान डेस्क', subtitle: 'Booth operations', href: '/poll-desk', icon: LayoutDashboard },
   { module: 'turnout', label: 'मतदान स्थिति', subtitle: 'Turnout overview', href: '/turnout', icon: Activity },
   { module: 'warroom', label: 'वॉर रूम', subtitle: 'Field overview', href: '/warroom', icon: ShieldCheck },
@@ -40,6 +42,7 @@ const navigation = [
 
 const pageTitles = new Map([
   ['/', 'मतदाता सूची'],
+  ['/slips', 'मतदाता पर्ची'],
   ['/poll-desk', 'मतदान डेस्क'],
   ['/turnout', 'मतदान स्थिति'],
   ['/warroom', 'वॉर रूम'],
@@ -52,6 +55,7 @@ const pageTitles = new Map([
 ]);
 const pageModules = new Map([
   ['/', 'voters'],
+  ['/slips', 'voters'],
   ['/poll-desk', 'poll-desk'],
   ['/turnout', 'turnout'],
   ['/warroom', 'warroom'],
