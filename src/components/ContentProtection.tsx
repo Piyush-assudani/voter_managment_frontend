@@ -65,7 +65,7 @@ export const ContentProtection: React.FC = () => {
 
     // 4. Disable DevTools & Page Inspection Keyboard Shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
-      const key = e.key.toLowerCase();
+      const key = (e.key || '').toLowerCase();
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
 
       // F12 -> DevTools
