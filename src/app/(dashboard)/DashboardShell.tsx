@@ -27,8 +27,9 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 
 const navigation = [
-  { module: 'voters', label: 'मतदाता सूची', subtitle: 'Voter directory', href: '/', icon: UsersRound },
+  { module: 'home', label: 'स्मार्ट बूथ (Hub)', subtitle: 'Home launcher', href: '/', icon: LayoutDashboard },
   { module: 'voters', label: 'मतदाता पर्ची', subtitle: 'Slip studio & print', href: '/slips', icon: Ticket },
+  { module: 'voters', label: 'मतदाता डायरेक्टरी', subtitle: 'Voter directory', href: '/voters', icon: UsersRound },
   { module: 'poll-desk', label: 'मतदान डेस्क', subtitle: 'Booth operations', href: '/poll-desk', icon: LayoutDashboard },
   { module: 'turnout', label: 'मतदान स्थिति', subtitle: 'Turnout overview', href: '/turnout', icon: Activity },
   { module: 'warroom', label: 'वॉर रूम', subtitle: 'Field overview', href: '/warroom', icon: ShieldCheck },
@@ -41,8 +42,9 @@ const navigation = [
 ];
 
 const pageTitles = new Map([
-  ['/', 'मतदाता सूची'],
+  ['/', 'स्मार्ट बूथ (Smart Booth Hub)'],
   ['/slips', 'मतदाता पर्ची'],
+  ['/voters', 'मतदाता डायरेक्टरी'],
   ['/poll-desk', 'मतदान डेस्क'],
   ['/turnout', 'मतदान स्थिति'],
   ['/warroom', 'वॉर रूम'],
@@ -54,8 +56,9 @@ const pageTitles = new Map([
   ['/admin', 'एडमिन पैनल'],
 ]);
 const pageModules = new Map([
-  ['/', 'voters'],
+  ['/', 'home'],
   ['/slips', 'voters'],
+  ['/voters', 'voters'],
   ['/poll-desk', 'poll-desk'],
   ['/turnout', 'turnout'],
   ['/warroom', 'warroom'],
@@ -218,7 +221,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
         <div className="nav-section-label">WORKSPACE</div>
         <nav className="primary-nav" aria-label="Primary navigation">
-          {navigation.filter(({ module }) => !allowedModules || allowedModules.includes(module)).map(({ label, subtitle, href, icon: Icon }) => {
+          {navigation.filter(({ module }) => module === 'home' || !allowedModules || allowedModules.includes(module)).map(({ label, subtitle, href, icon: Icon }) => {
             const isActive = pathname === href;
             return (
               <Link
@@ -266,6 +269,32 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       <div className="app-main">
         <header className="topbar">
           <div className="topbar-start">
+            {pathname !== '/' && (
+              <Link
+                href="/"
+                className="topbar-home-back-button"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  background: '#047857',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  boxShadow: '0 2px 6px rgba(4, 120, 87, 0.25)',
+                  marginRight: '8px',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+                title="मुख्य मेन्यू पर वापस जाएं (Back to Home)"
+              >
+                <ChevronLeft size={16} />
+                <span>मुख्य मेन्यू</span>
+              </Link>
+            )}
             <button className="icon-button mobile-menu-button" aria-label="Open navigation" onClick={() => setMobileOpen(true)}>
               <Menu size={20} />
             </button>
