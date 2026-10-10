@@ -62,9 +62,10 @@ export default function TermsPage() {
 
           <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', margin: '28px 0 12px' }}>5. Contact Information</h2>
           <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px 18px', fontSize: '14px', lineHeight: 1.6 }}>
-            <strong>Legal Desk:</strong> VijaySetu Compliance Operations<br />
-            <strong>Email:</strong> <a href="mailto:support@vijaysetu.piyushassudani.in" style={{ color: '#2563eb' }}>support@vijaysetu.piyushassudani.in</a><br />
-            <strong>Website:</strong> <a href="/" style={{ color: '#2563eb' }}>https://vijaysetu.piyushassudani.in</a>
+            <strong>Legal Desk:</strong> Roots Reach Media &bull; VijaySetu Legal Operations<br />
+            <strong>Helpline / WhatsApp:</strong> <a href="https://wa.me/917231077770" target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>+91 72310 77770</a><br />
+            <strong>कॉल:</strong> <a href="tel:+917231077770" style={{ color: '#2563eb' }}>+91 72310 77770</a><br />
+            <strong>Official Portal:</strong> <a href="https://vijaysetu-website.vercel.app" target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>आधिकारिक वेबसाइट</a>
           </div>
         </article>
       </main>

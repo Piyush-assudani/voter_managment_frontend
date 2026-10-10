@@ -412,13 +412,13 @@ export default function SlipsPage() {
     }
   };
 
-  // Quick WhatsApp Send (Manual wa.me)
-  const handleManualWhatsApp = async () => {
+  // Official WhatsApp Send (Meta Cloud API)
+  const handleSendWhatsAppViaApi = async () => {
     if (!selectedVoter) return;
     setWpSending(true);
     setWpMessage('');
     try {
-      const response = await apiFetch('/whatsapp/send-manual', {
+      const response = await apiFetch('/whatsapp/send-slip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -426,7 +426,7 @@ export default function SlipsPage() {
           phoneNumber: wpPhone || selectedVoter.phone || '',
         }),
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(data.message || 'WhatsApp पर्ची नहीं भेजी जा सकी');
       }
@@ -435,13 +435,10 @@ export default function SlipsPage() {
           prev ? { ...prev, whatsappCredits: data.remainingCredits, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev
         );
       }
-      setWpMessage('1 क्रेडिट काटा गया। WhatsApp चैट खोली जा रही है...');
-      if (data.waLink) {
-        window.open(data.waLink, '_blank');
-      }
+      setWpMessage('Meta API द्वारा पर्ची सफलतापूर्वक भेज दी गई है!');
       setTimeout(() => {
         setIsWpModalOpen(false);
-      }, 1200);
+      }, 1500);
     } catch (err) {
       setWpMessage(err instanceof Error ? err.message : 'संदेश भेजने में त्रुटि हुई');
     } finally {
@@ -1528,12 +1525,12 @@ export default function SlipsPage() {
                 <button
                   type="button"
                   className="button-primary"
-                  style={{ background: '#25D366', borderColor: '#22c55e', color: '#fff' }}
-                  onClick={handleManualWhatsApp}
+                  style={{ background: '#25D366', borderColor: '#22c55e', color: '#fff', fontWeight: 600 }}
+                  onClick={handleSendWhatsAppViaApi}
                   disabled={wpSending || !wpPhone.trim()}
                 >
                   {wpSending ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}
-                  WhatsApp चैट खोलें
+                  WhatsApp पर्ची भेजें (Meta API)
                 </button>
               </div>
             </div>

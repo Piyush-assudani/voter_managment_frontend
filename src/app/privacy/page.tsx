@@ -79,9 +79,10 @@ export default function PrivacyPage() {
 
           <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', margin: '28px 0 12px' }}>4. Grievance Redressal &amp; Contact Details</h2>
           <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px 18px', fontSize: '14px', lineHeight: 1.6 }}>
-            <strong>Grievance &amp; Data Protection Officer:</strong> VijaySetu Compliance Team<br />
-            <strong>Email:</strong> <a href="mailto:support@vijaysetu.piyushassudani.in" style={{ color: '#2563eb' }}>support@vijaysetu.piyushassudani.in</a><br />
-            <strong>Portal:</strong> <a href="/" style={{ color: '#2563eb' }}>https://vijaysetu.piyushassudani.in</a>
+            <strong>Agency &amp; Compliance Desk:</strong> Roots Reach Media &bull; VijaySetu Support<br />
+            <strong>Helpline / WhatsApp:</strong> <a href="https://wa.me/917231077770" target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>+91 72310 77770</a><br />
+            <strong>कॉल:</strong> <a href="tel:+917231077770" style={{ color: '#2563eb' }}>+91 72310 77770</a><br />
+            <strong>Official Portal:</strong> <a href="https://vijaysetu-website.vercel.app" target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>आधिकारिक वेबसाइट</a>
           </div>
         </article>
       </main>

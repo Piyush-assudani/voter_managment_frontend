@@ -409,7 +409,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
       {/* Footer */}
       <footer className="app-footer" style={{ justifyContent: 'center', textAlign: 'center', flexWrap: 'wrap', gap: '6px' }}>
-        <span>&copy; 2026 VijaySetu &bull; Roots Reach Media. All Rights Reserved. &bull; <a href="/privacy" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Privacy Policy</a> &bull; <a href="/terms" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Terms of Service</a> &bull; 📞 7231077770</span>
+        <span>&copy; 2026 VijaySetu &bull; Roots Reach Media. All Rights Reserved. &bull; <a href="https://vijaysetu-website.vercel.app" target="_blank" rel="noopener noreferrer" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>वेबसाइट</a> &bull; <a href="/privacy" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Privacy Policy</a> &bull; <a href="/terms" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Terms of Service</a> &bull; 📞 7231077770</span>
       </footer>
 
       {/* FULL-SCREEN SUSPENSION LOCKOUT MODAL */}

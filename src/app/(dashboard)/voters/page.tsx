@@ -1169,27 +1169,15 @@ export default function DashboardPage() {
               <div className="modal-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
                 <button className="button-secondary" type="button" onClick={() => window.print()}><Printer size={15} /> प्रिंट</button>
                 <button
-                  type="button"
+                  type="submit"
                   className="button-primary"
-                  style={{ background: '#25D366', borderColor: '#22c55e', color: '#fff' }}
-                  onClick={() => void sendManualSlip()}
+                  style={{ background: '#25D366', borderColor: '#22c55e', color: '#fff', fontWeight: 600 }}
                   disabled={sending || whatsappQuota?.whatsappEnabled === false || (whatsappQuota ? whatsappQuota.whatsappCredits <= 0 : false)}
-                  title="WhatsApp Web या App पर सीधे संदेश खोलें (1 क्रेडिट कटेगा)"
+                  title="Meta Cloud API से आधिकारिक WhatsApp पर्ची भेजें"
                 >
                   {sending ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}
-                  WhatsApp चैट खोलें (मैनुअल)
+                  WhatsApp पर्ची भेजें (Meta API)
                 </button>
-                {whatsappQuota?.metaConfigured && (
-                  <button
-                    className="button-secondary"
-                    type="submit"
-                    disabled={sending || whatsappQuota?.whatsappEnabled === false || (whatsappQuota ? whatsappQuota.whatsappCredits <= 0 : false)}
-                    title="Meta Cloud API से बैकग्राउंड में भेजें"
-                  >
-                    {sending ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}
-                    Meta API से भेजें
-                  </button>
-                )}
               </div>
             </form>
           </section>
