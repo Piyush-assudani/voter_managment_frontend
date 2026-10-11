@@ -874,64 +874,74 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               </>
             ) : (
               <>
-                {/* Line 1: Party Name & Appeal (Clean wrapping, no truncation) */}
+                {/* Line 1: Party Name */}
                 <div
                   className="voter-slip-party-headline"
                   style={{
                     color: '#ea580c',
-                    fontSize: '12px',
+                    fontSize: '13px',
                     fontWeight: 700,
-                    lineHeight: 1.25,
+                    lineHeight: 1.35,
                     textAlign: 'center',
                     wordBreak: 'keep-all',
-                    overflowWrap: 'break-word',
                     maxWidth: '100%',
                   }}
                 >
-                  <span>{merged.partyName || 'भारतीय जनता पार्टी (भाजपा) प्रत्याशी'}</span>
-                  {merged.appealHeadline && (
-                    <span style={{ marginLeft: '4px', display: 'inline-block' }}>
-                      {merged.appealHeadline}
-                    </span>
-                  )}
+                  {merged.partyName || 'भारतीय जनता पार्टी (भाजपा) प्रत्याशी'}
                 </div>
 
-                {/* Line 2: Candidate Name (Hindi Prominent + English Subtitle, Never Cut Off) */}
+                {/* Line 2: Appeal Headline */}
+                {merged.appealHeadline && (
+                  <div
+                    className="voter-slip-appeal-headline"
+                    style={{
+                      color: '#c2410c',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      lineHeight: 1.35,
+                      textAlign: 'center',
+                      wordBreak: 'keep-all',
+                      maxWidth: '100%',
+                      marginTop: '2px',
+                    }}
+                  >
+                    {merged.appealHeadline}
+                  </div>
+                )}
+
+                {/* Line 3: Candidate Name (Hindi Prominent + English Subtitle) */}
                 <div
                   className="voter-slip-candidate-name"
                   style={{
                     color: '#1e3a8a',
-                    margin: '2px 0',
+                    margin: '4px 0',
                     textAlign: 'center',
                     wordBreak: 'keep-all',
-                    overflowWrap: 'break-word',
                     maxWidth: '100%',
-                    lineHeight: 1.2,
                   }}
                 >
-                  <div style={{ fontSize: '18px', fontWeight: 900, letterSpacing: 'normal', color: '#1e3a8a', wordBreak: 'keep-all' }}>
+                  <div style={{ fontSize: '20px', fontWeight: 900, letterSpacing: 'normal', color: '#1e3a8a', lineHeight: 1.35 }}>
                     {merged.candidateName || 'प्रत्याशी नाम'}
                   </div>
                   {merged.candidateNameEn && (
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#2563eb', letterSpacing: '0.2px', marginTop: '1px', wordBreak: 'keep-all' }}>
+                    <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#2563eb', letterSpacing: '0.2px', marginTop: '2px', lineHeight: 1.3 }}>
                       ({merged.candidateNameEn})
                     </div>
                   )}
                 </div>
 
-                {/* Line 3: Subtitle (Clean wrapping, no truncation) */}
+                {/* Line 4: Subtitle */}
                 <div
                   className="voter-slip-subtitle"
                   style={{
                     color: '#475569',
-                    fontSize: '11px',
+                    fontSize: '11.5px',
                     fontWeight: 600,
-                    lineHeight: 1.25,
+                    lineHeight: 1.35,
                     textAlign: 'center',
                     wordBreak: 'keep-all',
-                    overflowWrap: 'break-word',
                     maxWidth: '100%',
-                    marginTop: '1px',
+                    marginTop: '2px',
                   }}
                 >
                   {merged.subTitle || `मतदाता सूचना पर्ची (Voter Slip) · वार्ड नं. ${ward}`}
@@ -1056,7 +1066,8 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
           style={{
             background: 'linear-gradient(90deg, #ea580c 0%, #c2410c 14%, #1d4ed8 40%, #1e3a8a 100%)',
             borderRadius: '10px',
-            padding: '6px 12px',
+            padding: '8px 14px',
+            minHeight: '54px',
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
@@ -1070,8 +1081,8 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             style={{
               background: '#ffffff',
               color: '#ea580c',
-              width: '38px',
-              height: '38px',
+              width: '40px',
+              height: '40px',
               borderRadius: '8px',
               display: 'flex',
               alignItems: 'center',
@@ -1111,18 +1122,18 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             style={{
               flex: 1,
               minWidth: 0,
-              fontFamily: 'var(--font-noto-sans-devanagari), var(--font-anek-devanagari), "Noto Sans Devanagari", "Anek Devanagari", sans-serif',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              fontFamily: 'var(--font-anek-devanagari), var(--font-noto-sans-devanagari), "Anek Devanagari", "Noto Sans Devanagari", sans-serif',
             }}
           >
             <div
               style={{
-                fontSize: '13px',
+                fontSize: '13.5px',
                 fontWeight: 800,
                 letterSpacing: 'normal',
-                lineHeight: 1.35,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                lineHeight: 1.4,
                 color: '#ffffff',
                 textRendering: 'geometricPrecision',
               }}
@@ -1131,14 +1142,11 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             </div>
             <div
               style={{
-                fontSize: '12px',
+                fontSize: '13px',
                 fontWeight: 700,
                 opacity: 0.98,
-                lineHeight: 1.35,
-                marginTop: '1px',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                lineHeight: 1.4,
+                marginTop: '2px',
                 letterSpacing: 'normal',
                 color: '#ffffff',
                 textRendering: 'geometricPrecision',
@@ -1154,7 +1162,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                   title="EVM पट्टी संदेश बदलें"
                   style={{
                     color: '#ffffff',
-                    fontSize: '11px',
+                    fontSize: '12px',
                     fontWeight: 600,
                     background: 'rgba(0, 0, 0, 0.3)',
                     border: '1px dashed #fed7aa',
@@ -1266,10 +1274,11 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             className="voter-slip-voter-row"
             style={{
               display: 'flex',
-              alignItems: 'baseline',
-              padding: '7px 4px',
+              alignItems: 'center',
+              padding: '8px 4px',
               borderBottom: '1px dotted #cbd5e1',
               fontSize: '14px',
+              lineHeight: 1.4,
             }}
           >
             <span className="voter-slip-voter-label" style={{ width: '165px', minWidth: '165px', flexShrink: 0, color: '#334155', fontWeight: 600 }}>मतदाता का नाम:</span>
@@ -1281,10 +1290,11 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             className="voter-slip-voter-row"
             style={{
               display: 'flex',
-              alignItems: 'baseline',
-              padding: '7px 4px',
+              alignItems: 'center',
+              padding: '8px 4px',
               borderBottom: '1px dotted #cbd5e1',
               fontSize: '14px',
+              lineHeight: 1.4,
             }}
           >
             <span className="voter-slip-voter-label" style={{ width: '165px', minWidth: '165px', flexShrink: 0, color: '#334155', fontWeight: 600 }}>{relLabel}:</span>
@@ -1296,10 +1306,11 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             className="voter-slip-voter-row"
             style={{
               display: 'flex',
-              alignItems: 'baseline',
-              padding: '7px 4px',
+              alignItems: 'center',
+              padding: '8px 4px',
               borderBottom: '1px dotted #cbd5e1',
               fontSize: '14px',
+              lineHeight: 1.4,
             }}
           >
             <span className="voter-slip-voter-label" style={{ width: '165px', minWidth: '165px', flexShrink: 0, color: '#334155', fontWeight: 600 }}>मकान संख्या:</span>
@@ -1311,10 +1322,11 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             className="voter-slip-voter-row"
             style={{
               display: 'flex',
-              alignItems: 'baseline',
-              padding: '7px 4px',
+              alignItems: 'center',
+              padding: '8px 4px',
               borderBottom: '1px dotted #cbd5e1',
               fontSize: '14px',
+              lineHeight: 1.4,
             }}
           >
             <span className="voter-slip-voter-label" style={{ width: '165px', minWidth: '165px', flexShrink: 0, color: '#334155', fontWeight: 600 }}>आयु / लिंग:</span>
@@ -1326,10 +1338,11 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             className="voter-slip-voter-row"
             style={{
               display: 'flex',
-              alignItems: 'baseline',
-              padding: '7px 4px',
+              alignItems: 'center',
+              padding: '8px 4px',
               borderBottom: '1px dotted #cbd5e1',
               fontSize: '14px',
+              lineHeight: 1.4,
             }}
           >
             <span className="voter-slip-voter-label" style={{ width: '165px', minWidth: '165px', flexShrink: 0, color: '#334155', fontWeight: 600 }}>पहचान पत्र (EPIC):</span>
