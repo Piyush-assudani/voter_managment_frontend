@@ -278,15 +278,162 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
               <option value="">सभी क्लाइंट</option>{organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}
             </select>
           </label>}
-          <span className="panel-count">{isPlatformAdmin && !organizationId ? 'क्लाइंट-वार worker quota' : `${accounts.filter((account) => account.accountType === 'worker' && account.isActive).length} / 10 सक्रिय कार्यकर्ता`}</span>
+          <span className="panel-count" style={{ whiteSpace: 'nowrap', width: 'auto' }}>
+            {isPlatformAdmin && !organizationId ? 'क्लाइंट-वार worker quota' : `${accounts.filter((account) => account.accountType === 'worker' && account.isActive).length} / 10 सक्रिय कार्यकर्ता`}
+          </span>
           <label className="search-field account-search"><Search size={15} /><input aria-label="खाते खोजें" placeholder="नाम, email, फोन या scope" value={search} onChange={(event) => setSearch(event.target.value)} /></label>
-          <span className="panel-count">{filteredAccounts.length} / {accounts.length} खाते</span>
+          <span className="panel-count" style={{ whiteSpace: 'nowrap', width: 'auto' }}>{filteredAccounts.length} / {accounts.length} खाते</span>
           {embeddedOrganizationId && <button className="button-primary" type="button" onClick={startCreate}><Plus size={15} /> नया खाता</button>}
         </div>
         {loading && !accounts.length ? <div className="empty-state"><LoaderCircle size={20} className="spin" /><p>खाते लोड हो रहे हैं…</p></div> : filteredAccounts.length ? (
-          <div className="table-scroll"><table className="voter-table desk-table"><thead><tr><th>खाता</th>{isPlatformAdmin && !embeddedOrganizationId && <th>क्लाइंट</th>}<th>भूमिका</th><th>Scope</th><th>Modules</th><th>स्थिति</th><th>कार्य</th></tr></thead><tbody>
-            {filteredAccounts.map((account) => <tr key={account.id}><td><div className="voter-name">{account.name || account.email}</div><div className="voter-subline">{account.email}{account.phone ? ` · ${account.phone}` : ''}</div></td>{isPlatformAdmin && !embeddedOrganizationId && <td>{account.organizationName || account.organizationId}</td>}<td>{account.role}</td><td>{account.scope}{account.scopeValue ? ` · ${account.scopeValue}` : ''}</td><td>{account.modules.length} modules</td><td><span className={`record-status ${account.isActive ? 'status-voted' : 'status-pending'}`}>{account.isActive ? 'सक्रिय' : 'बंद'}</span></td><td><div className="feature-actions"><button className="button-secondary" type="button" onClick={() => startEdit(account)}><Pencil size={14} /> बदलें</button><button className="button-quiet" type="button" onClick={() => startPermissions(account)}><ShieldCheck size={14} /> अनुमतियाँ</button><button className="button-quiet" type="button" onClick={() => startPasswordChange(account)}><KeyRound size={14} /> पासवर्ड</button><button className="button-quiet" type="button" onClick={() => void disable(account)} disabled={!account.isActive}><UserRoundX size={14} /> बंद करें</button></div></td></tr>)}
-          </tbody></table></div>
+          <>
+            {/* Desktop Table View */}
+            <div className="desktop-table-view table-scroll">
+              <table className="voter-table desk-table">
+                <thead>
+                  <tr>
+                    <th style={{ whiteSpace: 'nowrap' }}>खाता</th>
+                    {isPlatformAdmin && !embeddedOrganizationId && <th style={{ whiteSpace: 'nowrap' }}>क्लाइंट</th>}
+                    <th style={{ whiteSpace: 'nowrap' }}>भूमिका</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Scope</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Modules</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>स्थिति</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>कार्य</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAccounts.map((account) => (
+                    <tr key={account.id}>
+                      <td>
+                        <div className="voter-name">{account.name || account.email}</div>
+                        <div className="voter-subline">{account.email}{account.phone ? ` · ${account.phone}` : ''}</div>
+                      </td>
+                      {isPlatformAdmin && !embeddedOrganizationId && (
+                        <td style={{ whiteSpace: 'nowrap' }}>{account.organizationName || account.organizationId}</td>
+                      )}
+                      <td style={{ whiteSpace: 'nowrap', fontWeight: 600 }}>{account.role}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{account.scope}{account.scopeValue ? ` · ${account.scopeValue}` : ''}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{account.modules.length} modules</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <span className={`record-status ${account.isActive ? 'status-voted' : 'status-pending'}`}>
+                          {account.isActive ? 'सक्रिय' : 'बंद'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="feature-actions" style={{ flexWrap: 'nowrap' }}>
+                          <button className="button-secondary" type="button" onClick={() => startEdit(account)}>
+                            <Pencil size={14} /> बदलें
+                          </button>
+                          <button className="button-quiet" type="button" onClick={() => startPermissions(account)}>
+                            <ShieldCheck size={14} /> अनुमतियाँ
+                          </button>
+                          <button className="button-quiet" type="button" onClick={() => startPasswordChange(account)}>
+                            <KeyRound size={14} /> पासवर्ड
+                          </button>
+                          <button className="button-quiet" type="button" onClick={() => void disable(account)} disabled={!account.isActive}>
+                            <UserRoundX size={14} /> बंद करें
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="mobile-card-view">
+              {filteredAccounts.map((account) => (
+                <div
+                  key={account.id}
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    padding: '14px 16px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                    <div>
+                      <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
+                        {account.name || account.email}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                        {account.email} {account.phone ? ` · ${account.phone}` : ''}
+                      </div>
+                    </div>
+                    <span className={`record-status ${account.isActive ? 'status-voted' : 'status-pending'}`} style={{ whiteSpace: 'nowrap' }}>
+                      {account.isActive ? 'सक्रिय' : 'बंद'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                    {isPlatformAdmin && !embeddedOrganizationId && (account.organizationName || account.organizationId) && (
+                      <span style={{ fontSize: '11px', fontWeight: 600, background: '#f1f5f9', color: '#475569', padding: '3px 8px', borderRadius: '6px' }}>
+                        🏢 {account.organizationName || account.organizationId}
+                      </span>
+                    )}
+                    <span style={{ fontSize: '11px', fontWeight: 600, background: '#e0f2fe', color: '#0369a1', padding: '3px 8px', borderRadius: '6px' }}>
+                      👤 {account.role}
+                    </span>
+                    <span style={{ fontSize: '11px', fontWeight: 600, background: '#fef3c7', color: '#92400e', padding: '3px 8px', borderRadius: '6px' }}>
+                      📍 {account.scope}{account.scopeValue ? `: ${account.scopeValue}` : ''}
+                    </span>
+                    <span style={{ fontSize: '11px', fontWeight: 600, background: '#f3e8ff', color: '#6b21a8', padding: '3px 8px', borderRadius: '6px' }}>
+                      🧩 {account.modules.length} मॉड्यूल्स
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      style={{ justifyContent: 'center', padding: '7px 10px', fontSize: '12px' }}
+                      onClick={() => startEdit(account)}
+                    >
+                      <Pencil size={13} /> बदलें
+                    </button>
+                    <button
+                      className="button-quiet"
+                      type="button"
+                      style={{ justifyContent: 'center', padding: '7px 10px', fontSize: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}
+                      onClick={() => startPermissions(account)}
+                    >
+                      <ShieldCheck size={13} /> अनुमतियाँ
+                    </button>
+                    <button
+                      className="button-quiet"
+                      type="button"
+                      style={{ justifyContent: 'center', padding: '7px 10px', fontSize: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}
+                      onClick={() => startPasswordChange(account)}
+                    >
+                      <KeyRound size={13} /> पासवर्ड
+                    </button>
+                    <button
+                      className="button-quiet"
+                      type="button"
+                      style={{
+                        justifyContent: 'center',
+                        padding: '7px 10px',
+                        fontSize: '12px',
+                        background: account.isActive ? '#fff1f2' : '#f8fafc',
+                        color: account.isActive ? '#e11d48' : '#94a3b8',
+                        border: '1px solid #fecdd3',
+                      }}
+                      onClick={() => void disable(account)}
+                      disabled={!account.isActive}
+                    >
+                      <UserRoundX size={13} /> बंद करें
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         ) : <div className="empty-state"><strong>{error ? 'खाते उपलब्ध नहीं' : search ? 'कोई खाता मेल नहीं खाता' : 'अभी कोई उप-खाता नहीं'}</strong><p>{error || (search ? 'खोज शब्द बदलकर फिर कोशिश करें।' : 'नया खाता बनाकर भूमिका, scope और module access दें。')}</p></div>}
         <div className="records-footnote">{isPlatformAdmin ? 'क्लाइंट कार्यकर्ता खाते tenant के अनुसार अलग रखे जाते हैं।' : 'इस संगठन में अधिकतम 10 सक्रिय कार्यकर्ता खाते बनाए जा सकते हैं।'}</div>
       </section>

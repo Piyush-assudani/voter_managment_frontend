@@ -12,8 +12,8 @@ import { apiFetch } from '@/lib/api';
 
 const pageTitles = new Map([
   ['/', 'मुख्य डैशबोर्ड'],
-  ['/slips', 'मतदाता खोज व पर्ची'],
-  ['/voters', 'परिवार व मुखिया प्रबंधन'],
+  ['/voters', 'मतदाता खोज व पर्ची'],
+  ['/slips', 'बल्क पर्ची प्रिंट शीट'],
   ['/poll-desk', 'मतदान दिवस डेस्क'],
   ['/turnout', 'लाइव टर्नआउट'],
   ['/warroom', 'राजनीतिक वॉर-रूम'],
@@ -50,6 +50,15 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [userInfo, setUserInfo] = useState<{ role?: string; name?: string; email?: string; organizationId?: string; organizationName?: string }>({});
   const [clients, setClients] = useState<Array<{ id: string; name: string; candidateName?: string; voterCount?: number }>>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const [isSuspended, setIsSuspended] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return window.localStorage.getItem('account_suspended') === 'true';
@@ -205,13 +214,52 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
         }}
       >
-        {/* Left: Brand Identity (Logo + VijaySetu Name) & Back Button */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
+        {/* Left: Back Button, Brand Identity & Subpage Title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+          {/* Prominent Back Button (Always visible on any subpage, Mobile & Desktop) */}
+          {pathname !== '/' && (
+            <Link
+              href="/"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: isMobile ? '3px' : '5px',
+                height: '34px',
+                padding: isMobile ? '0 9px' : '0 12px',
+                borderRadius: '8px',
+                background: '#047857',
+                color: '#ffffff',
+                fontSize: isMobile ? '12px' : '12.5px',
+                fontWeight: 700,
+                textDecoration: 'none',
+                boxShadow: '0 2px 5px rgba(4, 120, 87, 0.25)',
+                cursor: 'pointer',
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
+                transition: 'all 0.15s ease',
+              }}
+              title="मुख्य मेन्यू (डैशबोर्ड) पर वापस जाएं"
+            >
+              <ChevronLeft size={isMobile ? 17 : 16} strokeWidth={2.5} />
+              <span>{isMobile ? 'मेन्यू' : 'मुख्य मेन्यू'}</span>
+            </Link>
+          )}
+
+          {/* Brand Identity */}
+          <Link
+            href="/"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              textDecoration: 'none',
+              flexShrink: 0,
+            }}
+          >
             <div
               style={{
-                width: '36px',
-                height: '36px',
+                width: '34px',
+                height: '34px',
                 borderRadius: '8px',
                 background: '#ffffff',
                 border: '1px solid #e2e8f0',
@@ -226,63 +274,38 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.png" alt="VijaySetu Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <span style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
-                  VijaySetu
-                </span>
-                <span
-                  className="hidden sm:inline-block"
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    color: '#047857',
-                    background: '#ecfdf5',
-                    border: '1px solid #a7f3d0',
-                    padding: '1px 5px',
-                    borderRadius: '8px',
-                  }}
-                >
-                  विजयसेतु
+
+            {/* Brand text: Only show if on desktop or on homepage */}
+            {(!isMobile || pathname === '/') && (
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <span style={{ fontSize: '16.5px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
+                    VijaySetu
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '9.5px',
+                      fontWeight: 700,
+                      color: '#047857',
+                      background: '#ecfdf5',
+                      border: '1px solid #a7f3d0',
+                      padding: '1px 5px',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    विजयसेतु
+                  </span>
+                </div>
+                <span className="hidden md:inline-block" style={{ fontSize: '10px', color: '#64748b', fontWeight: 600 }}>
+                  चुनाव प्रबंधन प्रणाली
                 </span>
               </div>
-              <span className="hidden md:inline-block" style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600 }}>
-                चुनाव प्रबंधन प्रणाली
-              </span>
-            </div>
+            )}
           </Link>
-
-          {/* When on Subpage: Prominent "← मुख्य मेन्यू" Back Button */}
-          {pathname !== '/' && (
-            <Link
-              href="/"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '5px 10px',
-                borderRadius: '7px',
-                background: '#047857',
-                color: '#ffffff',
-                fontSize: '11.5px',
-                fontWeight: 700,
-                textDecoration: 'none',
-                boxShadow: '0 2px 5px rgba(4, 120, 87, 0.2)',
-                marginLeft: '6px',
-                cursor: 'pointer',
-                flexShrink: 0,
-              }}
-              title="मुख्य मेन्यू पर वापस जाएं"
-            >
-              <ChevronLeft size={15} />
-              <span className="hidden sm:inline">मुख्य मेन्यू</span>
-              <span className="sm:hidden">मेन्यू</span>
-            </Link>
-          )}
 
           {/* Subpage Title (Visible on larger screens) */}
           {pathname !== '/' && (
-            <div className="hidden lg:block" style={{ marginLeft: '6px', borderLeft: '1px solid #cbd5e1', paddingLeft: '10px' }}>
+            <div className="hidden lg:block" style={{ marginLeft: '4px', borderLeft: '1px solid #cbd5e1', paddingLeft: '10px' }}>
               <span style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' }}>
                 {activePage}
               </span>

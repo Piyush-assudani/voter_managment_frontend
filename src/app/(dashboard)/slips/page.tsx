@@ -23,6 +23,7 @@ import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/V
 import { ImageCropModal } from '@/components/ImageCropModal';
 import { downloadSlip } from '@/lib/downloadSlip';
 import { SortButton, SortState } from '@/components/SortButton';
+import { WhatsAppLogo } from '@/components/WhatsAppLogo';
 
 interface Voter {
   _id: string;
@@ -454,7 +455,7 @@ export default function SlipsPage() {
     if (!selectedVoter) return;
     setIsDownloading(true);
     try {
-      await downloadSlip(selectedVoter, slipConfig);
+      await downloadSlip(selectedVoter, slipConfig, printContainerRef.current);
     } catch {
       alert('पर्ची इमेज डाउनलोड नहीं हो सकी');
     } finally {
@@ -904,7 +905,7 @@ export default function SlipsPage() {
                 <button
                   className="button-primary"
                   type="button"
-                  style={{ background: '#25D366', borderColor: '#22c55e', color: '#fff' }}
+                  style={{ background: '#25D366', borderColor: '#22c55e', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   onClick={() => {
                     if (!selectedVoter) return;
                     setWpPhone(selectedVoter.phone || '');
@@ -914,7 +915,7 @@ export default function SlipsPage() {
                   disabled={!selectedVoter || whatsappQuota?.whatsappEnabled === false || (whatsappQuota ? whatsappQuota.whatsappCredits <= 0 : false)}
                   title="WhatsApp Web या App पर सीधे संदेश खोलें (1 क्रेडिट कटेगा)"
                 >
-                  <Send size={15} /> WhatsApp
+                  <WhatsAppLogo size={15} color="#ffffff" /> WhatsApp
                 </button>
               </div>
             </div>
@@ -1521,11 +1522,11 @@ export default function SlipsPage() {
                 <button
                   type="button"
                   className="button-primary"
-                  style={{ background: '#25D366', borderColor: '#22c55e', color: '#fff', fontWeight: 600 }}
+                  style={{ background: '#25D366', borderColor: '#22c55e', color: '#fff', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   onClick={handleSendWhatsAppViaApi}
                   disabled={wpSending || !wpPhone.trim()}
                 >
-                  {wpSending ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}
+                  {wpSending ? <LoaderCircle size={15} className="spin" /> : <WhatsAppLogo size={16} color="#ffffff" />}
                   WhatsApp पर्ची भेजें (Meta API)
                 </button>
               </div>

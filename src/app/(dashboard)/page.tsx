@@ -34,10 +34,10 @@ interface LauncherModule {
 
 const launcherModules: LauncherModule[] = [
   {
-    id: 'slips',
+    id: 'voters',
     name: 'मतदाता खोज व पर्ची',
-    subtitle: 'पर्ची वितरण व त्वरित खोज',
-    href: '/slips',
+    subtitle: 'मतदाता खोज, परिवार व पर्ची',
+    href: '/voters',
     icon: Ticket,
     iconBg: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
     module: 'voters',
@@ -88,10 +88,10 @@ const launcherModules: LauncherModule[] = [
     module: 'community',
   },
   {
-    id: 'voters',
-    name: 'परिवार व मुखिया प्रबंधन',
-    subtitle: 'Family & Household Directory',
-    href: '/voters',
+    id: 'slips',
+    name: 'बल्क पर्ची प्रिंट शीट',
+    subtitle: 'A4 प्रिंट शीट्स व बल्क पर्ची',
+    href: '/slips',
     icon: UsersRound,
     iconBg: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
     module: 'voters',

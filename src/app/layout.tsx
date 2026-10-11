@@ -1,20 +1,31 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Noto_Sans_Devanagari, Outfit } from 'next/font/google';
+import { Anek_Devanagari, Inter, Noto_Sans_Devanagari, Outfit } from 'next/font/google';
 import './globals.css';
 import { ContentProtection } from '@/components/ContentProtection';
 
 const inter = Inter({
   subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
   variable: '--font-inter',
+  display: 'swap',
 });
 const notoSansDevanagari = Noto_Sans_Devanagari({
   subsets: ['devanagari', 'latin'],
+  weight: ['400', '500', '600', '700', '800', '900'],
   variable: '--font-noto-sans-devanagari',
+  display: 'swap',
 });
 const outfit = Outfit({
   subsets: ['latin'],
-  variable: '--font-outfit',
   weight: ['400', '500', '600', '700', '800', '900'],
+  variable: '--font-outfit',
+  display: 'swap',
+});
+const anekDevanagari = Anek_Devanagari({
+  subsets: ['devanagari', 'latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-anek-devanagari',
+  display: 'swap',
 });
 
 export const viewport: Viewport = {
@@ -38,7 +49,7 @@ export default function RootLayout({
   return (
     <html lang="hi">
       <body
-        className={`${inter.variable} ${notoSansDevanagari.variable} ${outfit.variable} bg-[#FAFAFA] text-[#111827]`}
+        className={`${inter.variable} ${notoSansDevanagari.variable} ${outfit.variable} ${anekDevanagari.variable} bg-[#FAFAFA] text-[#111827]`}
         suppressHydrationWarning
       >
         <ContentProtection />

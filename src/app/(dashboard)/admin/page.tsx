@@ -2,9 +2,9 @@
 
 import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Activity, AlertCircle, Check, ChevronDown, ChevronRight, Copy, Download, Eye, EyeOff, FileSpreadsheet,
-  FileText, KeyRound, Layers, LoaderCircle, MapPin, MessageCircle, Phone, Plus, RefreshCw,
-  Settings2, ShieldCheck, Sparkles, Tag, Ticket, Trash2, Upload, User, UserPlus, UsersRound, X,
+  Activity, AlertCircle, AlertTriangle, Check, ChevronDown, ChevronRight, Copy, Cpu, Download, Eye, EyeOff, FileSpreadsheet,
+  FileText, HardDrive, KeyRound, Layers, LoaderCircle, MapPin, MessageCircle, Phone, Plus, RefreshCw,
+  Server, Settings2, ShieldCheck, Sparkles, Tag, Ticket, Trash2, Upload, User, UserPlus, UsersRound, X, Zap,
 } from 'lucide-react';
 import DashboardShell from '@/app/(dashboard)/DashboardShell';
 import AccountsManager from '@/components/AccountsManager';
@@ -105,6 +105,7 @@ interface Tenant {
   whatsappEnabled?: boolean;
   whatsappCredits?: number;
   whatsappUsed?: number;
+  candidateName?: string;
   slipConfig?: SlipConfig;
 }
 
@@ -125,6 +126,42 @@ interface SystemHealth {
   metaReady: boolean;
   platform: string;
   checkedAt: string;
+  disk?: {
+    totalGB: number;
+    usableTotalGB?: number;
+    usedGB: number;
+    freeGB: number;
+    usedPercent: number;
+  };
+  cache?: {
+    engine: string;
+    isRedisReady: boolean;
+    memoryKeysCount: number;
+    redisConfigured: boolean;
+  };
+  memory?: {
+    totalGB: number;
+    usedGB: number;
+    freeGB: number;
+    usedPercent: number;
+    heapUsedMB: number;
+  };
+  systemInfo?: {
+    cpuModel: string;
+    cpuCores: number;
+    loadAvg: number[];
+    platform: string;
+    nodeVersion: string;
+    uptimeSeconds: number;
+    systemUptimeSeconds: number;
+  };
+  dbStats?: {
+    totalVoters: number;
+    totalOrganizations: number;
+    totalUsers: number;
+    totalDispatches: number;
+    dbName: string;
+  };
 }
 
 interface UploadJob {
@@ -171,11 +208,15 @@ type AdminView = 'tenants' | 'demo' | 'branding' | 'leads' | 'records' | 'users'
 export default function AdminPanel() {
   const [activeView, setActiveView] = useState<AdminView>('tenants');
   const [organizations, setOrganizations] = useState<Tenant[]>([]);
+  const [deletingTenant, setDeletingTenant] = useState<Tenant | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeletingClient, setIsDeletingClient] = useState(false);
   const [voters, setVoters] = useState<AdminVoter[]>([]);
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [demoUsers, setDemoUsers] = useState<DemoUserRecord[]>([]);
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoGenerating, setDemoGenerating] = useState(false);
+  const [demoTargetOrgId, setDemoTargetOrgId] = useState('new');
   const [demoClientName, setDemoClientName] = useState('');
   const [demoCustomEmail, setDemoCustomEmail] = useState('');
   const [demoCustomPassword, setDemoCustomPassword] = useState('');
@@ -544,17 +585,19 @@ export default function AdminPanel() {
           clientName: demoClientName.trim(),
           customEmail: demoCustomEmail.trim(),
           customPassword: demoCustomPassword.trim(),
+          targetOrgId: demoTargetOrgId,
         }),
       });
       if (!res.ok) throw new Error(await getApiError(res, 'डेमो खाता नहीं बन सका।'));
       const result = await res.json();
-      setNotice(result.message || 'नया डेमो यूज़र व 25 सैंपल मतदाताओं का डेटा तैयार हो गया!');
+      setNotice(result.message || 'नया डेमो यूज़र व सैंपल मतदाताओं का डेटा तैयार हो गया!');
       if (result.demoUser) {
         setLatestGenerated(result.demoUser);
       }
       setDemoClientName('');
       setDemoCustomEmail('');
       setDemoCustomPassword('');
+      setDemoTargetOrgId('new');
       await loadDemoUsers();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'डेमो खाता नहीं बन सका।');
@@ -598,7 +641,10 @@ export default function AdminPanel() {
   };
 
   const copyDemoCredentials = (email: string, pass: string, id: string) => {
-    const text = `विजयसेतु डेमो पोर्टल:\nलॉगिन लिंक: https://vijaysetu.piyushassudani.in/login\nआईडी / ईमेल: ${email}\nपासवर्ड: ${pass}\nसहायता संपर्क: Roots Reach Media (+91 72310 77770)`;
+    const portalUrl = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')
+      ? `${window.location.origin}/login`
+      : 'https://vijaysetu.vercel.app/login';
+    const text = `विजयसेतु डेमो पोर्टल:\nलॉगिन लिंक: ${portalUrl}\nआईडी / ईमेल: ${email}\nपासवर्ड: ${pass}\nसहायता संपर्क: Roots Reach Media (+91 72310 77770)`;
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setNotice('डेमो क्रेडेंशियल्स कॉपी हो गए!');
@@ -606,7 +652,10 @@ export default function AdminPanel() {
   };
 
   const shareDemoWhatsApp = (email: string, pass: string, name: string) => {
-    const msg = `*नमस्ते ${name}!*\n\nआपका *VijaySetu (विजयसेतु)* इलेक्शन मैनेजमेंट डेमो पोर्टल तैयार है:\n\n🔗 *लॉगिन लिंक:* https://vijaysetu.piyushassudani.in/login\n📧 *आईडी / ईमेल:* ${email}\n🔑 *पासवर्ड:* ${pass}\n\nपोर्टल में 25 सैंपल मतदाताओं का डेटा, 1-सेकंड पर्ची जनरेटर, लाइव पोल-डेस्क व जातिगत समीकरण पहले से सक्रिय हैं।\n\nकिसी भी सहायता के लिए संपर्क करें:\n*Roots Reach Media* - 📞 +91 72310 77770`;
+    const portalUrl = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')
+      ? `${window.location.origin}/login`
+      : 'https://vijaysetu.vercel.app/login';
+    const msg = `*नमस्ते ${name}!*\n\nआपका *VijaySetu (विजयसेतु)* इलेक्शन मैनेजमेंट डेमो पोर्टल तैयार है:\n\n🔗 *लॉगिन लिंक:* ${portalUrl}\n📧 *आईडी / ईमेल:* ${email}\n🔑 *पासवर्ड:* ${pass}\n\nपोर्टल में 25 सैंपल मतदाताओं का डेटा, 1-सेकंड पर्ची जनरेटर, लाइव पोल-डेस्क व जातिगत समीकरण पहले से सक्रिय हैं।\n\nकिसी भी सहायता के लिए संपर्क करें:\n*Roots Reach Media* - 📞 +91 72310 77770`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
@@ -795,6 +844,40 @@ export default function AdminPanel() {
       setError(updateError instanceof Error ? updateError.message : 'क्लाइंट सेटिंग सेव नहीं हुई।');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteOrganization = async () => {
+    if (!deletingTenant) return;
+    setIsDeletingClient(true);
+    setError('');
+    setNotice('');
+    try {
+      const response = await apiFetch(`/admin/organizations/${encodeURIComponent(deletingTenant.id)}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error(await getApiError(response, 'क्लाइंट डिलीट नहीं हो सका।'));
+
+      if (typeof window !== 'undefined') {
+        const activeOrg = localStorage.getItem('activeOrganizationId');
+        if (activeOrg === deletingTenant.id) {
+          localStorage.removeItem('activeOrganizationId');
+          localStorage.removeItem('activeOrganizationName');
+          window.dispatchEvent(new Event('organization-changed'));
+        }
+      }
+
+      setNotice(`'${deletingTenant.name}' और उसका सारा डेटा (मतदाता, कार्यकर्ता, पर्चियां) सफलतापूर्वक डिलीट कर दिया गया।`);
+      setDeletingTenant(null);
+      setDeleteConfirmText('');
+      if (editingTenant?.id === deletingTenant.id) {
+        setEditingTenant(null);
+      }
+      await loadOrganizations();
+    } catch (delError) {
+      setError(delError instanceof Error ? delError.message : 'क्लाइंट डिलीट नहीं हो सका।');
+    } finally {
+      setIsDeletingClient(false);
     }
   };
 
@@ -1030,24 +1113,113 @@ export default function AdminPanel() {
                   </label>
                   <label>अनुमत वार्ड <span className="optional-label">कॉमा से अलग; खाली = पूरा संगठन</span><input value={tenantWards} onChange={(event) => setTenantWards(event.target.value)} placeholder="वार्ड 1, वार्ड 2" /></label>
                 </div>
-                <fieldset className="feature-module-fieldset" style={{ marginTop: '24px' }}>
-                  <legend>इस क्लाइंट के लिए फीचर</legend>
-                  <div className="feature-module-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '15px' }}>
-                    {moduleOptions.map(([module, label]) => (
-                      <label key={module} style={{ whiteSpace: 'nowrap' }}><input type="checkbox" checked={tenantModules.includes(module)} onChange={() => toggleModule(module)} /> {label}</label>
-                    ))}
+                <fieldset
+                  style={{
+                    marginTop: '24px',
+                    padding: '16px 18px',
+                    borderRadius: '12px',
+                    border: '1.5px solid #e2e8f0',
+                    background: '#ffffff',
+                  }}
+                >
+                  <legend style={{ fontWeight: 700, color: '#0f172a', fontSize: '14px', padding: '0 8px' }}>
+                    इस क्लाइंट के लिए फीचर
+                  </legend>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                      gap: '10px',
+                      marginTop: '6px',
+                    }}
+                  >
+                    {moduleOptions.map(([module, label]) => {
+                      const isChecked = tenantModules.includes(module);
+                      return (
+                        <label
+                          key={module}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '9px',
+                            padding: '9px 12px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${isChecked ? '#86efac' : '#e2e8f0'}`,
+                            background: isChecked ? '#f0fdf4' : '#f8fafc',
+                            color: isChecked ? '#166534' : '#334155',
+                            fontWeight: isChecked ? 700 : 500,
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleModule(module)}
+                            style={{ width: '16px', height: '16px', accentColor: '#16a34a', cursor: 'pointer' }}
+                          />
+                          <span>{label}</span>
+                        </label>
+                      );
+                    })}
                   </div>
                 </fieldset>
 
-                <div style={{ marginTop: '16px', padding: '14px 18px', background: '#f0fdf4', borderRadius: '10px', border: '1px solid #bbf7d0', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: '#166534', cursor: 'pointer', margin: 0 }}>
-                    <input type="checkbox" checked={tenantWhatsappEnabled} onChange={(e) => setTenantWhatsappEnabled(e.target.checked)} />
-                    WhatsApp मैसेजिंग सेवा सक्षम करें
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '13px', color: '#166534' }}>
-                    प्रारंभिक WhatsApp क्रेडिट्स:
-                    <input type="number" min="0" value={tenantWhatsappCredits} onChange={(e) => setTenantWhatsappCredits(e.target.value)} style={{ width: '90px', padding: '4px 8px', borderRadius: '6px', border: '1px solid #86efac' }} />
-                  </label>
+                <div
+                  style={{
+                    marginTop: '16px',
+                    padding: '16px 18px',
+                    background: '#f0fdf4',
+                    borderRadius: '12px',
+                    border: '1.5px solid #bbf7d0',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 700, color: '#166534', cursor: 'pointer', margin: 0, fontSize: '14px' }}>
+                      <input
+                        type="checkbox"
+                        checked={tenantWhatsappEnabled}
+                        onChange={(e) => setTenantWhatsappEnabled(e.target.checked)}
+                        style={{ width: '17px', height: '17px', accentColor: '#16a34a', cursor: 'pointer' }}
+                      />
+                      <MessageCircle size={17} />
+                      WhatsApp मैसेजिंग सेवा सक्षम करें
+                    </label>
+                    <span style={{ fontSize: '11px', color: '#15803d', fontWeight: 600, background: '#dcfce7', padding: '2px 8px', borderRadius: '12px' }}>
+                      {tenantWhatsappEnabled ? 'चालू (Active)' : 'बंद (Disabled)'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', paddingTop: '8px', borderTop: '1px dashed #bbf7d0' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '13px', color: '#166534', fontWeight: 600 }}>
+                      प्रारंभिक WhatsApp क्रेडिट्स:
+                      <input
+                        type="number"
+                        min="0"
+                        value={tenantWhatsappCredits}
+                        onChange={(e) => setTenantWhatsappCredits(e.target.value)}
+                        style={{ width: '90px', padding: '6px 10px', borderRadius: '6px', border: '1.5px solid #86efac', background: '#ffffff', fontWeight: 700, fontSize: '14px', color: '#166534' }}
+                      />
+                    </label>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {['100', '500', '1000'].map((quick) => (
+                        <button
+                          key={quick}
+                          type="button"
+                          className="button-quiet"
+                          style={{ fontSize: '11px', padding: '3px 8px', background: '#ffffff', border: '1px solid #86efac', borderRadius: '4px', cursor: 'pointer', color: '#166534', fontWeight: 700 }}
+                          onClick={() => setTenantWhatsappCredits(quick)}
+                        >
+                          +{quick}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 {/* वैकल्पिक प्रारंभिक पर्ची विवरण */}
@@ -1115,100 +1287,219 @@ export default function AdminPanel() {
             </section>
 
             <section className="records-panel">
-              <div className="records-toolbar">
+              <div className="records-toolbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
                   <h2>क्लाइंट संगठन</h2>
                   <p>मॉड्यूल, वार्ड, पर्ची ब्रांडिंग, WhatsApp क्रेडिट और खाते की स्थिति नियंत्रित करें।</p>
                 </div>
-                <span className="panel-count">{organizations.length}</span>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 12px',
+                    borderRadius: '20px',
+                    background: '#e0f2fe',
+                    color: '#0369a1',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    width: 'fit-content',
+                    border: '1px solid #bae6fd',
+                  }}
+                >
+                  कुल {organizations.length} संगठन
+                </span>
               </div>
               {loading ? (
                 <div className="empty-state"><LoaderCircle size={20} className="spin" /><p>क्लाइंट लोड हो रहे हैं…</p></div>
               ) : organizations.length ? (
-                <div className="table-scroll">
-                  <table className="voter-table desk-table">
-                    <thead>
-                      <tr>
-                        <th>क्लाइंट संगठन</th>
-                        <th>वार्ड</th>
-                        <th>पर्ची ब्रांडिंग (प्रत्याशी)</th>
-                        <th>सक्षम फीचर</th>
-                        <th>कार्यकर्ता</th>
-                        <th>मतदाता</th>
-                        <th>WhatsApp कोटा</th>
-                        <th>स्थिति</th>
-                        <th>एक्शन</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {organizations.map((tenant) => (
-                        <tr key={tenant.id}>
-                          <td>
-                            <strong className="voter-name">{tenant.name}</strong>
-                            <div className="voter-subline">{tenant.id}</div>
-                          </td>
-                          <td>{tenant.wards.length ? tenant.wards.join(', ') : 'सभी'}</td>
-                          <td>
-                            {tenant.slipConfig?.candidateName ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                <strong style={{ fontSize: '13px', color: '#1e3a8a' }}>
-                                  {tenant.slipConfig.candidateName}
-                                </strong>
-                                <span style={{ fontSize: '11px', color: '#ea580c', background: '#fff7ed', padding: '1px 6px', borderRadius: '4px', border: '1px solid #fed7aa', display: 'inline-block', width: 'fit-content', fontWeight: 600 }}>
-                                  {tenant.slipConfig.partySymbolName || 'चिन्ह'} (#{tenant.slipConfig.evmNumber || '1'})
-                                </span>
-                              </div>
-                            ) : (
-                              <span style={{ fontSize: '12px', color: '#94a3b8' }}>डिफ़ॉल्ट</span>
-                            )}
-                          </td>
-                          <td>{tenant.modules.length}</td>
-                          <td>{tenant.activeWorkers} / 10</td>
-                          <td>{tenant.voterCount.toLocaleString('hi-IN')}</td>
-                          <td>
-                            {tenant.whatsappEnabled !== false ? (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#15803d', background: '#dcfce7', padding: '2px 8px', borderRadius: '12px' }}>
-                                {(tenant.whatsappCredits ?? 0).toLocaleString('hi-IN')} क्रेडिट
-                              </span>
-                            ) : (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#b91c1c', background: '#fee2e2', padding: '2px 8px', borderRadius: '12px' }}>
-                                अक्षम
-                              </span>
-                            )}
-                          </td>
-                          <td>
-                            <span className={`record-status ${tenant.isActive ? 'status-voted' : 'status-pending'}`}>
-                              {tenant.isActive ? 'सक्रिय' : 'बंद'}
+                <>
+                  {/* MOBILE VIEW (< 768px): Responsive Clean Client Cards */}
+                  <div className="mobile-card-view" style={{ padding: '10px' }}>
+                    {organizations.map((tenant) => (
+                      <div
+                        key={tenant.id}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '12px',
+                          padding: '14px',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                          <div>
+                            <strong style={{ fontSize: '15px', color: '#0f172a' }}>{tenant.name}</strong>
+                            <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>{tenant.id}</div>
+                          </div>
+                          <span className={`record-status ${tenant.isActive ? 'status-voted' : 'status-pending'}`}>
+                            {tenant.isActive ? 'सक्रिय' : 'बंद'}
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                          <span style={{ fontSize: '11px', background: '#f1f5f9', color: '#334155', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                            👥 {tenant.voterCount.toLocaleString('hi-IN')} मतदाता
+                          </span>
+                          <span style={{ fontSize: '11px', background: '#f1f5f9', color: '#334155', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                            👷 {tenant.activeWorkers}/10 कार्यकर्ता
+                          </span>
+                          <span style={{ fontSize: '11px', background: '#dcfce7', color: '#166534', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                            💬 {tenant.whatsappCredits ?? 0} क्रेडिट
+                          </span>
+                          {tenant.wards.length > 0 && (
+                            <span style={{ fontSize: '11px', background: '#e0f2fe', color: '#0369a1', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                              वार्ड: {tenant.wards.join(', ')}
                             </span>
-                          </td>
-                          <td style={{ whiteSpace: 'nowrap' }}>
-                            <div style={{ display: 'flex', gap: '6px' }}>
-                              <button
-                                className="button-secondary"
-                                type="button"
-                                style={{ padding: '4px 10px', fontSize: '12px', color: '#0369a1', borderColor: '#7dd3fc', background: '#f0f9ff' }}
-                                onClick={() => {
-                                  handleSelectBrandingOrg(tenant.id);
-                                  setActiveView('branding');
-                                }}
-                                title="इस क्लाइंट की पर्ची ब्रांडिंग कस्टमाइज़ करें"
-                              >
-                                <Ticket size={13} /> पर्ची ब्रांडिंग
-                              </button>
-                              <button
-                                className="button-quiet"
-                                type="button"
-                                onClick={() => setEditingTenant({ ...tenant, slipConfig: tenant.slipConfig || { ...defaultSlipConfig } })}
-                              >
-                                <Settings2 size={13} /> सेटिंग
-                              </button>
-                            </div>
-                          </td>
+                          )}
+                        </div>
+
+                        {tenant.slipConfig?.candidateName && (
+                          <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', padding: '6px 10px', borderRadius: '6px', marginBottom: '10px', fontSize: '12px' }}>
+                            प्रत्याशी: <strong style={{ color: '#1e3a8a' }}>{tenant.slipConfig.candidateName}</strong>
+                            {tenant.slipConfig.partySymbolName && (
+                              <span style={{ color: '#ea580c', marginLeft: '6px', fontWeight: 600 }}>
+                                ({tenant.slipConfig.partySymbolName})
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
+                          <button
+                            className="button-secondary"
+                            type="button"
+                            style={{ fontSize: '12px', padding: '6px 8px', justifyContent: 'center' }}
+                            onClick={() => {
+                              handleSelectBrandingOrg(tenant.id);
+                              setActiveView('branding');
+                            }}
+                          >
+                            <Ticket size={13} /> पर्ची ब्रांडिंग
+                          </button>
+                          <button
+                            className="button-quiet"
+                            type="button"
+                            style={{ fontSize: '12px', padding: '6px 8px', justifyContent: 'center', border: '1px solid #cbd5e1' }}
+                            onClick={() => setEditingTenant({ ...tenant, slipConfig: tenant.slipConfig || { ...defaultSlipConfig } })}
+                          >
+                            <Settings2 size={13} /> सेटिंग
+                          </button>
+                          <button
+                            className="button-quiet"
+                            type="button"
+                            style={{ color: '#dc2626', borderColor: '#fca5a5', background: '#fef2f2', padding: '6px 10px', fontSize: '12px' }}
+                            onClick={() => {
+                              setDeletingTenant(tenant);
+                              setDeleteConfirmText('');
+                            }}
+                            title="पूरा क्लाइंट और सारा डेटा डिलीट करें"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* DESKTOP VIEW (>= 769px): Full Sortable Table */}
+                  <div className="table-scroll desktop-table-view">
+                    <table className="voter-table desk-table">
+                      <thead>
+                        <tr>
+                          <th>क्लाइंट संगठन</th>
+                          <th>वार्ड</th>
+                          <th>पर्ची ब्रांडिंग (प्रत्याशी)</th>
+                          <th>सक्षम फीचर</th>
+                          <th>कार्यकर्ता</th>
+                          <th>मतदाता</th>
+                          <th>WhatsApp कोटा</th>
+                          <th>स्थिति</th>
+                          <th>एक्शन</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {organizations.map((tenant) => (
+                          <tr key={tenant.id}>
+                            <td>
+                              <strong className="voter-name">{tenant.name}</strong>
+                              <div className="voter-subline">{tenant.id}</div>
+                            </td>
+                            <td>{tenant.wards.length ? tenant.wards.join(', ') : 'सभी'}</td>
+                            <td>
+                              {tenant.slipConfig?.candidateName ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                  <strong style={{ fontSize: '13px', color: '#1e3a8a' }}>
+                                    {tenant.slipConfig.candidateName}
+                                  </strong>
+                                  <span style={{ fontSize: '11px', color: '#ea580c', background: '#fff7ed', padding: '1px 6px', borderRadius: '4px', border: '1px solid #fed7aa', display: 'inline-block', width: 'fit-content', fontWeight: 600 }}>
+                                    {tenant.slipConfig.partySymbolName || 'चिन्ह'} (#{tenant.slipConfig.evmNumber || '1'})
+                                  </span>
+                                </div>
+                              ) : (
+                                <span style={{ fontSize: '12px', color: '#94a3b8' }}>डिफ़ॉल्ट</span>
+                              )}
+                            </td>
+                            <td>{tenant.modules.length}</td>
+                            <td>{tenant.activeWorkers} / 10</td>
+                            <td>{tenant.voterCount.toLocaleString('hi-IN')}</td>
+                            <td>
+                              {tenant.whatsappEnabled !== false ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#15803d', background: '#dcfce7', padding: '2px 8px', borderRadius: '12px' }}>
+                                  {(tenant.whatsappCredits ?? 0).toLocaleString('hi-IN')} क्रेडिट
+                                </span>
+                              ) : (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#b91c1c', background: '#fee2e2', padding: '2px 8px', borderRadius: '12px' }}>
+                                  अक्षम
+                                </span>
+                              )}
+                            </td>
+                            <td>
+                              <span className={`record-status ${tenant.isActive ? 'status-voted' : 'status-pending'}`}>
+                                {tenant.isActive ? 'सक्रिय' : 'बंद'}
+                              </span>
+                            </td>
+                            <td style={{ whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                <button
+                                  className="button-secondary"
+                                  type="button"
+                                  style={{ padding: '4px 10px', fontSize: '12px', color: '#0369a1', borderColor: '#7dd3fc', background: '#f0f9ff' }}
+                                  onClick={() => {
+                                    handleSelectBrandingOrg(tenant.id);
+                                    setActiveView('branding');
+                                  }}
+                                  title="इस क्लाइंट की पर्ची ब्रांडिंग कस्टमाइज़ करें"
+                                >
+                                  <Ticket size={13} /> पर्ची ब्रांडिंग
+                                </button>
+                                <button
+                                  className="button-quiet"
+                                  type="button"
+                                  onClick={() => setEditingTenant({ ...tenant, slipConfig: tenant.slipConfig || { ...defaultSlipConfig } })}
+                                >
+                                  <Settings2 size={13} /> सेटिंग
+                                </button>
+                                <button
+                                  className="button-quiet"
+                                  type="button"
+                                  style={{ color: '#dc2626', borderColor: '#fca5a5', background: '#fef2f2' }}
+                                  onClick={() => {
+                                    setDeletingTenant(tenant);
+                                    setDeleteConfirmText('');
+                                  }}
+                                  title="पूरा क्लाइंट और उसका सारा डेटा हमेशा के लिए डिलीट करें"
+                                >
+                                  <Trash2 size={13} /> डिलीट
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               ) : (
                 <div className="empty-state"><strong>अभी कोई क्लाइंट नहीं</strong><p>पहला संगठन बनाने पर वह इस सूची में दिखेगा।</p></div>
               )}
@@ -1261,6 +1552,33 @@ export default function AdminPanel() {
 
               <form onSubmit={createDemoUser} className="modal-form">
                 <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                  <label>
+                    किस क्लाइंट / प्रत्याशी के लिए डेमो बनाना है?
+                    <select
+                      value={demoTargetOrgId}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setDemoTargetOrgId(val);
+                        if (val !== 'new') {
+                          const found = organizations.find((o) => o.id === val);
+                          if (found) {
+                            setDemoClientName(`डेमो - ${found.name}`);
+                          }
+                        } else {
+                          setDemoClientName('');
+                        }
+                      }}
+                      style={{ height: '40px' }}
+                    >
+                      <option value="new">✨ नया अलग डेमो क्लाइंट बनाएं (New Independent Client)</option>
+                      {organizations.map((org) => (
+                        <option key={org.id} value={org.id}>
+                          {org.name} {org.candidateName ? `(${org.candidateName})` : ''} • {org.voterCount ? `${org.voterCount.toLocaleString('hi-IN')} वोटर` : '0 वोटर'}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
                   <label>
                     क्लाइंट / प्रत्याशी का नाम (वैकल्पिक)
                     <input
@@ -1402,184 +1720,311 @@ export default function AdminPanel() {
                   <p>ऊपर दिए गए फॉर्म से नया डेमो खाता व 25 सैंपल मतदाताओं का डेटा तैयार करें।</p>
                 </div>
               ) : (
-                <div className="table-scroll">
-                  <table className="voter-table desk-table">
-                    <thead>
-                      <tr>
-                        <th>
-                          <SortButton label="क्लाइंट / नाम" field="name" type="alpha" currentSort={demoSort} onSort={handleDemoSort} />
-                        </th>
-                        <th>लॉगिन ईमेल / ID</th>
-                        <th>पासवर्ड</th>
-                        <th>
-                          <SortButton label="सैंपल वोटर्स" field="voterCount" type="numeric" currentSort={demoSort} onSort={handleDemoSort} />
-                        </th>
-                        <th>
-                          <SortButton label="अवस्था" field="status" type="alpha" currentSort={demoSort} onSort={handleDemoSort} />
-                        </th>
-                        <th>
-                          <SortButton label="तिथि" field="date" type="numeric" currentSort={demoSort} onSort={handleDemoSort} />
-                        </th>
-                        <th style={{ textAlign: 'right' }}>नियंत्रण व एक्शन</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedDemoUsers.map((user) => (
-                        <tr key={user.id}>
-                          <td>
-                            <strong className="voter-name">{user.name}</strong>
-                          </td>
-                          <td>
-                            <code style={{ background: '#f1f5f9', padding: '3px 6px', borderRadius: '4px', fontSize: '12px' }}>
-                              {user.email}
-                            </code>
-                          </td>
-                          <td>
-                            <code style={{ background: '#f1f5f9', padding: '3px 6px', borderRadius: '4px', fontSize: '12px', fontWeight: 700 }}>
-                              {user.password}
-                            </code>
-                          </td>
-                          <td>
-                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#225e46' }}>
-                              {user.voterCount} मतदाता
+                <>
+                  {/* MOBILE VIEW (< 768px): Clean, Unclipped Demo Account Cards */}
+                  <div className="mobile-card-view" style={{ padding: '10px' }}>
+                    {sortedDemoUsers.map((user) => (
+                      <div
+                        key={user.id}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '12px',
+                          padding: '14px',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                          <div>
+                            <strong style={{ fontSize: '15px', color: '#0f172a' }}>{user.name}</strong>
+                            <div style={{ fontSize: '11px', color: '#64748b' }}>
+                              {user.createdAt ? new Date(user.createdAt).toLocaleDateString('hi-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                            </div>
+                          </div>
+                          {user.isActive ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', padding: '3px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+                              🟢 सक्रिय
                             </span>
-                          </td>
-                          <td>
-                            {user.isActive ? (
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  background: '#dcfce7',
-                                  color: '#15803d',
-                                  border: '1px solid #86efac',
-                                  padding: '3px 10px',
-                                  borderRadius: '12px',
-                                  fontSize: '11px',
-                                  fontWeight: 800,
-                                }}
-                              >
-                                🟢 सक्रिय (Active)
-                              </span>
-                            ) : (
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  background: '#fee2e2',
-                                  color: '#b91c1c',
-                                  border: '1px solid #fca5a5',
-                                  padding: '3px 10px',
-                                  borderRadius: '12px',
-                                  fontSize: '11px',
-                                  fontWeight: 800,
-                                }}
-                              >
-                                🔴 बंद (Suspended)
-                              </span>
-                            )}
-                          </td>
-                          <td style={{ fontSize: '12px', color: '#64748b' }}>
-                            {user.createdAt ? new Date(user.createdAt).toLocaleDateString('hi-IN', { day: '2-digit', month: 'short' }) : '—'}
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                              {/* TOGGLE SUSPEND / ACTIVATE */}
-                              {user.isActive ? (
-                                <button
-                                  type="button"
-                                  onClick={() => void toggleDemoSuspend(user.id)}
-                                  style={{
-                                    background: '#fee2e2',
-                                    color: '#b91c1c',
-                                    border: '1px solid #fca5a5',
-                                    padding: '4px 10px',
-                                    borderRadius: '6px',
-                                    fontSize: '11.5px',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    transition: 'all 0.15s ease',
-                                  }}
-                                  title="इस खाते को तुरंत बंद करें"
-                                >
-                                  ⛔ सस्पेंड करें
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => void toggleDemoSuspend(user.id)}
-                                  style={{
-                                    background: '#dcfce7',
-                                    color: '#15803d',
-                                    border: '1px solid #86efac',
-                                    padding: '4px 10px',
-                                    borderRadius: '6px',
-                                    fontSize: '11.5px',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    transition: 'all 0.15s ease',
-                                  }}
-                                  title="इस खाते को पुनः चालू करें"
-                                >
-                                  ✅ चालू करें
-                                </button>
-                              )}
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', padding: '3px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+                              🔴 बंद (Suspended)
+                            </span>
+                          )}
+                        </div>
 
-                              {/* COPY CREDENTIALS */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', marginBottom: '10px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>लॉगिन आईडी:</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <code style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>{user.email}</code>
                               <button
                                 type="button"
                                 onClick={() => copyDemoCredentials(user.email, user.password, user.id)}
-                                className="button-secondary"
-                                style={{ padding: '4px 8px', fontSize: '11px' }}
-                                title="आईडी व पासवर्ड कॉपी करें"
+                                style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer' }}
                               >
-                                <Copy size={12} /> {copiedId === user.id ? 'कॉपी!' : 'कॉपी'}
-                              </button>
-
-                              {/* WHATSAPP SHARE */}
-                              <button
-                                type="button"
-                                onClick={() => shareDemoWhatsApp(user.email, user.password, user.name)}
-                                style={{
-                                  background: '#22c55e',
-                                  color: '#ffffff',
-                                  border: 'none',
-                                  padding: '4px 8px',
-                                  borderRadius: '6px',
-                                  fontSize: '11px',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                }}
-                                title="WhatsApp पर क्रेडेंशियल्स शेयर करें"
-                              >
-                                💬 WhatsApp
-                              </button>
-
-                              {/* DELETE DEMO */}
-                              <button
-                                type="button"
-                                onClick={() => void deleteDemoUser(user.id)}
-                                style={{
-                                  background: 'none',
-                                  border: '1px solid #e2e8f0',
-                                  color: '#94a3b8',
-                                  padding: '4px 8px',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                }}
-                                title="खाता व सैंपल डेटा डिलीट करें"
-                              >
-                                <Trash2 size={12} />
+                                <Copy size={11} />
                               </button>
                             </div>
-                          </td>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>पासवर्ड:</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <code style={{ fontSize: '12px', fontWeight: 800, color: '#166534' }}>{user.password}</code>
+                              <button
+                                type="button"
+                                onClick={() => copyDemoCredentials(user.email, user.password, user.id)}
+                                style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer' }}
+                              >
+                                <Copy size={11} />
+                              </button>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>सैंपल वोटर्स:</span>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#1e3a8a' }}>{user.voterCount} मतदाता</span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: '6px', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+                          <button
+                            type="button"
+                            onClick={() => void toggleDemoSuspend(user.id)}
+                            style={{
+                              background: user.isActive ? '#fee2e2' : '#dcfce7',
+                              color: user.isActive ? '#b91c1c' : '#15803d',
+                              border: `1px solid ${user.isActive ? '#fca5a5' : '#86efac'}`,
+                              padding: '6px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11.5px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {user.isActive ? '⛔ सस्पेंड' : '✅ चालू'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => shareDemoWhatsApp(user.email, user.password, user.name)}
+                            style={{
+                              background: '#22c55e',
+                              color: '#ffffff',
+                              border: 'none',
+                              padding: '6px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11.5px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <MessageCircle size={13} /> WhatsApp
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyDemoCredentials(user.email, user.password, user.id)}
+                            className="button-secondary"
+                            style={{ padding: '6px 8px', fontSize: '11px' }}
+                            title="आईडी व पासवर्ड कॉपी करें"
+                          >
+                            <Copy size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void deleteDemoUser(user.id)}
+                            style={{
+                              background: '#fff',
+                              border: '1px solid #fca5a5',
+                              color: '#dc2626',
+                              padding: '6px 8px',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                            }}
+                            title="खाता व सैंपल डेटा डिलीट करें"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* DESKTOP VIEW (>= 769px): Full Table */}
+                  <div className="table-scroll desktop-table-view">
+                    <table className="voter-table desk-table">
+                      <thead>
+                        <tr>
+                          <th>
+                            <SortButton label="क्लाइंट / नाम" field="name" type="alpha" currentSort={demoSort} onSort={handleDemoSort} />
+                          </th>
+                          <th>लॉगिन ईमेल / ID</th>
+                          <th>पासवर्ड</th>
+                          <th>
+                            <SortButton label="सैंपल वोटर्स" field="voterCount" type="numeric" currentSort={demoSort} onSort={handleDemoSort} />
+                          </th>
+                          <th>
+                            <SortButton label="अवस्था" field="status" type="alpha" currentSort={demoSort} onSort={handleDemoSort} />
+                          </th>
+                          <th>
+                            <SortButton label="तिथि" field="date" type="numeric" currentSort={demoSort} onSort={handleDemoSort} />
+                          </th>
+                          <th style={{ textAlign: 'right' }}>नियंत्रण व एक्शन</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {sortedDemoUsers.map((user) => (
+                          <tr key={user.id}>
+                            <td>
+                              <strong className="voter-name">{user.name}</strong>
+                            </td>
+                            <td>
+                              <code style={{ background: '#f1f5f9', padding: '3px 6px', borderRadius: '4px', fontSize: '12px' }}>
+                                {user.email}
+                              </code>
+                            </td>
+                            <td>
+                              <code style={{ background: '#f1f5f9', padding: '3px 6px', borderRadius: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                {user.password}
+                              </code>
+                            </td>
+                            <td>
+                              <span style={{ fontSize: '12px', fontWeight: 700, color: '#225e46' }}>
+                                {user.voterCount} मतदाता
+                              </span>
+                            </td>
+                            <td>
+                              {user.isActive ? (
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    background: '#dcfce7',
+                                    color: '#15803d',
+                                    border: '1px solid #86efac',
+                                    padding: '3px 10px',
+                                    borderRadius: '12px',
+                                    fontSize: '11px',
+                                    fontWeight: 800,
+                                  }}
+                                >
+                                  🟢 सक्रिय (Active)
+                                </span>
+                              ) : (
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    background: '#fee2e2',
+                                    color: '#b91c1c',
+                                    border: '1px solid #fca5a5',
+                                    padding: '3px 10px',
+                                    borderRadius: '12px',
+                                    fontSize: '11px',
+                                    fontWeight: 800,
+                                  }}
+                                >
+                                  🔴 बंद (Suspended)
+                                </span>
+                              )}
+                            </td>
+                            <td style={{ fontSize: '12px', color: '#64748b' }}>
+                              {user.createdAt ? new Date(user.createdAt).toLocaleDateString('hi-IN', { day: '2-digit', month: 'short' }) : '—'}
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                {user.isActive ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => void toggleDemoSuspend(user.id)}
+                                    style={{
+                                      background: '#fee2e2',
+                                      color: '#b91c1c',
+                                      border: '1px solid #fca5a5',
+                                      padding: '4px 10px',
+                                      borderRadius: '6px',
+                                      fontSize: '11.5px',
+                                      fontWeight: 700,
+                                      cursor: 'pointer',
+                                    }}
+                                    title="इस खाते को तुरंत बंद करें"
+                                  >
+                                    ⛔ सस्पेंड करें
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => void toggleDemoSuspend(user.id)}
+                                    style={{
+                                      background: '#dcfce7',
+                                      color: '#15803d',
+                                      border: '1px solid #86efac',
+                                      padding: '4px 10px',
+                                      borderRadius: '6px',
+                                      fontSize: '11.5px',
+                                      fontWeight: 700,
+                                      cursor: 'pointer',
+                                    }}
+                                    title="इस खाते को पुनः चालू करें"
+                                  >
+                                    ✅ चालू करें
+                                  </button>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => copyDemoCredentials(user.email, user.password, user.id)}
+                                  className="button-secondary"
+                                  style={{ padding: '4px 8px', fontSize: '11px' }}
+                                  title="आईडी व पासवर्ड कॉपी करें"
+                                >
+                                  <Copy size={12} /> {copiedId === user.id ? 'कॉपी!' : 'कॉपी'}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => shareDemoWhatsApp(user.email, user.password, user.name)}
+                                  style={{
+                                    background: '#22c55e',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    padding: '4px 8px',
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                  }}
+                                  title="WhatsApp पर क्रेडेंशियल्स शेयर करें"
+                                >
+                                  💬 WhatsApp
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => void deleteDemoUser(user.id)}
+                                  style={{
+                                    background: 'none',
+                                    border: '1px solid #e2e8f0',
+                                    color: '#94a3b8',
+                                    padding: '4px 8px',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                  }}
+                                  title="खाता व सैंपल डेटा डिलीट करें"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </section>
           </>
@@ -3055,11 +3500,339 @@ export default function AdminPanel() {
         )}
 
         {activeView === 'system' && (
-          <section className="feature-metrics">
-            <article className="metric-card"><span><DatabaseIcon /> Database</span><strong>{health?.database ?? '—'}</strong><small>सर्वर कनेक्शन जाँच</small></article>
-            <article className="metric-card metric-card-green"><span><ShieldCheck size={15} /> WhatsApp / Meta</span><strong>{health ? (health.metaReady ? 'Configured' : 'Not configured') : '—'}</strong><small>Credentials configured status only</small></article>
-            <article className="metric-card"><span><Activity size={15} /> API</span><strong>{health?.platform ?? '—'}</strong><small>{health?.checkedAt ? new Date(health.checkedAt).toLocaleString('hi-IN') : 'सिस्टम चेक'}</small></article>
-          </section>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Header with live refresh */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', background: '#fff', padding: '16px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: health?.database === 'connected' ? '#10b981' : '#f59e0b' }} />
+                  <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', margin: 0 }}>सिस्टम स्थिति व इन्फ्रास्ट्रक्चर मॉनिटर</h2>
+                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '20px', background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0' }}>
+                    ● 100% लाइव सर्वर टेलीमेट्री
+                  </span>
+                </div>
+                <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
+                  सर्वर ओएस (Darwin/Linux), वास्तविक होस्ट डिस्क, RAM मेमोरी व लाइव MongoDB ({health?.dbStats?.totalVoters ? `${health.dbStats.totalVoters.toLocaleString('hi-IN')} मतदाता` : 'voter_management'})
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '12px', color: '#64748b', background: '#f8fafc', padding: '6px 12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  अंतिम लाइव जाँच: {health?.checkedAt ? new Date(health.checkedAt).toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void loadHealth()}
+                  className="button-secondary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', fontSize: '13px' }}
+                >
+                  <RefreshCw size={14} /> रिफ्रेश करें
+                </button>
+              </div>
+            </div>
+
+            {/* Storage (512 GB SSD) & Memory (RAM) Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: '16px' }}>
+              {/* Storage Card */}
+              <div style={{ background: '#fff', borderRadius: '14px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <HardDrive size={20} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', margin: 0 }}>सर्वर स्टोरेज (NVMe SSD)</h3>
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>लाइव होस्ट डिस्क: {health?.disk?.totalGB ?? 512} GB SSD Tier</span>
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '3px 8px',
+                    borderRadius: '20px',
+                    background: (health?.disk?.usedPercent ?? 0) < 75 ? '#dcfce7' : (health?.disk?.usedPercent ?? 0) < 90 ? '#fef3c7' : '#fee2e2',
+                    color: (health?.disk?.usedPercent ?? 0) < 75 ? '#15803d' : (health?.disk?.usedPercent ?? 0) < 90 ? '#b45309' : '#b91c1c',
+                  }}>
+                    {(health?.disk?.usedPercent ?? 0) < 75 ? '● स्वस्थ / सामान्य' : (health?.disk?.usedPercent ?? 0) < 90 ? '● मध्यम' : '● अत्यधिक भरा'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <strong style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a' }}>
+                    {health?.disk?.usedGB ?? '—'} GB
+                  </strong>
+                  <span style={{ fontSize: '14px', color: '#64748b' }}>
+                    / {health?.disk?.usableTotalGB ?? health?.disk?.totalGB ?? 512} GB उपलब्ध OS ({health?.disk?.usedPercent ?? 0}% प्रयुक्त)
+                  </span>
+                </div>
+
+                {/* Progress Bar */}
+                <div style={{ width: '100%', height: '10px', background: '#f1f5f9', borderRadius: '10px', overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${Math.min(100, health?.disk?.usedPercent ?? 0)}%`,
+                      borderRadius: '10px',
+                      background: (health?.disk?.usedPercent ?? 0) < 75 ? 'linear-gradient(90deg, #10b981, #059669)' : (health?.disk?.usedPercent ?? 0) < 90 ? 'linear-gradient(90deg, #f59e0b, #d97706)' : 'linear-gradient(90deg, #ef4444, #dc2626)',
+                      transition: 'width 0.4s ease',
+                    }}
+                  />
+                </div>
+
+                {/* Storage breakdown details */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #f1f5f9', textAlign: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b' }}>कुल SSD हार्डवेयर</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{health?.disk?.totalGB ?? 512} GB</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b' }}>खाली स्थान (Free)</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#16a34a', marginTop: '2px' }}>{health?.disk?.freeGB ?? '—'} GB</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b' }}>उपलब्ध OS पार्टीशन</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', marginTop: '2px' }}>{health?.disk?.usableTotalGB ?? 460} GB</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Memory (RAM) Card */}
+              <div style={{ background: '#fff', borderRadius: '14px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Activity size={20} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', margin: 0 }}>सिस्टम मेमोरी (RAM)</h3>
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>सक्रिय प्रोसेस व ऐप्स</span>
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '3px 8px',
+                    borderRadius: '20px',
+                    background: (health?.memory?.usedPercent ?? 0) < 85 ? '#dcfce7' : '#fee2e2',
+                    color: (health?.memory?.usedPercent ?? 0) < 85 ? '#15803d' : '#b91c1c',
+                  }}>
+                    {(health?.memory?.usedPercent ?? 0) < 85 ? `● स्वस्थ (${health?.memory?.usedPercent ?? 0}%)` : `● उच्च भार (${health?.memory?.usedPercent ?? 0}%)`}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <strong style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a' }}>
+                    {health?.memory?.usedGB ?? '—'} GB
+                  </strong>
+                  <span style={{ fontSize: '14px', color: '#64748b' }}>
+                    / {health?.memory?.totalGB ?? '—'} GB कुल RAM ({health?.memory?.usedPercent ?? 0}% सक्रिय)
+                  </span>
+                </div>
+
+                {/* Progress Bar */}
+                <div style={{ width: '100%', height: '10px', background: '#f1f5f9', borderRadius: '10px', overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${Math.min(100, health?.memory?.usedPercent ?? 0)}%`,
+                      borderRadius: '10px',
+                      background: (health?.memory?.usedPercent ?? 0) < 85 ? 'linear-gradient(90deg, #10b981, #059669)' : 'linear-gradient(90deg, #f59e0b, #ef4444)',
+                      transition: 'width 0.4s ease',
+                    }}
+                  />
+                </div>
+
+                {/* RAM breakdown details */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #f1f5f9', textAlign: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b' }}>कुल RAM</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{health?.memory?.totalGB ?? '—'} GB</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b' }}>उपलब्ध / मुक्त</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#16a34a', marginTop: '2px' }}>{health?.memory?.freeGB ?? '—'} GB</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b' }}>Node Process हीप</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#2563eb', marginTop: '2px' }}>{health?.memory?.heapUsedMB ?? '—'} MB</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Database & Runtime Specs Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
+              {/* Database Metrics */}
+              <div style={{ background: '#fff', borderRadius: '14px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <DatabaseIcon />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', margin: 0 }}>डेटाबेस (MongoDB)</h3>
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>DB: {health?.dbStats?.dbName ?? 'vijaysetu'}</span>
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '3px 8px',
+                    borderRadius: '20px',
+                    background: health?.database === 'connected' ? '#dcfce7' : '#fee2e2',
+                    color: health?.database === 'connected' ? '#15803d' : '#b91c1c',
+                  }}>
+                    ● {health?.database === 'connected' ? 'कनेक्टेड' : 'डिस्कनेक्टेड'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                    <div style={{ fontSize: '12px', color: '#64748b' }}>कुल मतदाता</div>
+                    <strong style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
+                      {health?.dbStats?.totalVoters ? health.dbStats.totalVoters.toLocaleString('hi-IN') : '0'}
+                    </strong>
+                  </div>
+                  <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                    <div style={{ fontSize: '12px', color: '#64748b' }}>संगठन / क्लाइंट</div>
+                    <strong style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
+                      {health?.dbStats?.totalOrganizations ? health.dbStats.totalOrganizations.toLocaleString('hi-IN') : '0'}
+                    </strong>
+                  </div>
+                  <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                    <div style={{ fontSize: '12px', color: '#64748b' }}>कार्यकर्ता / ऑपरेटर</div>
+                    <strong style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
+                      {health?.dbStats?.totalUsers ? health.dbStats.totalUsers.toLocaleString('hi-IN') : '0'}
+                    </strong>
+                  </div>
+                  <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                    <div style={{ fontSize: '12px', color: '#64748b' }}>पर्ची डिस्पैच लॉग</div>
+                    <strong style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
+                      {health?.dbStats?.totalDispatches ? health.dbStats.totalDispatches.toLocaleString('hi-IN') : '0'}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Server & CPU Runtime Specs */}
+              <div style={{ background: '#fff', borderRadius: '14px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#faf5ff', color: '#9333ea', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Server size={20} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', margin: 0 }}>सर्वर व CPU विनिर्देश</h3>
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>हार्डवेयर व ऑपरेटिंग सिस्टम</span>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '20px', background: '#f3e8ff', color: '#7e22ce' }}>
+                    {health?.systemInfo?.cpuCores ?? '—'} Core CPU
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
+                    <span style={{ color: '#64748b' }}>प्रोसेसर मॉडल</span>
+                    <strong style={{ color: '#1e293b', textAlign: 'right', maxWidth: '60%' }} title={health?.systemInfo?.cpuModel}>
+                      {health?.systemInfo?.cpuModel?.split('@')[0] || health?.systemInfo?.cpuModel || 'Multi-Core'}
+                    </strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
+                    <span style={{ color: '#64748b' }}>प्लेटफॉर्म / OS</span>
+                    <strong style={{ color: '#1e293b' }}>{health?.systemInfo?.platform ?? 'Linux/macOS'}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
+                    <span style={{ color: '#64748b' }}>Node.js रनटाइम</span>
+                    <strong style={{ color: '#1e293b' }}>{health?.systemInfo?.nodeVersion ?? 'Node.js'}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
+                    <span style={{ color: '#64748b' }}>बैकएंड अपटाइम</span>
+                    <strong style={{ color: '#16a34a' }}>
+                      {health?.systemInfo?.uptimeSeconds
+                        ? `${Math.floor(health.systemInfo.uptimeSeconds / 3600)}h ${Math.floor((health.systemInfo.uptimeSeconds % 3600) / 60)}m`
+                        : 'सक्रिय'}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* WhatsApp Meta Gateway */}
+              <div style={{ background: '#fff', borderRadius: '14px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <ShieldCheck size={20} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', margin: 0 }}>WhatsApp / Meta API</h3>
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>मतदाता पर्ची क्लाउड मैसेजिंग</span>
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '3px 8px',
+                    borderRadius: '20px',
+                    background: health?.metaReady ? '#dcfce7' : '#f1f5f9',
+                    color: health?.metaReady ? '#15803d' : '#64748b',
+                  }}>
+                    ● {health?.metaReady ? 'सक्रिय (Configured)' : 'कॉन्फ़िगर नहीं'}
+                  </span>
+                </div>
+
+                <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5, margin: 0 }}>
+                  {health?.metaReady
+                    ? 'Meta WhatsApp Business API क्रेडेंशियल्स सक्रिय हैं। मतदाता पर्चियां सीधे मतदाताओं के WhatsApp पर ऑटो-सेंड की जा सकती हैं।'
+                    : 'Meta Cloud API पर्यावरण चर (META_WHATSAPP_TOKEN, META_PHONE_ID) वर्तमान में सेट नहीं हैं। वेब व स्थानीय पर्ची शेयरिंग उपलब्ध है।'}
+                </p>
+
+                <div style={{ marginTop: 'auto', background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #f1f5f9', fontSize: '12px', color: '#475569' }}>
+                  <strong>API स्थिति:</strong> {health?.metaReady ? 'उत्पादन के लिए तैयार' : 'डेस्कटॉप/वेब WhatsApp लिंक मोड'}
+                </div>
+              </div>
+
+              {/* High-Speed Caching & Redis Engine */}
+              <div style={{ background: '#fff', borderRadius: '14px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Zap size={20} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', margin: 0 }}>कैशिंग व Redis इंजन</h3>
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>Multi-Tier L1/L2 हाई-स्पीड कैश</span>
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '3px 8px',
+                    borderRadius: '20px',
+                    background: health?.cache?.isRedisReady ? '#dcfce7' : '#eff6ff',
+                    color: health?.cache?.isRedisReady ? '#15803d' : '#2563eb',
+                    border: `1px solid ${health?.cache?.isRedisReady ? '#bbf7d0' : '#bfdbfe'}`,
+                  }}>
+                    ● {health?.cache?.isRedisReady ? 'Redis L2 सक्रिय' : 'In-Memory L1 सक्रिय'}
+                  </span>
+                </div>
+
+                <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5, margin: 0 }}>
+                  मतदाता सूची, वार्ड समरी और फ़िल्टर एनालिटिक्स को डेटाबेस पर बिना अतिरिक्त लोड डाले <strong>5 मिलीसेकंड से कम</strong> में सर्व करने के लिए L1/L2 कैशिंग सक्रिय है।
+                </p>
+
+                <div style={{ marginTop: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #f1f5f9', fontSize: '12px' }}>
+                  <div>
+                    <span style={{ color: '#64748b' }}>सक्रिय कैश कीज़:</span>{' '}
+                    <strong style={{ color: '#0f172a' }}>{health?.cache?.memoryKeysCount ?? 0} ऑब्जेक्ट्स</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748b' }}>इंजन प्रकार:</span>{' '}
+                    <strong style={{ color: '#059669' }}>{health?.cache?.isRedisReady ? 'Redis Distributed' : 'Node-Cache (Local)'}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {editingTenant && (
@@ -3321,9 +4094,172 @@ export default function AdminPanel() {
                   </div>
                 </fieldset>
 
-                <label className="checkbox-label" style={{ marginTop: '14px' }}><input type="checkbox" checked={editingTenant.isActive} onChange={(event) => setEditingTenant({ ...editingTenant, isActive: event.target.checked })} /> क्लाइंट खाते को सक्रिय रखें</label>
-                <div className="modal-actions"><button className="button-secondary" type="button" onClick={() => setEditingTenant(null)}>रद्द करें</button><button className="button-primary" type="submit" disabled={saving}>{saving ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />} सेव करें</button></div>
+                <label className="checkbox-label" style={{ marginTop: '14px' }}>
+                  <input type="checkbox" checked={editingTenant.isActive} onChange={(event) => setEditingTenant({ ...editingTenant, isActive: event.target.checked })} />
+                  क्लाइंट खाते को सक्रिय रखें
+                </label>
+
+                <div className="modal-actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: '10px' }}>
+                  <button
+                    type="button"
+                    className="button-quiet"
+                    style={{ color: '#dc2626', borderColor: '#fca5a5', background: '#fef2f2', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600 }}
+                    onClick={() => {
+                      setDeletingTenant(editingTenant);
+                      setDeleteConfirmText('');
+                    }}
+                  >
+                    <Trash2 size={14} /> पूरा क्लाइंट और सारा डेटा डिलीट करें
+                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="button-secondary" type="button" onClick={() => setEditingTenant(null)}>रद्द करें</button>
+                    <button className="button-primary" type="submit" disabled={saving}>
+                      {saving ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />} सेव करें
+                    </button>
+                  </div>
+                </div>
               </form>
+            </section>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* CLIENT CASCADE DELETION CONFIRMATION MODAL (DANGER ZONE)         */}
+        {/* ================================================================= */}
+        {deletingTenant && (
+          <div
+            className="feature-modal-backdrop"
+            role="presentation"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget && !isDeletingClient) setDeletingTenant(null);
+            }}
+          >
+            <section
+              className="form-modal"
+              role="dialog"
+              aria-modal="true"
+              style={{
+                maxWidth: '520px',
+                width: '95%',
+                border: '1.5px solid #fca5a5',
+                boxShadow: '0 20px 25px -5px rgba(239, 68, 68, 0.15)',
+              }}
+            >
+              <div className="modal-heading" style={{ borderBottom: '1px solid #fee2e2', paddingBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      background: '#fee2e2',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#dc2626',
+                    }}
+                  >
+                    <AlertTriangle size={22} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#dc2626', letterSpacing: '0.08em' }}>
+                      DANGER ZONE · पूर्ण डेटा निष्कासन
+                    </span>
+                    <h2 style={{ fontSize: '19px', color: '#991b1b', margin: '2px 0 0' }}>क्लाइंट खाता डिलीट करें?</h2>
+                  </div>
+                </div>
+                <button
+                  className="icon-button"
+                  type="button"
+                  disabled={isDeletingClient}
+                  onClick={() => setDeletingTenant(null)}
+                  aria-label="बंद करें"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div style={{ padding: '16px 0', fontSize: '14px', color: '#334155', lineHeight: 1.6 }}>
+                <p style={{ margin: '0 0 12px', fontWeight: 600, color: '#0f172a' }}>
+                  आप क्लाइंट <span style={{ color: '#b91c1c', fontWeight: 800 }}>&quot;{deletingTenant.name}&quot;</span> ({deletingTenant.id}) को हटाने जा रहे हैं।
+                </p>
+
+                <div
+                  style={{
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    borderRadius: '8px',
+                    padding: '12px 14px',
+                    marginBottom: '16px',
+                    fontSize: '13px',
+                    color: '#991b1b',
+                  }}
+                >
+                  <strong>चेतावनी: निम्नलिखित सभी चीजें स्थायी रूप से (Permanently) डिलीट हो जाएंगी:</strong>
+                  <ul style={{ margin: '6px 0 0', paddingLeft: '20px' }}>
+                    <li>इस क्लाइंट के सभी <strong>{deletingTenant.voterCount.toLocaleString('hi-IN')} मतदाता</strong></li>
+                    <li>सभी कार्यकर्ता व एडमिन लॉगिन खाते ({deletingTenant.activeWorkers} सक्रिय कार्यकर्ता)</li>
+                    <li>सभी WhatsApp व पर्ची डिस्पैच रिकॉर्ड्स</li>
+                    <li>पर्ची ब्रांडिंग और कस्टमाइजेशन सेटिंग्स</li>
+                  </ul>
+                  <p style={{ margin: '8px 0 0', fontWeight: 700, color: '#b91c1c' }}>
+                    ⚠️ यह प्रक्रिया पूर्ववत (Undo) नहीं की जा सकती!
+                  </p>
+                </div>
+
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                  पुष्टि के लिए नीचे क्लाइंट का नाम लिखें: <strong style={{ color: '#0f172a' }}>{deletingTenant.name}</strong>
+                </label>
+                <input
+                  type="text"
+                  placeholder={deletingTenant.name}
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  disabled={isDeletingClient}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: '1.5px solid #cbd5e1',
+                    outline: 'none',
+                    fontSize: '14px',
+                  }}
+                />
+                {error && (
+                  <div className="notice notice-error" style={{ marginTop: '10px', fontSize: '13px' }}>
+                    {error}
+                  </div>
+                )}
+              </div>
+
+              <div className="modal-actions" style={{ borderTop: '1px solid #f1f5f9', paddingTop: '14px' }}>
+                <button
+                  className="button-secondary"
+                  type="button"
+                  disabled={isDeletingClient}
+                  onClick={() => {
+                    setDeletingTenant(null);
+                    setDeleteConfirmText('');
+                  }}
+                >
+                  रद्द करें
+                </button>
+                <button
+                  type="button"
+                  className="button-primary"
+                  style={{
+                    background: '#dc2626',
+                    borderColor: '#dc2626',
+                    color: '#ffffff',
+                    opacity: deleteConfirmText.trim() === deletingTenant.name.trim() ? 1 : 0.6,
+                  }}
+                  disabled={deleteConfirmText.trim() !== deletingTenant.name.trim() || isDeletingClient}
+                  onClick={() => void handleDeleteOrganization()}
+                >
+                  {isDeletingClient ? <LoaderCircle size={15} className="spin" /> : <Trash2 size={15} />}
+                  {isDeletingClient ? 'डिलीट हो रहा है...' : 'हाँ, पूरा क्लाइंट डिलीट करें'}
+                </button>
+              </div>
             </section>
           </div>
         )}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Circle, LoaderCircle, Printer, RefreshCw, Search } from 'lucide-react';
+import { Check, Circle, LoaderCircle, Printer, RefreshCw, Search, Vote } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
 import { SortButton, SortState } from '@/components/SortButton';
 
@@ -201,11 +201,21 @@ export default function PollDeskPage() {
     <div className="work-page">
       <div className="page-intro">
         <div>
-          <div className="eyebrow-label"><span className="eyebrow-mark" /> POLLING DESK</div>
+          <div className="eyebrow-label">
+            <span className="eyebrow-mark" />
+            <Vote size={12} strokeWidth={2.5} />
+            LIVE POLLING DESK
+          </div>
           <h1>मतदान डेस्क</h1>
           <p>बूथ पर मतदाता की स्थिति रिकॉर्ड करें। हर बदलाव सीधे डेटाबेस में सेव होता है।</p>
         </div>
-        <button className="button-secondary" type="button" onClick={() => void loadVoters(selectedWard)} disabled={loading || !selectedWard}>
+        <button
+          className="button-secondary"
+          type="button"
+          onClick={() => void loadVoters(selectedWard)}
+          disabled={loading || !selectedWard}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}
+        >
           {loading ? <LoaderCircle size={15} className="spin" /> : <RefreshCw size={15} />}
           रिफ्रेश
         </button>

@@ -57,7 +57,7 @@ export default function LoginPage() {
           <p>अपने ऑपरेशन्स डैशबोर्ड में साइन इन करें।</p>
         </div>
         <form className="auth-form" onSubmit={handleLogin}>
-          <label htmlFor="email">ईमेल पता या यूज़रनेम</label>
+          <label htmlFor="email">ईमेल आईडी या यूज़रनेम</label>
           <input
             id="email"
             type="text"
@@ -65,7 +65,7 @@ export default function LoginPage() {
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="name@example.com"
+            placeholder="ईमेल आईडी या यूज़रनेम लिखें (उदा. admin, demo_client)"
           />
           <div className="auth-password-label">
             <label htmlFor="password">पासवर्ड</label>
