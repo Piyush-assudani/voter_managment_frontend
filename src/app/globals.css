@@ -4264,13 +4264,21 @@ h4,
     line-height: 1.25 !important;
   }
   .voter-slip-ribbon {
-    padding: 6px 8px !important;
+    padding: 8px 10px !important;
+    min-height: 56px !important;
     gap: 8px !important;
     border-radius: 8px !important;
   }
+  .voter-slip-ribbon-content {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 1px !important;
+    line-height: 1.25 !important;
+  }
   .voter-slip-ribbon-evm-badge {
-    width: 30px !important;
-    height: 30px !important;
+    width: 32px !important;
+    height: 32px !important;
     font-size: 18px !important;
     border-radius: 6px !important;
   }
@@ -4286,13 +4294,20 @@ h4,
     padding: 6px 8px !important;
     border-radius: 8px !important;
     border-width: 1.5px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
   .voter-slip-metric-label {
     font-size: 11px !important;
+    line-height: 1.2 !important;
+    margin-bottom: 1px !important;
   }
   .voter-slip-metric-num {
     font-size: 26px !important;
-    margin-top: 2px !important;
+    margin-top: 0 !important;
+    line-height: 1 !important;
   }
   .voter-slip-voter-table {
     font-size: 12px !important;
@@ -4397,7 +4412,8 @@ h4,
     font-size: 9.5px !important;
   }
   .voter-slip-ribbon {
-    padding: 5px 6px !important;
+    padding: 6px 8px !important;
+    min-height: 48px !important;
     gap: 6px !important;
   }
   .voter-slip-ribbon-evm-badge {
@@ -4411,6 +4427,8 @@ h4,
   }
   .voter-slip-metric-num {
     font-size: 22px !important;
+    line-height: 1 !important;
+    margin-top: 0 !important;
   }
   .voter-slip-voter-label {
     width: 86px !important;

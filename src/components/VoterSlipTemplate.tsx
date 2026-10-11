@@ -1078,7 +1078,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             background: 'linear-gradient(90deg, #ea580c 0%, #c2410c 14%, #1d4ed8 40%, #1e3a8a 100%)',
             borderRadius: '10px',
             padding: '10px 14px',
-            minHeight: '60px',
+            minHeight: '62px',
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
@@ -1093,8 +1093,8 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             style={{
               background: '#ffffff',
               color: '#ea580c',
-              width: '40px',
-              height: '40px',
+              width: '42px',
+              height: '42px',
               borderRadius: '8px',
               display: 'flex',
               alignItems: 'center',
@@ -1113,7 +1113,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                 title="EVM क्रम संख्या बदलें"
                 className="voter-slip-ribbon-evm-input"
                 style={{
-                  width: '30px',
+                  width: '32px',
                   textAlign: 'center',
                   color: '#ea580c',
                   fontSize: '20px',
@@ -1137,30 +1137,33 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',
+              gap: '2px',
               fontFamily: 'var(--font-anek-devanagari), var(--font-noto-sans-devanagari), "Anek Devanagari", "Noto Sans Devanagari", sans-serif',
               overflow: 'visible',
             }}
           >
             <div
               style={{
-                fontSize: '13.5px',
+                fontSize: '13px',
                 fontWeight: 800,
                 letterSpacing: 'normal',
-                lineHeight: 1.45,
+                lineHeight: 1.25,
                 color: '#ffffff',
                 textRendering: 'geometricPrecision',
+                margin: 0,
+                padding: 0,
               }}
             >
               ईवीएम / मतपत्र क्रम संख्या: {merged.evmNumber || '1'}
             </div>
             <div
               style={{
-                fontSize: '13px',
-                fontWeight: 700,
+                fontSize: '13.5px',
+                fontWeight: 800,
                 opacity: 0.98,
-                lineHeight: 1.45,
-                marginTop: '3px',
-                paddingBottom: '2px',
+                lineHeight: 1.25,
+                margin: 0,
+                padding: 0,
                 letterSpacing: 'normal',
                 color: '#ffffff',
                 textRendering: 'geometricPrecision',
@@ -1197,7 +1200,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             style={{
               background: '#ffffff',
               borderRadius: '7px',
-              padding: '3px 10px',
+              padding: '4px 10px',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
@@ -1224,14 +1227,18 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               background: '#f0f7ff',
               border: '2px solid #60a5fa',
               borderRadius: '10px',
-              padding: '10px 14px',
+              padding: '8px 12px 10px 12px',
               textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <div className="voter-slip-metric-label" style={{ color: '#1e3a8a', fontSize: '12.5px', fontWeight: 700, letterSpacing: 'normal' }}>
+            <div className="voter-slip-metric-label" style={{ color: '#1e3a8a', fontSize: '12px', fontWeight: 700, letterSpacing: 'normal', lineHeight: 1.2, marginBottom: '2px' }}>
               भाग संख्या (PART)
             </div>
-            <div className="voter-slip-metric-num" style={{ color: '#1e3a8a', fontSize: '36px', fontWeight: 900, lineHeight: 1.1, marginTop: '4px' }}>
+            <div className="voter-slip-metric-num" style={{ color: '#1e3a8a', fontSize: '34px', fontWeight: 900, lineHeight: 1, margin: 0, padding: 0 }}>
               {part}
             </div>
           </div>
@@ -1243,14 +1250,18 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               background: '#f0f7ff',
               border: '2px solid #60a5fa',
               borderRadius: '10px',
-              padding: '10px 14px',
+              padding: '8px 12px 10px 12px',
               textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <div className="voter-slip-metric-label" style={{ color: '#ea580c', fontSize: '12.5px', fontWeight: 700, letterSpacing: 'normal' }}>
+            <div className="voter-slip-metric-label" style={{ color: '#ea580c', fontSize: '12px', fontWeight: 700, letterSpacing: 'normal', lineHeight: 1.2, marginBottom: '2px' }}>
               क्रम संख्या (SL. NO.)
             </div>
-            <div className="voter-slip-metric-num" style={{ color: '#ea580c', fontSize: '36px', fontWeight: 900, lineHeight: 1.1, marginTop: '4px' }}>
+            <div className="voter-slip-metric-num" style={{ color: '#ea580c', fontSize: '34px', fontWeight: 900, lineHeight: 1, margin: 0, padding: 0 }}>
               {serial}
             </div>
           </div>
