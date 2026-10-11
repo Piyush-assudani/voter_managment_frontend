@@ -21,7 +21,7 @@ import {
 import { apiFetch, getApiError } from '@/lib/api';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
 import { ImageCropModal } from '@/components/ImageCropModal';
-import { downloadSlip } from '@/lib/downloadSlip';
+import { downloadSlip, downloadBulkSlipsAsZip } from '@/lib/downloadSlip';
 import { SortButton, SortState } from '@/components/SortButton';
 import { WhatsAppLogo } from '@/components/WhatsAppLogo';
 
@@ -139,6 +139,8 @@ export default function SlipsPage() {
   // Bulk Print Mode
   const [bulkMode, setBulkMode] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isDownloadingBulkZip, setIsDownloadingBulkZip] = useState(false);
+  const [bulkZipProgress, setBulkZipProgress] = useState({ current: 0, total: 0 });
   const [sort, setSort] = useState<SortState>({ field: 'serialNo', direction: 'asc' });
 
   const handleSort = (field: string) => {
@@ -720,6 +722,26 @@ export default function SlipsPage() {
             </div>
             <button className="button-primary" type="button" onClick={handlePrint}>
               <Printer size={15} /> पूरी शीट प्रिंट करें
+            </button>
+            <button
+              className="button-primary"
+              type="button"
+              disabled={isDownloadingBulkZip || sortedVoters.length === 0}
+              onClick={async () => {
+                setIsDownloadingBulkZip(true);
+                setBulkZipProgress({ current: 0, total: sortedVoters.length });
+                await downloadBulkSlipsAsZip(sortedVoters, slipConfig, (current, total) => {
+                  setBulkZipProgress({ current, total });
+                });
+                setIsDownloadingBulkZip(false);
+              }}
+              style={{ background: '#1d4ed8', borderColor: '#2563eb' }}
+            >
+              {isDownloadingBulkZip ? (
+                <><LoaderCircle size={15} className="spin" /> ZIP बन रहा... ({bulkZipProgress.current}/{bulkZipProgress.total})</>
+              ) : (
+                <><Download size={15} /> बल्क ZIP डाउनलोड (सभी JPG)</>  
+              )}
             </button>
           </div>
 

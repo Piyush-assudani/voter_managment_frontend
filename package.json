@@ -9,7 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@types/jszip": "^3.4.0",
     "html2canvas": "^1.4.1",
+    "jszip": "^3.10.2",
     "lucide-react": "^1.52.0",
     "next": "16.4.0",
     "react": "19.3.0",

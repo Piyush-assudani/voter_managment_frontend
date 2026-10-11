@@ -2,7 +2,7 @@ import html2canvas from 'html2canvas';
 import { createRoot } from 'react-dom/client';
 import React from 'react';
 import { VoterSlipTemplate, SlipConfig, VoterSlipData } from '../components/VoterSlipTemplate';
-import { downloadDataUrl } from './fileDownload';
+import { downloadDataUrl, downloadBlob } from './fileDownload';
 
 export const generateSlipImage = async (
   voter: VoterSlipData,
@@ -191,6 +191,53 @@ export const downloadSlip = async (
   } catch (err) {
     console.error('Failed to download slip:', err);
     alert('पर्ची डाउनलोड नहीं हो सकी। कृपया दोबारा प्रयास करें।');
+    return false;
+  }
+};
+
+export const downloadBulkSlipsAsZip = async (
+  votersList: VoterSlipData[],
+  slipConfig?: SlipConfig,
+  onProgress?: (current: number, total: number) => void
+): Promise<boolean> => {
+  if (!votersList || votersList.length === 0) return false;
+
+  try {
+    const JSZip = (await import('jszip')).default;
+    const zip = new JSZip();
+    const candidateFolder = (slipConfig?.candidateName || 'VoterSlips').replace(/[^a-zA-Z0-9\u0900-\u097F_-]/g, '_');
+    const folder = zip.folder(candidateFolder) || zip;
+
+    for (let i = 0; i < votersList.length; i++) {
+      const voter = votersList[i];
+      if (onProgress) onProgress(i + 1, votersList.length);
+      try {
+        const dataUrl = await generateSlipImage(voter, slipConfig);
+        const base64Data = dataUrl.replace(/^data:image\/(jpeg|png|webp);base64,/, '');
+        const serialPadded = String(voter.serialNo || i + 1).padStart(4, '0');
+        const safeName = (voter.nameHi || voter.nameEn || 'voter').replace(/[^a-zA-Z0-9\u0900-\u097F_-]/g, '_');
+        const epicClean = (voter.epic || '').replace(/[^a-zA-Z0-9_-]/g, '');
+        const filename = `${serialPadded}_${epicClean || 'slip'}_${safeName}.jpg`;
+        folder.file(filename, base64Data, { base64: true });
+      } catch (itemErr) {
+        console.warn(`Failed to generate slip for voter ${voter.epic}:`, itemErr);
+      }
+      // Small pause to yield main thread
+      await new Promise((r) => setTimeout(r, 20));
+    }
+
+    const zipBlob = await zip.generateAsync({
+      type: 'blob',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 },
+    });
+
+    const zipFileName = `VoterSlips_Bulk_${Date.now()}.zip`;
+    await downloadBlob(zipBlob, zipFileName);
+    return true;
+  } catch (err) {
+    console.error('Failed to create bulk zip:', err);
+    alert('बल्क ज़िप तैयार करने में समस्या आई। कृपया पुनः प्रयास करें।');
     return false;
   }
 };

@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
-import { downloadSlip } from '@/lib/downloadSlip';
+import { downloadSlip, downloadBulkSlipsAsZip } from '@/lib/downloadSlip';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
 import { WhatsAppLogo } from '@/components/WhatsAppLogo';
 
@@ -619,16 +619,17 @@ export default function VoterDirectoryPage() {
   const handleBulkDownload = async () => {
     if (selectedIds.length === 0) return;
     setIsDownloading(true);
-    setActionMessage('पर्चियां डाउनलोड हो रही हैं, कृपया प्रतीक्षा करें...');
+    setActionMessage('पर्चियों का ZIP तैयार हो रहा है, कृपया प्रतीक्षा करें...');
     const selectedVoters = voters.filter((v) => selectedIds.includes(v._id));
 
-    for (const voter of selectedVoters) {
-      await downloadSlip(voter, slipConfig);
-      await new Promise((r) => setTimeout(r, 400));
-    }
+    const success = await downloadBulkSlipsAsZip(selectedVoters, slipConfig, (current, total) => {
+      setActionMessage(`ZIP तैयार हो रहा: ${current}/${total} पर्चियां...`);
+    });
 
     setIsDownloading(false);
-    setActionMessage(`${selectedVoters.length} पर्चियां सफलतापूर्वक डाउनलोड की गईं।`);
+    if (success) {
+      setActionMessage(`${selectedVoters.length} पर्चियों का ZIP सफलतापूर्वक डाउनलोड हुआ।`);
+    }
     setSelectedIds([]);
   };
 

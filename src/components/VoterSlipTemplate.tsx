@@ -245,7 +245,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
     return cleanHi || cleanEn || fallback;
   };
 
-  const voterName = formatName(voter.nameHi, voter.nameEn, 'जबरा राम / Jabra Ram');
+  const voterName = formatName(voter.nameEn, voter.nameHi, 'जबरा राम / Jabra Ram');
 
   const relLabel = voter.relationType === 'husband' || voter.relationType === 'पति' 
     ? 'पति' 
@@ -253,7 +253,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
     ? 'माता'
     : 'पिता';
 
-  const relativeName = formatName(voter.relativeNameHi, voter.relativeNameEn, 'नरिगा राम / Nariga Ram');
+  const relativeName = formatName(voter.relativeNameEn, voter.relativeNameHi, 'नरिगा राम / Nariga Ram');
 
   const ward = (voter.wardNo || '82').replace(/^(वार्ड|Ward)\s*/i, '');
   const part = (voter.partNo || '1').replace(/^(भाग|Part)\s*/i, '');
