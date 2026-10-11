@@ -2,9 +2,9 @@
 
 import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Activity, AlertCircle, AlertTriangle, Check, ChevronDown, ChevronRight, Copy, Cpu, Download, Eye, EyeOff, FileSpreadsheet,
-  FileText, HardDrive, KeyRound, Layers, LoaderCircle, MapPin, MessageCircle, Phone, Plus, RefreshCw,
-  Server, Settings2, ShieldCheck, Sparkles, Tag, Ticket, Trash2, Upload, User, UserPlus, UsersRound, X, Zap,
+  AlertCircle, AlertTriangle, Check, ChevronDown, ChevronRight, Copy, Download, Eye, EyeOff, FileSpreadsheet,
+  FileText, KeyRound, Layers, LoaderCircle, MapPin, MessageCircle, Phone, Plus, RefreshCw,
+  Settings2, Sparkles, Tag, Ticket, Trash2, Upload, User, UserPlus, UsersRound, X,
 } from 'lucide-react';
 import DashboardShell from '@/app/(dashboard)/DashboardShell';
 import AccountsManager from '@/components/AccountsManager';
@@ -121,48 +121,6 @@ interface AdminVoter {
   organizationId: string;
 }
 
-interface SystemHealth {
-  database: string;
-  metaReady: boolean;
-  platform: string;
-  checkedAt: string;
-  disk?: {
-    totalGB: number;
-    usableTotalGB?: number;
-    usedGB: number;
-    freeGB: number;
-    usedPercent: number;
-  };
-  cache?: {
-    engine: string;
-    isRedisReady: boolean;
-    memoryKeysCount: number;
-    redisConfigured: boolean;
-  };
-  memory?: {
-    totalGB: number;
-    usedGB: number;
-    freeGB: number;
-    usedPercent: number;
-    heapUsedMB: number;
-  };
-  systemInfo?: {
-    cpuModel: string;
-    cpuCores: number;
-    loadAvg: number[];
-    platform: string;
-    nodeVersion: string;
-    uptimeSeconds: number;
-    systemUptimeSeconds: number;
-  };
-  dbStats?: {
-    totalVoters: number;
-    totalOrganizations: number;
-    totalUsers: number;
-    totalDispatches: number;
-    dbName: string;
-  };
-}
 
 interface UploadJob {
   id: string;
@@ -203,7 +161,7 @@ interface DemoUserRecord {
   createdAt: string;
 }
 
-type AdminView = 'tenants' | 'demo' | 'branding' | 'leads' | 'records' | 'users' | 'import' | 'export' | 'system';
+type AdminView = 'tenants' | 'demo' | 'branding' | 'leads' | 'records' | 'users' | 'import' | 'export';
 
 export default function AdminPanel() {
   const [activeView, setActiveView] = useState<AdminView>('tenants');
@@ -212,7 +170,6 @@ export default function AdminPanel() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeletingClient, setIsDeletingClient] = useState(false);
   const [voters, setVoters] = useState<AdminVoter[]>([]);
-  const [health, setHealth] = useState<SystemHealth | null>(null);
   const [demoUsers, setDemoUsers] = useState<DemoUserRecord[]>([]);
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoGenerating, setDemoGenerating] = useState(false);
@@ -478,11 +435,6 @@ export default function AdminPanel() {
     }
   }, [organizationId]);
 
-  const loadHealth = useCallback(async () => {
-    const response = await apiFetch('/admin/system-health', { cache: 'no-store' });
-    if (!response.ok) throw new Error(await getApiError(response, 'सिस्टम स्थिति लोड नहीं हुई।'));
-    setHealth(await response.json() as SystemHealth);
-  }, []);
 
   const loadPdfJobs = useCallback(async () => {
     if (activeView !== 'import') return;
@@ -684,17 +636,16 @@ export default function AdminPanel() {
       if (activeView === 'records') await Promise.all([loadOrganizations(), loadVoters()]);
       else if (activeView === 'demo') await loadDemoUsers();
       else if (activeView === 'leads') await loadLeads();
-      else if (activeView === 'tenants' || activeView === 'branding' || activeView === 'users' || activeView === 'import') {
+      else if (activeView === 'tenants' || activeView === 'branding' || activeView === 'users' || activeView === 'import' || activeView === 'export') {
         await loadOrganizations();
         await loadPdfJobs();
       }
-      else await loadHealth();
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'एडमिन जानकारी लोड नहीं हुई।');
     } finally {
       setLoading(false);
     }
-  }, [activeView, loadHealth, loadOrganizations, loadVoters, loadPdfJobs, loadLeads, loadDemoUsers]);
+  }, [activeView, loadOrganizations, loadVoters, loadPdfJobs, loadLeads, loadDemoUsers]);
 
   useEffect(() => { void Promise.resolve().then(() => loadPageData()); }, [loadPageData]);
   useEffect(() => { void loadLeads(); }, [loadLeads]);
@@ -1042,7 +993,6 @@ export default function AdminPanel() {
             { key: 'users', label: 'सभी अकाउंट', Icon: UserPlus },
             { key: 'import', label: 'डेटा इम्पोर्ट', Icon: Upload },
             { key: 'export', label: 'डेटा एक्सपोर्ट', Icon: Download },
-            { key: 'system', label: 'सिस्टम स्थिति', Icon: Activity },
           ] as const).map(({ key, label, Icon }) => (
             <button className={`admin-tab ${activeView === key ? 'is-active' : ''}`} key={key} type="button" onClick={() => { setActiveView(key); setError(''); }}>
               <Icon size={15} /> {label}
@@ -3499,341 +3449,7 @@ export default function AdminPanel() {
           </section>
         )}
 
-        {activeView === 'system' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* Header with live refresh */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', background: '#fff', padding: '16px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: health?.database === 'connected' ? '#10b981' : '#f59e0b' }} />
-                  <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', margin: 0 }}>सिस्टम स्थिति व इन्फ्रास्ट्रक्चर मॉनिटर</h2>
-                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '20px', background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0' }}>
-                    ● 100% लाइव सर्वर टेलीमेट्री
-                  </span>
-                </div>
-                <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
-                  सर्वर ओएस (Darwin/Linux), वास्तविक होस्ट डिस्क, RAM मेमोरी व लाइव MongoDB ({health?.dbStats?.totalVoters ? `${health.dbStats.totalVoters.toLocaleString('hi-IN')} मतदाता` : 'voter_management'})
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '12px', color: '#64748b', background: '#f8fafc', padding: '6px 12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                  अंतिम लाइव जाँच: {health?.checkedAt ? new Date(health.checkedAt).toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => void loadHealth()}
-                  className="button-secondary"
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', fontSize: '13px' }}
-                >
-                  <RefreshCw size={14} /> रिफ्रेश करें
-                </button>
-              </div>
-            </div>
 
-            {/* Storage (512 GB SSD) & Memory (RAM) Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: '16px' }}>
-              {/* Storage Card */}
-              <div style={{ background: '#fff', borderRadius: '14px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <HardDrive size={20} />
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', margin: 0 }}>सर्वर स्टोरेज (NVMe SSD)</h3>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>लाइव होस्ट डिस्क: {health?.disk?.totalGB ?? 512} GB SSD Tier</span>
-                    </div>
-                  </div>
-                  <span style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '3px 8px',
-                    borderRadius: '20px',
-                    background: (health?.disk?.usedPercent ?? 0) < 75 ? '#dcfce7' : (health?.disk?.usedPercent ?? 0) < 90 ? '#fef3c7' : '#fee2e2',
-                    color: (health?.disk?.usedPercent ?? 0) < 75 ? '#15803d' : (health?.disk?.usedPercent ?? 0) < 90 ? '#b45309' : '#b91c1c',
-                  }}>
-                    {(health?.disk?.usedPercent ?? 0) < 75 ? '● स्वस्थ / सामान्य' : (health?.disk?.usedPercent ?? 0) < 90 ? '● मध्यम' : '● अत्यधिक भरा'}
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                  <strong style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a' }}>
-                    {health?.disk?.usedGB ?? '—'} GB
-                  </strong>
-                  <span style={{ fontSize: '14px', color: '#64748b' }}>
-                    / {health?.disk?.usableTotalGB ?? health?.disk?.totalGB ?? 512} GB उपलब्ध OS ({health?.disk?.usedPercent ?? 0}% प्रयुक्त)
-                  </span>
-                </div>
-
-                {/* Progress Bar */}
-                <div style={{ width: '100%', height: '10px', background: '#f1f5f9', borderRadius: '10px', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      height: '100%',
-                      width: `${Math.min(100, health?.disk?.usedPercent ?? 0)}%`,
-                      borderRadius: '10px',
-                      background: (health?.disk?.usedPercent ?? 0) < 75 ? 'linear-gradient(90deg, #10b981, #059669)' : (health?.disk?.usedPercent ?? 0) < 90 ? 'linear-gradient(90deg, #f59e0b, #d97706)' : 'linear-gradient(90deg, #ef4444, #dc2626)',
-                      transition: 'width 0.4s ease',
-                    }}
-                  />
-                </div>
-
-                {/* Storage breakdown details */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #f1f5f9', textAlign: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>कुल SSD हार्डवेयर</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{health?.disk?.totalGB ?? 512} GB</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>खाली स्थान (Free)</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#16a34a', marginTop: '2px' }}>{health?.disk?.freeGB ?? '—'} GB</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>उपलब्ध OS पार्टीशन</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', marginTop: '2px' }}>{health?.disk?.usableTotalGB ?? 460} GB</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Memory (RAM) Card */}
-              <div style={{ background: '#fff', borderRadius: '14px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Activity size={20} />
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', margin: 0 }}>सिस्टम मेमोरी (RAM)</h3>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>सक्रिय प्रोसेस व ऐप्स</span>
-                    </div>
-                  </div>
-                  <span style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '3px 8px',
-                    borderRadius: '20px',
-                    background: (health?.memory?.usedPercent ?? 0) < 85 ? '#dcfce7' : '#fee2e2',
-                    color: (health?.memory?.usedPercent ?? 0) < 85 ? '#15803d' : '#b91c1c',
-                  }}>
-                    {(health?.memory?.usedPercent ?? 0) < 85 ? `● स्वस्थ (${health?.memory?.usedPercent ?? 0}%)` : `● उच्च भार (${health?.memory?.usedPercent ?? 0}%)`}
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                  <strong style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a' }}>
-                    {health?.memory?.usedGB ?? '—'} GB
-                  </strong>
-                  <span style={{ fontSize: '14px', color: '#64748b' }}>
-                    / {health?.memory?.totalGB ?? '—'} GB कुल RAM ({health?.memory?.usedPercent ?? 0}% सक्रिय)
-                  </span>
-                </div>
-
-                {/* Progress Bar */}
-                <div style={{ width: '100%', height: '10px', background: '#f1f5f9', borderRadius: '10px', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      height: '100%',
-                      width: `${Math.min(100, health?.memory?.usedPercent ?? 0)}%`,
-                      borderRadius: '10px',
-                      background: (health?.memory?.usedPercent ?? 0) < 85 ? 'linear-gradient(90deg, #10b981, #059669)' : 'linear-gradient(90deg, #f59e0b, #ef4444)',
-                      transition: 'width 0.4s ease',
-                    }}
-                  />
-                </div>
-
-                {/* RAM breakdown details */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #f1f5f9', textAlign: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>कुल RAM</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{health?.memory?.totalGB ?? '—'} GB</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>उपलब्ध / मुक्त</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#16a34a', marginTop: '2px' }}>{health?.memory?.freeGB ?? '—'} GB</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>Node Process हीप</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#2563eb', marginTop: '2px' }}>{health?.memory?.heapUsedMB ?? '—'} MB</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Database & Runtime Specs Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
-              {/* Database Metrics */}
-              <div style={{ background: '#fff', borderRadius: '14px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <DatabaseIcon />
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', margin: 0 }}>डेटाबेस (MongoDB)</h3>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>DB: {health?.dbStats?.dbName ?? 'vijaysetu'}</span>
-                    </div>
-                  </div>
-                  <span style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '3px 8px',
-                    borderRadius: '20px',
-                    background: health?.database === 'connected' ? '#dcfce7' : '#fee2e2',
-                    color: health?.database === 'connected' ? '#15803d' : '#b91c1c',
-                  }}>
-                    ● {health?.database === 'connected' ? 'कनेक्टेड' : 'डिस्कनेक्टेड'}
-                  </span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>कुल मतदाता</div>
-                    <strong style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
-                      {health?.dbStats?.totalVoters ? health.dbStats.totalVoters.toLocaleString('hi-IN') : '0'}
-                    </strong>
-                  </div>
-                  <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>संगठन / क्लाइंट</div>
-                    <strong style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
-                      {health?.dbStats?.totalOrganizations ? health.dbStats.totalOrganizations.toLocaleString('hi-IN') : '0'}
-                    </strong>
-                  </div>
-                  <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>कार्यकर्ता / ऑपरेटर</div>
-                    <strong style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
-                      {health?.dbStats?.totalUsers ? health.dbStats.totalUsers.toLocaleString('hi-IN') : '0'}
-                    </strong>
-                  </div>
-                  <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>पर्ची डिस्पैच लॉग</div>
-                    <strong style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
-                      {health?.dbStats?.totalDispatches ? health.dbStats.totalDispatches.toLocaleString('hi-IN') : '0'}
-                    </strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* Server & CPU Runtime Specs */}
-              <div style={{ background: '#fff', borderRadius: '14px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#faf5ff', color: '#9333ea', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Server size={20} />
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', margin: 0 }}>सर्वर व CPU विनिर्देश</h3>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>हार्डवेयर व ऑपरेटिंग सिस्टम</span>
-                    </div>
-                  </div>
-                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '20px', background: '#f3e8ff', color: '#7e22ce' }}>
-                    {health?.systemInfo?.cpuCores ?? '—'} Core CPU
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
-                    <span style={{ color: '#64748b' }}>प्रोसेसर मॉडल</span>
-                    <strong style={{ color: '#1e293b', textAlign: 'right', maxWidth: '60%' }} title={health?.systemInfo?.cpuModel}>
-                      {health?.systemInfo?.cpuModel?.split('@')[0] || health?.systemInfo?.cpuModel || 'Multi-Core'}
-                    </strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
-                    <span style={{ color: '#64748b' }}>प्लेटफॉर्म / OS</span>
-                    <strong style={{ color: '#1e293b' }}>{health?.systemInfo?.platform ?? 'Linux/macOS'}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
-                    <span style={{ color: '#64748b' }}>Node.js रनटाइम</span>
-                    <strong style={{ color: '#1e293b' }}>{health?.systemInfo?.nodeVersion ?? 'Node.js'}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-                    <span style={{ color: '#64748b' }}>बैकएंड अपटाइम</span>
-                    <strong style={{ color: '#16a34a' }}>
-                      {health?.systemInfo?.uptimeSeconds
-                        ? `${Math.floor(health.systemInfo.uptimeSeconds / 3600)}h ${Math.floor((health.systemInfo.uptimeSeconds % 3600) / 60)}m`
-                        : 'सक्रिय'}
-                    </strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* WhatsApp Meta Gateway */}
-              <div style={{ background: '#fff', borderRadius: '14px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <ShieldCheck size={20} />
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', margin: 0 }}>WhatsApp / Meta API</h3>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>मतदाता पर्ची क्लाउड मैसेजिंग</span>
-                    </div>
-                  </div>
-                  <span style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '3px 8px',
-                    borderRadius: '20px',
-                    background: health?.metaReady ? '#dcfce7' : '#f1f5f9',
-                    color: health?.metaReady ? '#15803d' : '#64748b',
-                  }}>
-                    ● {health?.metaReady ? 'सक्रिय (Configured)' : 'कॉन्फ़िगर नहीं'}
-                  </span>
-                </div>
-
-                <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5, margin: 0 }}>
-                  {health?.metaReady
-                    ? 'Meta WhatsApp Business API क्रेडेंशियल्स सक्रिय हैं। मतदाता पर्चियां सीधे मतदाताओं के WhatsApp पर ऑटो-सेंड की जा सकती हैं।'
-                    : 'Meta Cloud API पर्यावरण चर (META_WHATSAPP_TOKEN, META_PHONE_ID) वर्तमान में सेट नहीं हैं। वेब व स्थानीय पर्ची शेयरिंग उपलब्ध है।'}
-                </p>
-
-                <div style={{ marginTop: 'auto', background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #f1f5f9', fontSize: '12px', color: '#475569' }}>
-                  <strong>API स्थिति:</strong> {health?.metaReady ? 'उत्पादन के लिए तैयार' : 'डेस्कटॉप/वेब WhatsApp लिंक मोड'}
-                </div>
-              </div>
-
-              {/* High-Speed Caching & Redis Engine */}
-              <div style={{ background: '#fff', borderRadius: '14px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Zap size={20} />
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', margin: 0 }}>कैशिंग व Redis इंजन</h3>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>Multi-Tier L1/L2 हाई-स्पीड कैश</span>
-                    </div>
-                  </div>
-                  <span style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '3px 8px',
-                    borderRadius: '20px',
-                    background: health?.cache?.isRedisReady ? '#dcfce7' : '#eff6ff',
-                    color: health?.cache?.isRedisReady ? '#15803d' : '#2563eb',
-                    border: `1px solid ${health?.cache?.isRedisReady ? '#bbf7d0' : '#bfdbfe'}`,
-                  }}>
-                    ● {health?.cache?.isRedisReady ? 'Redis L2 सक्रिय' : 'In-Memory L1 सक्रिय'}
-                  </span>
-                </div>
-
-                <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5, margin: 0 }}>
-                  मतदाता सूची, वार्ड समरी और फ़िल्टर एनालिटिक्स को डेटाबेस पर बिना अतिरिक्त लोड डाले <strong>5 मिलीसेकंड से कम</strong> में सर्व करने के लिए L1/L2 कैशिंग सक्रिय है।
-                </p>
-
-                <div style={{ marginTop: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #f1f5f9', fontSize: '12px' }}>
-                  <div>
-                    <span style={{ color: '#64748b' }}>सक्रिय कैश कीज़:</span>{' '}
-                    <strong style={{ color: '#0f172a' }}>{health?.cache?.memoryKeysCount ?? 0} ऑब्जेक्ट्स</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b' }}>इंजन प्रकार:</span>{' '}
-                    <strong style={{ color: '#059669' }}>{health?.cache?.isRedisReady ? 'Redis Distributed' : 'Node-Cache (Local)'}</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {editingTenant && (
           <div className="feature-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setEditingTenant(null); }}>
@@ -4283,8 +3899,4 @@ export default function AdminPanel() {
       />
     </>
   );
-}
-
-function DatabaseIcon() {
-  return <FileSpreadsheet size={15} />;
 }
