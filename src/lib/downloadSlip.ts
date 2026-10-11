@@ -7,90 +7,43 @@ import { downloadDataUrl, downloadBlob } from './fileDownload';
 export const generateSlipImage = async (
   voter: VoterSlipData,
   slipConfig?: SlipConfig,
-  existingElement?: HTMLElement | null
+  _existingElement?: HTMLElement | null
 ): Promise<string> => {
-  // If element is already rendered in the DOM and is wide enough (>= 500px), snapshot directly
-  if (existingElement && existingElement.offsetWidth >= 500) {
-    try {
-      const target = (existingElement.querySelector('.voter-slip-printable-card') as HTMLElement) || existingElement;
-      if (document.fonts) {
-        try {
-          await document.fonts.ready;
-        } catch {
-          // ignore font ready errors
-        }
-      }
-      const imgs = Array.from(target.querySelectorAll('img'));
-      await Promise.all(
-        imgs.map((img) => {
-          if (img.complete && img.naturalHeight !== 0) return Promise.resolve(true);
-          return new Promise((resolve) => {
-            img.onload = () => resolve(true);
-            img.onerror = () => resolve(true);
-            setTimeout(() => resolve(true), 1500);
-          });
-        })
-      );
-      const canvas = await html2canvas(target, {
-        scale: 2.5,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        onclone: (clonedDoc) => {
-          const style = clonedDoc.createElement('style');
-          style.innerHTML = `
-            @import url('https://fonts.googleapis.com/css2?family=Anek+Devanagari:wght@400;500;600;700;800;900&family=Noto+Sans+Devanagari:wght@400;500;600;700;800;900&display=swap');
-            * {
-              -webkit-font-smoothing: antialiased !important;
-              -moz-osx-font-smoothing: grayscale !important;
-              text-rendering: optimizeLegibility !important;
-            }
-            .voter-slip-printable-card,
-            .voter-slip-printable-card * {
-              font-family: 'Anek Devanagari', 'Noto Sans Devanagari', sans-serif !important;
-              letter-spacing: normal !important;
-              word-spacing: normal !important;
-              font-variant-ligatures: normal !important;
-              font-feature-settings: "kern" 1, "liga" 1, "calt" 1 !important;
-            }
-            .voter-slip-ribbon-content,
-            .voter-slip-ribbon-content * {
-              overflow: visible !important;
-            }
-          `;
-          clonedDoc.head.appendChild(style);
-        },
-      });
-      return canvas.toDataURL('image/jpeg', 0.95);
-    } catch (existingErr) {
-      console.warn('Direct snapshot failed, falling back to offscreen renderer:', existingErr);
-    }
-  }
-
-  // Offscreen rendering fallback (always renders pristine 580px standard slip)
+  // Always render using a dedicated offscreen container to guarantee:
+  // 1. Pristine 600px print/card dimensions regardless of device/screen size
+  // 2. Complete full-height capture without viewport clipping or scroll truncation
+  // 3. Perfect Devanagari Hindi font anti-aliasing and matra rendering
   return new Promise((resolve, reject) => {
     const container = document.createElement('div');
     container.style.position = 'fixed';
     container.style.top = '0';
     container.style.left = '0';
-    container.style.width = '580px';
-    container.style.maxWidth = '580px';
+    container.style.width = '600px';
+    container.style.minWidth = '600px';
+    container.style.maxWidth = '600px';
     container.style.opacity = '0';
     container.style.pointerEvents = 'none';
     container.style.zIndex = '-99999';
-    container.style.overflow = 'hidden';
+    container.style.overflow = 'visible';
+    container.style.boxSizing = 'border-box';
     container.dir = 'ltr';
     document.body.appendChild(container);
 
     const root = createRoot(container);
     const ref = React.createRef<HTMLDivElement>();
 
-    root.render(React.createElement(VoterSlipTemplate, { voter, config: slipConfig, forwardedRef: ref }));
+    root.render(
+      React.createElement(VoterSlipTemplate, {
+        voter,
+        config: slipConfig,
+        forwardedRef: ref,
+        isInline: false,
+      })
+    );
 
     setTimeout(async () => {
       try {
-        if (!ref.current) throw new Error("Template not mounted");
+        if (!ref.current) throw new Error('Template not mounted');
 
         if (document.fonts) {
           try {
@@ -121,10 +74,14 @@ export const generateSlipImage = async (
           })
         );
 
-        // Allow styling and web fonts to settle
-        await new Promise((res) => setTimeout(res, 150));
+        // Allow layout and web fonts to settle completely
+        await new Promise((res) => setTimeout(res, 200));
 
         const targetNode = ref.current;
+        const rect = targetNode.getBoundingClientRect();
+        const measuredHeight = Math.ceil(Math.max(rect.height, targetNode.scrollHeight, targetNode.offsetHeight));
+        const measuredWidth = Math.ceil(Math.max(rect.width, targetNode.scrollWidth, targetNode.offsetWidth, 600));
+
         const canvas = await html2canvas(targetNode, {
           scale: 2.5,
           useCORS: true,
@@ -135,9 +92,10 @@ export const generateSlipImage = async (
           scrollY: 0,
           x: 0,
           y: 0,
-          width: targetNode.offsetWidth || 580,
-          height: targetNode.offsetHeight || 800,
+          width: measuredWidth,
+          height: measuredHeight,
           windowWidth: 1200,
+          windowHeight: measuredHeight + 300,
           onclone: (clonedDoc) => {
             const style = clonedDoc.createElement('style');
             style.innerHTML = `
@@ -155,9 +113,14 @@ export const generateSlipImage = async (
                 font-variant-ligatures: normal !important;
                 font-feature-settings: "kern" 1, "liga" 1, "calt" 1 !important;
               }
+              .voter-slip-ribbon {
+                min-height: 60px !important;
+                overflow: visible !important;
+              }
               .voter-slip-ribbon-content,
               .voter-slip-ribbon-content * {
                 overflow: visible !important;
+                line-height: 1.5 !important;
               }
             `;
             clonedDoc.head.appendChild(style);
@@ -174,17 +137,17 @@ export const generateSlipImage = async (
         if (document.body.contains(container)) document.body.removeChild(container);
         reject(err);
       }
-    }, 280);
+    }, 320);
   });
 };
 
 export const downloadSlip = async (
   voter: VoterSlipData,
   slipConfig?: SlipConfig,
-  existingElement?: HTMLElement | null
+  _existingElement?: HTMLElement | null
 ): Promise<boolean> => {
   try {
-    const dataUrl = await generateSlipImage(voter, slipConfig, existingElement);
+    const dataUrl = await generateSlipImage(voter, slipConfig);
     const fileName = `VoterSlip_${voter.epic || voter.serialNo}_${voter.nameEn || voter.nameHi || 'voter'}.jpg`;
     downloadDataUrl(dataUrl, fileName);
     return true;

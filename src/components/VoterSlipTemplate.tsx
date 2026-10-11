@@ -234,8 +234,18 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
   };
   
   const formatName = (en?: string, hi?: string, fallback = '') => {
-    const cleanEn = (en || '').trim();
-    const cleanHi = (hi || '').trim();
+    let cleanEn = (en || '').trim();
+    let cleanHi = (hi || '').trim();
+    if (!cleanEn && !cleanHi) return fallback;
+
+    // Auto-detect Devanagari script so Hindi is always first and English second
+    const isDevanagari = (s: string) => /[\u0900-\u097F]/.test(s);
+    if (isDevanagari(cleanEn) && !isDevanagari(cleanHi) && cleanHi) {
+      const temp = cleanEn;
+      cleanEn = cleanHi;
+      cleanHi = temp;
+    }
+
     if (cleanHi && cleanEn) {
       if (cleanHi.toLowerCase() === cleanEn.toLowerCase()) {
         return cleanHi;
@@ -408,13 +418,14 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
           background: '#ffffff',
           borderRadius: '16px',
           border: isEditable ? '3px dashed #16a34a' : '3px solid #16a34a',
-          padding: '18px 20px',
+          padding: '18px 20px 22px 20px',
           boxShadow: '0 4px 20px -2px rgba(0,0,0,0.06)',
           display: 'flex',
           flexDirection: 'column',
           gap: '14px',
           boxSizing: 'border-box',
           position: 'relative',
+          overflow: 'visible',
         }}
       >
         {/* ================= 1. TOP HEADER SECTION ================= */}
@@ -1066,13 +1077,14 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
           style={{
             background: 'linear-gradient(90deg, #ea580c 0%, #c2410c 14%, #1d4ed8 40%, #1e3a8a 100%)',
             borderRadius: '10px',
-            padding: '8px 14px',
-            minHeight: '54px',
+            padding: '10px 14px',
+            minHeight: '60px',
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
             color: '#ffffff',
             boxSizing: 'border-box',
+            overflow: 'visible',
           }}
         >
           {/* Big EVM Number Badge */}
@@ -1126,6 +1138,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               flexDirection: 'column',
               justifyContent: 'center',
               fontFamily: 'var(--font-anek-devanagari), var(--font-noto-sans-devanagari), "Anek Devanagari", "Noto Sans Devanagari", sans-serif',
+              overflow: 'visible',
             }}
           >
             <div
@@ -1133,7 +1146,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                 fontSize: '13.5px',
                 fontWeight: 800,
                 letterSpacing: 'normal',
-                lineHeight: 1.4,
+                lineHeight: 1.45,
                 color: '#ffffff',
                 textRendering: 'geometricPrecision',
               }}
@@ -1145,11 +1158,13 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                 fontSize: '13px',
                 fontWeight: 700,
                 opacity: 0.98,
-                lineHeight: 1.4,
-                marginTop: '2px',
+                lineHeight: 1.45,
+                marginTop: '3px',
+                paddingBottom: '2px',
                 letterSpacing: 'normal',
                 color: '#ffffff',
                 textRendering: 'geometricPrecision',
+                overflow: 'visible',
               }}
             >
               {isEditable ? (
