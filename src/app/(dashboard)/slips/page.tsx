@@ -21,7 +21,7 @@ import {
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
 import { ImageCropModal } from '@/components/ImageCropModal';
-import { downloadSlip, downloadBulkSlipsAsZip } from '@/lib/downloadSlip';
+import { downloadSlip, downloadBulkSlipsAsZip, generateSlipImage } from '@/lib/downloadSlip';
 import { SortButton, SortState } from '@/components/SortButton';
 import { WhatsAppLogo } from '@/components/WhatsAppLogo';
 
@@ -415,18 +415,26 @@ export default function SlipsPage() {
     }
   };
 
-  // Official WhatsApp Send (Meta Cloud API)
+  // Official WhatsApp Send (Meta Cloud API with Photo)
   const handleSendWhatsAppViaApi = async () => {
     if (!selectedVoter) return;
     setWpSending(true);
-    setWpMessage('');
+    setWpMessage('पर्ची की फोटो और संदेश Meta API द्वारा भेजा जा रहा है...');
     try {
+      let slipImageDataUrl: string | undefined;
+      try {
+        slipImageDataUrl = await generateSlipImage(selectedVoter, slipConfig, printContainerRef.current);
+      } catch (imgErr) {
+        console.warn('Failed to pre-render slip image for Meta API:', imgErr);
+      }
+
       const response = await apiFetch('/whatsapp/send-slip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           voterId: selectedVoter._id,
           phoneNumber: wpPhone || selectedVoter.phone || '',
+          slipImageDataUrl,
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -438,10 +446,97 @@ export default function SlipsPage() {
           prev ? { ...prev, whatsappCredits: data.remainingCredits, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev
         );
       }
-      setWpMessage('Meta API द्वारा पर्ची सफलतापूर्वक भेज दी गई है!');
+      setWpMessage(data.message || 'Meta API द्वारा पर्ची फोटो व विवरण सफलतापूर्वक भेज दिया गया है!');
       setTimeout(() => {
         setIsWpModalOpen(false);
-      }, 1500);
+      }, 2000);
+    } catch (err) {
+      setWpMessage(err instanceof Error ? err.message : 'संदेश भेजने में त्रुटि हुई');
+    } finally {
+      setWpSending(false);
+    }
+  };
+
+  // Direct WhatsApp (Mobile Share with Photo + Desktop Clipboard Paste)
+  const handleSendDirectWhatsApp = async () => {
+    if (!selectedVoter) return;
+    setWpSending(true);
+    setWpMessage('पर्ची की फोटो तैयार की जा रही है...');
+    try {
+      let slipImageDataUrl: string | undefined;
+      try {
+        slipImageDataUrl = await generateSlipImage(selectedVoter, slipConfig, printContainerRef.current);
+      } catch (imgErr) {
+        console.warn('Failed to pre-render slip image for direct WhatsApp:', imgErr);
+      }
+
+      const response = await apiFetch('/whatsapp/send-manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          voterId: selectedVoter._id,
+          phoneNumber: wpPhone || selectedVoter.phone || '',
+          slipImageDataUrl,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.message || 'WhatsApp पर्ची नहीं भेजी जा सकी');
+      }
+      if (typeof data.remainingCredits === 'number') {
+        setWhatsappQuota((prev) =>
+          prev ? { ...prev, whatsappCredits: data.remainingCredits, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev
+        );
+      }
+
+      // Mobile Web Share API: Directly attaches the image file to WhatsApp!
+      let sharedViaNative = false;
+      if (slipImageDataUrl && typeof window !== 'undefined') {
+        try {
+          const res = await fetch(slipImageDataUrl);
+          const blob = await res.blob();
+          const slipFile = new File([blob], `VoterSlip_${selectedVoter.epic || 'slip'}.png`, { type: 'image/png' });
+
+          if (navigator.canShare && navigator.canShare({ files: [slipFile] })) {
+            await navigator.share({
+              title: `मतदाता पर्ची - ${selectedVoter.nameHi || selectedVoter.nameEn || 'मतदाता'}`,
+              text: data.messageText || '',
+              files: [slipFile]
+            });
+            sharedViaNative = true;
+            setWpMessage('✅ WhatsApp शेयर खुल गया! फोटो व विवरण साथ में भेजा जा रहा है।');
+          }
+        } catch (shareErr) {
+          if ((shareErr as Error).name === 'AbortError') {
+            setWpSending(false);
+            return;
+          }
+          console.warn('Native Web Share failed, falling back to clipboard + web:', shareErr);
+        }
+      }
+
+      // Desktop Fallback: Copy image to clipboard + open WhatsApp Web
+      if (!sharedViaNative) {
+        if (slipImageDataUrl && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+          try {
+            const res = await fetch(slipImageDataUrl);
+            const blob = await res.blob();
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          } catch (clipErr) {
+            console.warn('Clipboard write error:', clipErr);
+          }
+        }
+
+        if (data.waLink) {
+          window.open(data.waLink, '_blank');
+        }
+
+        setWpMessage('📋 पर्ची फोटो क्लिपबोर्ड में कॉपी हो गई है! WhatsApp Web खुलते ही Ctrl + V (Paste) दबाकर फोटो तुरंत भेजें।');
+      }
+
+      setTimeout(() => {
+        setIsWpModalOpen(false);
+      }, 2500);
     } catch (err) {
       setWpMessage(err instanceof Error ? err.message : 'संदेश भेजने में त्रुटि हुई');
     } finally {
@@ -1666,9 +1761,19 @@ export default function SlipsPage() {
                 </p>
               )}
 
-              <div className="modal-actions" style={{ marginTop: '10px' }}>
+              <div className="modal-actions" style={{ marginTop: '14px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 <button className="button-secondary" type="button" onClick={() => setIsWpModalOpen(false)}>
                   रद्द करें
+                </button>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  style={{ borderColor: '#22c55e', color: '#166534', background: '#f0fdf4', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}
+                  onClick={handleSendDirectWhatsApp}
+                  disabled={wpSending || !wpPhone.trim()}
+                  title="सीधे WhatsApp में फोटो और विवरण भेजें (1 क्रेडिट कटेगा)"
+                >
+                  <WhatsAppLogo size={15} color="#25D366" /> डायरेक्ट WhatsApp (फोटो + मैसेज)
                 </button>
                 <button
                   type="button"
@@ -1676,6 +1781,7 @@ export default function SlipsPage() {
                   style={{ background: '#25D366', borderColor: '#22c55e', color: '#fff', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   onClick={handleSendWhatsAppViaApi}
                   disabled={wpSending || !wpPhone.trim()}
+                  title="Meta Cloud API से फोटो पर्ची भेजें"
                 >
                   {wpSending ? <LoaderCircle size={15} className="spin" /> : <WhatsAppLogo size={16} color="#ffffff" />}
                   WhatsApp पर्ची भेजें (Meta API)

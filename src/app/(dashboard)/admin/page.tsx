@@ -330,6 +330,15 @@ export default function AdminPanel() {
   const [templateTargetOrgId, setTemplateTargetOrgId] = useState<string>('');
   const [savingTemplate, setSavingTemplate] = useState<boolean>(false);
 
+  // Meta API Credentials Configuration States
+  const [metaPhoneId, setMetaPhoneId] = useState<string>('1313651321838149');
+  const [metaWabaId, setMetaWabaId] = useState<string>('1236298872043128');
+  const [metaTokenInput, setMetaTokenInput] = useState<string>('');
+  const [showMetaToken, setShowMetaToken] = useState<boolean>(false);
+  const [hasConfiguredToken, setHasConfiguredToken] = useState<boolean>(false);
+  const [savingMetaConfig, setSavingMetaConfig] = useState<boolean>(false);
+  const [metaConfigVerifyStatus, setMetaConfigVerifyStatus] = useState<string>('');
+
   // New Template Creation Form States
   const [newTmplName, setNewTmplName] = useState<string>('');
   const [newTmplCategory, setNewTmplCategory] = useState<string>('UTILITY');
@@ -345,6 +354,55 @@ export default function AdminPanel() {
   const [testPhone, setTestPhone] = useState<string>('');
   const [sendingTest, setSendingTest] = useState<boolean>(false);
   const [testSendResult, setTestSendResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const loadMetaConfig = useCallback(async (orgId = templateTargetOrgId) => {
+    try {
+      const query = orgId ? `?organizationId=${encodeURIComponent(orgId)}` : '';
+      const res = await apiFetch(`/whatsapp/config${query}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.phoneNumberId) setMetaPhoneId(data.phoneNumberId);
+        if (data.wabaId) setMetaWabaId(data.wabaId);
+        setHasConfiguredToken(Boolean(data.hasToken));
+      }
+    } catch (e) {
+      console.warn('Failed to load Meta config:', e);
+    }
+  }, [templateTargetOrgId]);
+
+  const handleSaveMetaConfig = async (e: FormEvent) => {
+    e.preventDefault();
+    setSavingMetaConfig(true);
+    setError('');
+    setNotice('');
+    setMetaConfigVerifyStatus('');
+    try {
+      const res = await apiFetch('/whatsapp/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneNumberId: metaPhoneId.trim(),
+          wabaId: metaWabaId.trim(),
+          token: metaTokenInput.trim() || undefined,
+          organizationId: templateTargetOrgId || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'क्रेडेंशियल्स सुरक्षित नहीं हो पाए।');
+      setNotice(data.message);
+      setMetaConfigVerifyStatus(data.verifyStatus || 'verified');
+      if (data.verifyStatus === 'verified') {
+        setHasConfiguredToken(true);
+        setMetaTokenInput('');
+        await loadMetaTemplates();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'क्रेडेंशियल्स सुरक्षित नहीं हो पाए।');
+      setMetaConfigVerifyStatus('failed');
+    } finally {
+      setSavingMetaConfig(false);
+    }
+  };
 
   const loadMetaTemplates = useCallback(async (orgId = templateTargetOrgId) => {
     setLoadingTemplates(true);
@@ -795,7 +853,7 @@ export default function AdminPanel() {
       else if (activeView === 'demo') await loadDemoUsers();
       else if (activeView === 'leads') await loadLeads();
       else if (activeView === 'templates') {
-        await Promise.all([loadOrganizations(), loadMetaTemplates()]);
+        await Promise.all([loadOrganizations(), loadMetaTemplates(), loadMetaConfig()]);
       } else if (activeView === 'tenants' || activeView === 'branding' || activeView === 'users' || activeView === 'import' || activeView === 'export') {
         await loadOrganizations();
         await loadPdfJobs();
@@ -805,7 +863,7 @@ export default function AdminPanel() {
     } finally {
       setLoading(false);
     }
-  }, [activeView, loadOrganizations, loadVoters, loadPdfJobs, loadLeads, loadDemoUsers, loadMetaTemplates]);
+  }, [activeView, loadOrganizations, loadVoters, loadPdfJobs, loadLeads, loadDemoUsers, loadMetaTemplates, loadMetaConfig]);
 
   useEffect(() => { void Promise.resolve().then(() => loadPageData()); }, [loadPageData]);
   useEffect(() => { void loadLeads(); }, [loadLeads]);
@@ -3016,6 +3074,187 @@ export default function AdminPanel() {
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Meta Cloud API Credentials Configuration Box */}
+              <div style={{
+                marginTop: '16px',
+                background: '#f8fafc',
+                borderRadius: '12px',
+                border: '1.5px solid #cbd5e1',
+                padding: '16px 18px',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <KeyRound size={17} color="#0284c7" />
+                    <h3 style={{ fontSize: '14.5px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                      Meta API क्रेडेंशियल्स व कनेक्शन सेटिंग्स (Credentials Setup)
+                    </h3>
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      background: hasConfiguredToken ? '#dcfce7' : '#fee2e2',
+                      color: hasConfiguredToken ? '#15803d' : '#b91c1c',
+                      border: `1px solid ${hasConfiguredToken ? '#bbf7d0' : '#fecaca'}`,
+                    }}>
+                      {hasConfiguredToken ? '✓ टोकन कॉन्फ़िगर है' : '⚠️ टोकन आवश्यक'}
+                    </span>
+                  </div>
+
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                    WABA ID: <code style={{ background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', fontSize: '11px' }}>{metaWabaId || '1236298872043128'}</code>
+                  </span>
+                </div>
+
+                <form onSubmit={handleSaveMetaConfig} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      Phone Number ID:
+                      <input
+                        type="text"
+                        required
+                        value={metaPhoneId}
+                        onChange={(e) => setMetaPhoneId(e.target.value)}
+                        placeholder="e.g. 1313651321838149"
+                        style={{
+                          width: '100%',
+                          padding: '7px 10px',
+                          fontSize: '12.5px',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          marginTop: '4px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </label>
+
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      WhatsApp Business Account ID (WABA ID):
+                      <input
+                        type="text"
+                        value={metaWabaId}
+                        onChange={(e) => setMetaWabaId(e.target.value)}
+                        placeholder="e.g. 1236298872043128"
+                        style={{
+                          width: '100%',
+                          padding: '7px 10px',
+                          fontSize: '12.5px',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          marginTop: '4px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                      Meta Access Token (अस्थायी या परमानेंट सिस्टम यूज़र टोकन):
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <div style={{ position: 'relative', flex: 1 }}>
+                        <input
+                          type={showMetaToken ? 'text' : 'password'}
+                          value={metaTokenInput}
+                          onChange={(e) => setMetaTokenInput(e.target.value)}
+                          placeholder={hasConfiguredToken ? '•••••••••••••••••••••••••• (सुरक्षित है - नया टोकन डालने के लिए पेस्ट करें)' : 'EAA... (Meta Developers से कॉपी किया हुआ पूरा टोकन यहाँ पेस्ट करें)'}
+                          style={{
+                            width: '100%',
+                            padding: '8px 36px 8px 10px',
+                            fontSize: '12px',
+                            borderRadius: '6px',
+                            border: '1px solid #cbd5e1',
+                            boxSizing: 'border-box',
+                            fontFamily: 'monospace'
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowMetaToken(!showMetaToken)}
+                          style={{
+                            position: 'absolute',
+                            right: '8px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            color: '#64748b',
+                            cursor: 'pointer',
+                            padding: 0,
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                        >
+                          {showMetaToken ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const text = await navigator.clipboard.readText();
+                            if (text) setMetaTokenInput(text.trim());
+                          } catch {
+                            alert('कृपया इनपुट बॉक्स में मैन्युअली Ctrl+V (Paste) करें।');
+                          }
+                        }}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '6px',
+                          padding: '7px 12px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          color: '#334155',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        <Copy size={13} />
+                        <span>पेस्ट करें</span>
+                      </button>
+
+                      <button
+                        type="submit"
+                        disabled={savingMetaConfig}
+                        className="button-primary"
+                        style={{
+                          padding: '7px 16px',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {savingMetaConfig ? <LoaderCircle size={14} className="spin" /> : <Check size={14} />}
+                        <span>सुरक्षित व सत्यापित करें</span>
+                      </button>
+                    </div>
+
+                    <small style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '5px' }}>
+                      💡 <strong>टोकन कॉपी करने हेतु:</strong> Meta for Developers डैशबोर्ड में &quot;Access token&quot; के बगल में दिए गए कॉपी आइकॉन 📋 पर क्लिक करें और यहाँ &quot;पेस्ट करें&quot; दबाएं।
+                    </small>
+                  </div>
+
+                  {metaConfigVerifyStatus === 'verified' && (
+                    <div style={{ fontSize: '12px', color: '#15803d', background: '#dcfce7', padding: '6px 12px', borderRadius: '6px', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Check size={14} /> Meta Graph API कनेक्शन सफलतापूर्वक सत्यापित हो गया है!
+                    </div>
+                  )}
+                  {metaConfigVerifyStatus === 'failed' && (
+                    <div style={{ fontSize: '12px', color: '#b91c1c', background: '#fee2e2', padding: '6px 12px', borderRadius: '6px', border: '1px solid #fecaca', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <AlertCircle size={14} /> Meta क्रेडेंशियल्स अमान्य या एक्सपायर हैं। कृपया Meta Developers से नया टोकन जनरेट करके पेस्ट करें।
+                    </div>
+                  )}
+                </form>
               </div>
             </div>
 

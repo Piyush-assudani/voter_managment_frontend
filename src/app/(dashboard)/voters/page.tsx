@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
-import { downloadSlip, downloadBulkSlipsAsZip } from '@/lib/downloadSlip';
+import { downloadSlip, downloadBulkSlipsAsZip, generateSlipImage } from '@/lib/downloadSlip';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
 import { WhatsAppLogo } from '@/components/WhatsAppLogo';
 
@@ -554,17 +554,28 @@ export default function VoterDirectoryPage() {
     }
   };
 
-  // WhatsApp send slip
+  // WhatsApp send slip (Meta API with photo)
   const sendSlip = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!slipVoter) return;
     setSending(true);
-    setActionMessage('');
+    setActionMessage('पर्ची की फोटो और संदेश Meta API द्वारा भेजा जा रहा है...');
     try {
+      let slipImageDataUrl: string | undefined;
+      try {
+        slipImageDataUrl = await generateSlipImage(slipVoter, slipConfig, modalSlipRef.current);
+      } catch (imgErr) {
+        console.warn('Failed to pre-render slip image for Meta API:', imgErr);
+      }
+
       const response = await apiFetch('/whatsapp/send-slip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voterId: slipVoter._id, phoneNumber: slipPhone }),
+        body: JSON.stringify({
+          voterId: slipVoter._id,
+          phoneNumber: slipPhone,
+          slipImageDataUrl
+        }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -572,8 +583,8 @@ export default function VoterDirectoryPage() {
       }
       void loadWhatsappQuota();
       setSlipVoter(null);
-      setActionMessage('Meta API द्वारा पर्ची सफलतापूर्वक भेज दी गई है।');
-      setTimeout(() => setActionMessage(''), 4000);
+      setActionMessage(data.message || 'Meta API द्वारा पर्ची फोटो व विवरण सफलतापूर्वक भेज दिया गया है!');
+      setTimeout(() => setActionMessage(''), 4500);
     } catch (sendError) {
       setActionMessage(sendError instanceof Error ? sendError.message : 'WhatsApp पर्ची नहीं भेजी जा सकी।');
     } finally {
@@ -581,33 +592,89 @@ export default function VoterDirectoryPage() {
     }
   };
 
-  // Manual WhatsApp fallback
+  // Direct WhatsApp (Mobile Share with Photo + Desktop Clipboard Paste)
   const sendManualSlip = async () => {
     if (!slipVoter) return;
     setSending(true);
-    setActionMessage('');
+    setActionMessage('पर्ची की फोटो और संदेश तैयार किया जा रहा है...');
     try {
+      // 1. Generate crisp slip image dataUrl
+      let slipImageDataUrl: string | undefined;
+      try {
+        slipImageDataUrl = await generateSlipImage(slipVoter, slipConfig, modalSlipRef.current);
+      } catch (imgErr) {
+        console.warn('Failed to pre-render slip image for direct WhatsApp:', imgErr);
+      }
+
+      // 2. Call backend send-manual with image
       const response = await apiFetch('/whatsapp/send-manual', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voterId: slipVoter._id, phoneNumber: slipPhone }),
+        body: JSON.stringify({
+          voterId: slipVoter._id,
+          phoneNumber: slipPhone,
+          slipImageDataUrl
+        }),
       });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.message || 'WhatsApp पर्ची नहीं भेजी जा सकी।');
       }
+
       if (typeof data.remainingCredits === 'number') {
         setWhatsappQuota((prev) =>
           prev ? { ...prev, whatsappCredits: data.remainingCredits, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev
         );
       }
-      setActionMessage('1 क्रेडिट काटा गया। WhatsApp चैट खोली जा रही है...');
-      if (data.waLink) {
-        window.open(data.waLink, '_blank');
+
+      // 3. Mobile Web Share API: Directly attaches the image file to WhatsApp!
+      let sharedViaNative = false;
+      if (slipImageDataUrl && typeof window !== 'undefined') {
+        try {
+          const res = await fetch(slipImageDataUrl);
+          const blob = await res.blob();
+          const slipFile = new File([blob], `VoterSlip_${slipVoter.epic || 'parchi'}.png`, { type: 'image/png' });
+
+          if (navigator.canShare && navigator.canShare({ files: [slipFile] })) {
+            await navigator.share({
+              title: `मतदाता पर्ची - ${slipVoter.nameHi || slipVoter.nameEn || 'मतदाता'}`,
+              text: data.messageText || '',
+              files: [slipFile]
+            });
+            sharedViaNative = true;
+            setActionMessage('✅ WhatsApp शेयर खुल गया! फोटो व विवरण साथ में भेजा जा रहा है।');
+          }
+        } catch (shareErr) {
+          if ((shareErr as Error).name === 'AbortError') {
+            setSending(false);
+            return;
+          }
+          console.warn('Native Web Share failed, falling back to clipboard + web:', shareErr);
+        }
       }
+
+      // 4. Desktop Fallback: Copy image to clipboard + open WhatsApp Web
+      if (!sharedViaNative) {
+        if (slipImageDataUrl && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+          try {
+            const res = await fetch(slipImageDataUrl);
+            const blob = await res.blob();
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          } catch (clipErr) {
+            console.warn('Clipboard write error:', clipErr);
+          }
+        }
+
+        if (data.waLink) {
+          window.open(data.waLink, '_blank');
+        }
+
+        setActionMessage('📋 पर्ची फोटो क्लिपबोर्ड में कॉपी हो गई है! WhatsApp Web खुलते ही Ctrl + V (Paste) दबाकर फोटो तुरंत भेजें।');
+      }
+
       setTimeout(() => {
         setSlipVoter(null);
-      }, 1200);
+      }, 2500);
     } catch (err) {
       setActionMessage(err instanceof Error ? err.message : 'मैनुअल WhatsApp संदेश नहीं भेजा जा सका।');
     } finally {
