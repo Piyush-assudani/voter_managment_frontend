@@ -2,9 +2,9 @@
 
 import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  AlertCircle, AlertTriangle, Check, ChevronDown, ChevronRight, Copy, Download, Eye, EyeOff, FileSpreadsheet,
-  FileText, KeyRound, Layers, LoaderCircle, MapPin, MessageCircle, Phone, Plus, RefreshCw,
-  Settings2, Sparkles, Tag, Ticket, Trash2, Upload, User, UserPlus, UsersRound, X,
+  AlertCircle, AlertTriangle, Check, CheckCheck, ChevronDown, ChevronRight, Copy, Download, Eye, EyeOff, FileSpreadsheet,
+  FileText, KeyRound, Layers, LoaderCircle, MapPin, MessageCircle, MessageSquareCode, Phone, Plus, RefreshCw, Send,
+  Settings2, Smartphone, Sparkles, Tag, Ticket, Trash2, Upload, User, UserPlus, UsersRound, X,
 } from 'lucide-react';
 import DashboardShell from '@/app/(dashboard)/DashboardShell';
 import AccountsManager from '@/components/AccountsManager';
@@ -161,7 +161,7 @@ interface DemoUserRecord {
   createdAt: string;
 }
 
-type AdminView = 'tenants' | 'demo' | 'branding' | 'leads' | 'records' | 'users' | 'import' | 'export';
+type AdminView = 'tenants' | 'demo' | 'branding' | 'templates' | 'leads' | 'records' | 'users' | 'import' | 'export';
 
 export default function AdminPanel() {
   const [activeView, setActiveView] = useState<AdminView>('tenants');
@@ -303,6 +303,164 @@ export default function AdminPanel() {
           ? { ...defaultSlipConfig, ...found.slipConfig }
           : { ...defaultSlipConfig }
       );
+    }
+  };
+
+  // ==========================================
+  // Meta WhatsApp Template Management States
+  // ==========================================
+  interface MetaTemplateItem {
+    name: string;
+    status: string;
+    category?: string;
+    language?: string;
+    components?: Array<{
+      type: string;
+      format?: string;
+      text?: string;
+      example?: { body_text?: string[][] };
+    }>;
+  }
+
+  const [metaTemplates, setMetaTemplates] = useState<MetaTemplateItem[]>([]);
+  const [activeMetaTemplate, setActiveMetaTemplate] = useState<string>('voter_slip_dispatch');
+  const [activeMetaLanguage, setActiveMetaLanguage] = useState<string>('hi');
+  const [isLiveFromMeta, setIsLiveFromMeta] = useState<boolean>(false);
+  const [loadingTemplates, setLoadingTemplates] = useState<boolean>(false);
+  const [templateTargetOrgId, setTemplateTargetOrgId] = useState<string>('');
+  const [savingTemplate, setSavingTemplate] = useState<boolean>(false);
+
+  // New Template Creation Form States
+  const [newTmplName, setNewTmplName] = useState<string>('');
+  const [newTmplCategory, setNewTmplCategory] = useState<string>('UTILITY');
+  const [newTmplLanguage, setNewTmplLanguage] = useState<string>('hi');
+  const [newTmplHeader, setNewTmplHeader] = useState<string>('डिजिटल मतदाता सूचना पर्ची 🗳️');
+  const [newTmplBody, setNewTmplBody] = useState<string>(
+    'नमस्कार {{1}} जी,\n\nआपकी डिजिटल मतदाता सूचना पर्ची विवरण:\n• पहचान पत्र (EPIC): {{2}}\n• वार्ड संख्या: {{3}}\n• भाग संख्या: {{4}}\n• क्रमांक संख्या: #{{5}}\n• मतदान केंद्र: {{6}}\n\nकृपया मतदान दिवस पर अपना पहचान पत्र साथ लाएं। आपका वोट, आपका अधिकार!'
+  );
+  const [newTmplFooter, setNewTmplFooter] = useState<string>('विजयसेतु चुनावी प्रबंधन');
+  const [creatingTemplate, setCreatingTemplate] = useState<boolean>(false);
+
+  // Test Send States
+  const [testPhone, setTestPhone] = useState<string>('');
+  const [sendingTest, setSendingTest] = useState<boolean>(false);
+  const [testSendResult, setTestSendResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const loadMetaTemplates = useCallback(async (orgId = templateTargetOrgId) => {
+    setLoadingTemplates(true);
+    try {
+      const query = orgId ? `?organizationId=${encodeURIComponent(orgId)}` : '';
+      const res = await apiFetch(`/whatsapp/templates${query}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.templates)) {
+          setMetaTemplates(data.templates);
+        }
+        if (data.activeTemplate) {
+          setActiveMetaTemplate(data.activeTemplate);
+        }
+        if (data.activeLanguage) {
+          setActiveMetaLanguage(data.activeLanguage);
+        }
+        setIsLiveFromMeta(Boolean(data.isLiveFromMeta));
+      }
+    } catch (err) {
+      console.warn('Failed to load templates:', err);
+    } finally {
+      setLoadingTemplates(false);
+    }
+  }, [templateTargetOrgId]);
+
+  const handleSelectActiveTemplate = async (tmplName: string, lang = 'hi') => {
+    setSavingTemplate(true);
+    setError('');
+    setNotice('');
+    try {
+      const res = await apiFetch('/whatsapp/templates/select-active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId: templateTargetOrgId || undefined,
+          templateName: tmplName,
+          templateLanguage: lang,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'टेम्पलेट सक्रिय नहीं हो पाया।');
+      setActiveMetaTemplate(tmplName);
+      setActiveMetaLanguage(lang);
+      setNotice(data.message || `Meta टेम्पलेट '${tmplName}' सक्रिय कर दिया गया है।`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'टेम्पलेट सक्रिय नहीं हो पाया।');
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const handleCreateMetaTemplate = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newTmplName.trim() || !newTmplBody.trim()) {
+      setError('टेम्पलेट का नाम और बॉडी टेक्स्ट आवश्यक है।');
+      return;
+    }
+    setCreatingTemplate(true);
+    setError('');
+    setNotice('');
+    try {
+      const res = await apiFetch('/whatsapp/templates/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newTmplName.trim(),
+          category: newTmplCategory,
+          language: newTmplLanguage,
+          headerText: newTmplHeader.trim() || undefined,
+          bodyText: newTmplBody.trim(),
+          footerText: newTmplFooter.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'टेम्पलेट सबमिट नहीं हो पाया।');
+      setNotice(data.message || 'नया Meta टेम्पलेट सबमिट कर दिया गया!');
+      await loadMetaTemplates();
+      setNewTmplName('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'टेम्पलेट निर्माण विफल।');
+    } finally {
+      setCreatingTemplate(false);
+    }
+  };
+
+  const handleTestSend = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!testPhone.trim()) {
+      setError('परीक्षण हेतु मोबाइल नंबर दर्ज करें।');
+      return;
+    }
+    setSendingTest(true);
+    setTestSendResult(null);
+    setError('');
+    setNotice('');
+    try {
+      const res = await apiFetch('/whatsapp/templates/test-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneNumber: testPhone.trim(),
+          templateName: activeMetaTemplate,
+          templateLanguage: activeMetaLanguage,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'टेस्ट मैसेज नहीं भेजा जा सका।');
+      setTestSendResult({ success: true, message: data.message });
+      setNotice(data.message);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'परीक्षण विफल।';
+      setTestSendResult({ success: false, message: msg });
+      setError(msg);
+    } finally {
+      setSendingTest(false);
     }
   };
 
@@ -636,7 +794,9 @@ export default function AdminPanel() {
       if (activeView === 'records') await Promise.all([loadOrganizations(), loadVoters()]);
       else if (activeView === 'demo') await loadDemoUsers();
       else if (activeView === 'leads') await loadLeads();
-      else if (activeView === 'tenants' || activeView === 'branding' || activeView === 'users' || activeView === 'import' || activeView === 'export') {
+      else if (activeView === 'templates') {
+        await Promise.all([loadOrganizations(), loadMetaTemplates()]);
+      } else if (activeView === 'tenants' || activeView === 'branding' || activeView === 'users' || activeView === 'import' || activeView === 'export') {
         await loadOrganizations();
         await loadPdfJobs();
       }
@@ -645,7 +805,7 @@ export default function AdminPanel() {
     } finally {
       setLoading(false);
     }
-  }, [activeView, loadOrganizations, loadVoters, loadPdfJobs, loadLeads, loadDemoUsers]);
+  }, [activeView, loadOrganizations, loadVoters, loadPdfJobs, loadLeads, loadDemoUsers, loadMetaTemplates]);
 
   useEffect(() => { void Promise.resolve().then(() => loadPageData()); }, [loadPageData]);
   useEffect(() => { void loadLeads(); }, [loadLeads]);
@@ -988,6 +1148,7 @@ export default function AdminPanel() {
             { key: 'tenants', label: 'क्लाइंट व संगठन', Icon: UsersRound },
             { key: 'demo', label: `डेमो यूज़र जनरेटर ${demoUsers.length > 0 ? `(${demoUsers.length})` : ''}`, Icon: KeyRound },
             { key: 'branding', label: 'पर्ची ब्रांडिंग', Icon: Ticket },
+            { key: 'templates', label: 'Meta टेम्पलेट मैनेजमेंट', Icon: MessageSquareCode },
             { key: 'leads', label: `लीड्स व पूछताछ ${leads.length > 0 ? `(${leads.length})` : ''}`, Icon: MessageCircle },
             { key: 'records', label: 'वोटर डेटा', Icon: FileSpreadsheet },
             { key: 'users', label: 'सभी अकाउंट', Icon: UserPlus },
@@ -2726,6 +2887,654 @@ export default function AdminPanel() {
                 </div>
               </div>
             )}
+          </>
+        )}
+
+        {/* ========================================================================= */}
+        {/* VIEW 9: META WHATSAPP TEMPLATE MANAGEMENT SUITE                           */}
+        {/* ========================================================================= */}
+        {activeView === 'templates' && (
+          <>
+            {/* Top Overview & Policy Notification */}
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              border: '1.5px solid #e2e8f0',
+              padding: '24px 20px',
+              marginBottom: '20px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: '16px' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      background: '#ecfdf5',
+                      color: '#047857',
+                      fontSize: '11.5px',
+                      fontWeight: 800,
+                      padding: '3px 9px',
+                      borderRadius: '20px',
+                      border: '1px solid #a7f3d0'
+                    }}>
+                      <Sparkles size={13} /> META CLOUD API
+                    </span>
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      background: isLiveFromMeta ? '#eff6ff' : '#fffbeb',
+                      color: isLiveFromMeta ? '#1d4ed8' : '#b45309',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      padding: '3px 8px',
+                      borderRadius: '20px',
+                      border: `1px solid ${isLiveFromMeta ? '#bfdbfe' : '#fde68a'}`
+                    }}>
+                      ● {isLiveFromMeta ? 'Meta API से लाइव कनेक्टेड' : 'मानक प्रीसेट मोड'}
+                    </span>
+                  </div>
+                  <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0' }}>
+                    Meta WhatsApp टेम्पलेट मैनेजमेंट
+                  </h2>
+                  <p style={{ fontSize: '13px', color: '#64748b', margin: 0, maxWidth: '780px', lineHeight: 1.5 }}>
+                    Meta (Facebook) की 24-घंटे नीति के अनुसार, मतदाता को पहली बार पर्ची भेजने के लिए स्वीकृत (Approved) टेम्पलेट आवश्यक होता है। यहाँ से आप सक्रिय टेम्पलेट चुन सकते हैं, जो संपूर्ण सिस्टम में सभी कार्यकर्ताओं के लिए स्वतः लागू रहेगा।
+                  </p>
+                </div>
+
+                <button
+                  className="button-secondary"
+                  type="button"
+                  onClick={() => void loadMetaTemplates()}
+                  disabled={loadingTemplates}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', padding: '8px 14px' }}
+                >
+                  <RefreshCw size={14} className={loadingTemplates ? 'spin' : ''} />
+                  <span>टेम्पलेट्स रीफ्रेश करें</span>
+                </button>
+              </div>
+
+              {/* Organization Scope Filter */}
+              <div style={{
+                background: '#f8fafc',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0',
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                flexWrap: 'wrap'
+              }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>लागू करने का दायरा:</span>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flex: 1 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTemplateTargetOrgId('');
+                      void loadMetaTemplates('');
+                    }}
+                    style={{
+                      padding: '5px 12px',
+                      fontSize: '12px',
+                      fontWeight: templateTargetOrgId === '' ? 700 : 500,
+                      background: templateTargetOrgId === '' ? '#0284c7' : '#ffffff',
+                      color: templateTargetOrgId === '' ? '#ffffff' : '#475569',
+                      border: '1px solid',
+                      borderColor: templateTargetOrgId === '' ? '#0284c7' : '#cbd5e1',
+                      borderRadius: '8px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ग्लोबल डिफ़ॉल्ट (सभी संगठन)
+                  </button>
+                  {organizations.map((org) => {
+                    const isSel = templateTargetOrgId === org.id;
+                    return (
+                      <button
+                        key={org.id}
+                        type="button"
+                        onClick={() => {
+                          setTemplateTargetOrgId(org.id);
+                          void loadMetaTemplates(org.id);
+                        }}
+                        style={{
+                          padding: '5px 12px',
+                          fontSize: '12px',
+                          fontWeight: isSel ? 700 : 500,
+                          background: isSel ? '#0284c7' : '#ffffff',
+                          color: isSel ? '#ffffff' : '#475569',
+                          border: '1px solid',
+                          borderColor: isSel ? '#0284c7' : '#cbd5e1',
+                          borderRadius: '8px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {org.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Main 2-Column Grid Studio */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 460px), 1fr))',
+              gap: '24px',
+              alignItems: 'start',
+              marginBottom: '32px'
+            }}>
+              {/* ================= LEFT COLUMN: TEMPLATE CARDS & CREATOR ================= */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                
+                {/* Active Template Status Card */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #065f46 0%, #047857 100%)',
+                  borderRadius: '16px',
+                  padding: '20px',
+                  color: '#ffffff',
+                  boxShadow: '0 8px 20px rgba(4, 120, 87, 0.15)',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <span style={{
+                      background: 'rgba(255,255,255,0.2)',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      padding: '3px 10px',
+                      borderRadius: '12px',
+                      backdropFilter: 'blur(4px)'
+                    }}>
+                      ✓ CURRENT ACTIVE TEMPLATE
+                    </span>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#a7f3d0' }}>
+                      {templateTargetOrgId ? organizations.find(o => o.id === templateTargetOrgId)?.name : 'ग्लोबल सक्रिय'}
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: '22px', fontWeight: 900, fontFamily: 'monospace', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                    {activeMetaTemplate}
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#d1fae5', lineHeight: 1.5 }}>
+                    जब भी कोई यूजर या कार्यकर्ता &apos;WhatsApp पर भेजें&apos; दबाएगा, तो यही अनुमोदित टेम्पलेट सीधे डिलीवर होगा।
+                  </div>
+                </div>
+
+                {/* Templates Selector List */}
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  border: '1.5px solid #e2e8f0',
+                  padding: '20px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                      उपलब्ध Meta टेम्पलेट्स ({metaTemplates.length})
+                    </h3>
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>क्लिक करके सक्रिय करें</span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {metaTemplates.map((tmpl) => {
+                      const isActive = tmpl.name.toLowerCase() === activeMetaTemplate.toLowerCase();
+                      const bodyComp = tmpl.components?.find((c) => c.type.toUpperCase() === 'BODY');
+                      const headerComp = tmpl.components?.find((c) => c.type.toUpperCase() === 'HEADER');
+
+                      return (
+                        <div
+                          key={tmpl.name}
+                          style={{
+                            borderRadius: '12px',
+                            border: `2px solid ${isActive ? '#10b981' : '#e2e8f0'}`,
+                            background: isActive ? '#f0fdf4' : '#ffffff',
+                            padding: '16px',
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: 800, fontSize: '14.5px', fontFamily: 'monospace', color: '#0f172a' }}>
+                                  {tmpl.name}
+                                </span>
+                                <span style={{
+                                  fontSize: '10.5px',
+                                  fontWeight: 800,
+                                  color: '#059669',
+                                  background: '#d1fae5',
+                                  padding: '2px 7px',
+                                  borderRadius: '6px'
+                                }}>
+                                  {tmpl.status || 'APPROVED'}
+                                </span>
+                                <span style={{
+                                  fontSize: '10.5px',
+                                  fontWeight: 700,
+                                  color: '#475569',
+                                  background: '#f1f5f9',
+                                  padding: '2px 6px',
+                                  borderRadius: '6px'
+                                }}>
+                                  {tmpl.language || 'hi'} • {tmpl.category || 'UTILITY'}
+                                </span>
+                              </div>
+                              {headerComp?.text && (
+                                <div style={{ fontSize: '12px', fontWeight: 700, color: '#047857', marginTop: '4px' }}>
+                                  हेडर: {headerComp.text}
+                                </div>
+                              )}
+                            </div>
+
+                            {isActive ? (
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                background: '#10b981',
+                                color: '#ffffff',
+                                fontSize: '11.5px',
+                                fontWeight: 800,
+                                padding: '5px 12px',
+                                borderRadius: '8px',
+                                flexShrink: 0
+                              }}>
+                                <Check size={13} /> सक्रिय (Active)
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={savingTemplate}
+                                onClick={() => void handleSelectActiveTemplate(tmpl.name, tmpl.language || 'hi')}
+                                style={{
+                                  background: '#0284c7',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  fontSize: '11.5px',
+                                  fontWeight: 700,
+                                  padding: '6px 12px',
+                                  borderRadius: '8px',
+                                  cursor: 'pointer',
+                                  flexShrink: 0
+                                }}
+                              >
+                                {savingTemplate ? 'सेव हो रहा...' : 'सक्रिय बनाएं'}
+                              </button>
+                            )}
+                          </div>
+
+                          <div style={{
+                            fontSize: '12px',
+                            color: '#475569',
+                            background: isActive ? 'rgba(255,255,255,0.7)' : '#f8fafc',
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            border: '1px solid #e2e8f0',
+                            whiteSpace: 'pre-line',
+                            lineHeight: 1.45,
+                            maxHeight: '120px',
+                            overflowY: 'auto'
+                          }}>
+                            {bodyComp?.text || 'कोई बॉडी टेक्स्ट नहीं'}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Create New Meta Template Form */}
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  border: '1.5px solid #e2e8f0',
+                  padding: '20px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                    <Plus size={16} color="#0284c7" />
+                    <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                      नया Meta WhatsApp टेम्पलेट सबमिट करें
+                    </h3>
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                    नया टेम्पलेट सीधे Meta Cloud API को सत्यापन एवं स्वीकृति (Approval) हेतु भेजा जाएगा।
+                  </p>
+
+                  <form onSubmit={handleCreateMetaTemplate} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                        टेम्पलेट का नाम (Name)*
+                        <input
+                          type="text"
+                          required
+                          value={newTmplName}
+                          onChange={(e) => setNewTmplName(e.target.value)}
+                          placeholder="e.g. voter_slip_custom_hi"
+                          pattern="^[a-z0-9_]+$"
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            fontSize: '12.5px',
+                            borderRadius: '8px',
+                            border: '1px solid #cbd5e1',
+                            marginTop: '4px',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                        <span style={{ fontSize: '10px', color: '#94a3b8' }}>केवल छोटे अक्षर, संख्या और अंडरस्कोर (_)</span>
+                      </label>
+
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                        श्रेणी (Category)
+                        <select
+                          value={newTmplCategory}
+                          onChange={(e) => setNewTmplCategory(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            fontSize: '12.5px',
+                            borderRadius: '8px',
+                            border: '1px solid #cbd5e1',
+                            marginTop: '4px',
+                            boxSizing: 'border-box',
+                            background: '#ffffff'
+                          }}
+                        >
+                          <option value="UTILITY">UTILITY (मतदाता पर्ची, सेवा संदेश)</option>
+                          <option value="MARKETING">MARKETING (प्रचार व अपील)</option>
+                        </select>
+                      </label>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                        हेडर टेक्स्ट (वैकल्पिक)
+                        <input
+                          type="text"
+                          value={newTmplHeader}
+                          onChange={(e) => setNewTmplHeader(e.target.value)}
+                          placeholder="डिजिटल मतदाता पर्ची"
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            fontSize: '12.5px',
+                            borderRadius: '8px',
+                            border: '1px solid #cbd5e1',
+                            marginTop: '4px',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </label>
+
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                        फ़ूटर टेक्स्ट (वैकल्पिक)
+                        <input
+                          type="text"
+                          value={newTmplFooter}
+                          onChange={(e) => setNewTmplFooter(e.target.value)}
+                          placeholder="विजयसेतु"
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            fontSize: '12.5px',
+                            borderRadius: '8px',
+                            border: '1px solid #cbd5e1',
+                            marginTop: '4px',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                      बॉडी टेक्स्ट (Body with Variables)*
+                      <textarea
+                        required
+                        rows={6}
+                        value={newTmplBody}
+                        onChange={(e) => setNewTmplBody(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          fontSize: '12.5px',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          marginTop: '4px',
+                          boxSizing: 'border-box',
+                          fontFamily: 'inherit',
+                          lineHeight: 1.5
+                        }}
+                      />
+                      <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '4px' }}>
+                        चर मान: &#123;&#123;1&#125;&#125;=नाम, &#123;&#123;2&#125;&#125;=EPIC, &#123;&#123;3&#125;&#125;=वार्ड, &#123;&#123;4&#125;&#125;=भाग, &#123;&#123;5&#125;&#125;=क्रमांक, &#123;&#123;6&#125;&#125;=मतदान केंद्र
+                      </span>
+                    </label>
+
+                    <button
+                      type="submit"
+                      disabled={creatingTemplate}
+                      className="button-primary"
+                      style={{ padding: '9px 18px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    >
+                      {creatingTemplate ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}
+                      <span>Meta को सबमिट करें (Submit to Meta)</span>
+                    </button>
+                  </form>
+                </div>
+
+              </div>
+
+              {/* ================= RIGHT COLUMN: LIVE PHONE PREVIEW & TEST SEND ================= */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                {/* WhatsApp Chat Simulation Mockup */}
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '24px',
+                  border: '1.5px solid #cbd5e1',
+                  boxShadow: '0 12px 30px rgba(0,0,0,0.06)',
+                  overflow: 'hidden',
+                  maxWidth: '440px',
+                  margin: '0 auto',
+                  width: '100%'
+                }}>
+                  {/* WhatsApp App Bar */}
+                  <div style={{
+                    background: '#075e54',
+                    padding: '14px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    color: '#ffffff'
+                  }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      background: '#128c7e',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 800,
+                      fontSize: '14px',
+                      border: '1.5px solid #25d366'
+                    }}>
+                      VS
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>विजयसेतु आधिकारिक</span>
+                        <CheckCheck size={14} color="#25d366" />
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#dcfce7' }}>Official WhatsApp Business</div>
+                    </div>
+                  </div>
+
+                  {/* Chat Wallpaper Background */}
+                  <div style={{
+                    background: '#e5ddd5',
+                    backgroundImage: 'radial-gradient(#d1c7bc 1px, transparent 1px)',
+                    backgroundSize: '16px 16px',
+                    padding: '24px 16px',
+                    minHeight: '380px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'flex-start'
+                  }}>
+                    <div style={{
+                      alignSelf: 'center',
+                      background: '#ffffff',
+                      color: '#64748b',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      padding: '4px 12px',
+                      borderRadius: '12px',
+                      marginBottom: '16px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                    }}>
+                      आज
+                    </div>
+
+                    {/* WhatsApp Message Bubble */}
+                    <div style={{
+                      background: '#ffffff',
+                      borderRadius: '12px 12px 12px 2px',
+                      padding: '14px',
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.08)',
+                      maxWidth: '92%',
+                      position: 'relative'
+                    }}>
+                      {/* Message Header */}
+                      <div style={{
+                        fontSize: '13.5px',
+                        fontWeight: 800,
+                        color: '#075e54',
+                        marginBottom: '8px',
+                        borderBottom: '1px solid #f1f5f9',
+                        paddingBottom: '6px'
+                      }}>
+                        डिजिटल मतदाता सूचना पर्ची 🗳️
+                      </div>
+
+                      {/* Message Body with Highlighted Values */}
+                      <div style={{ fontSize: '12.5px', color: '#1e293b', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+                        {(() => {
+                          const tmpl = metaTemplates.find((t) => t.name === activeMetaTemplate) || metaTemplates[0];
+                          const body = tmpl?.components?.find((c) => c.type.toUpperCase() === 'BODY')?.text;
+                          if (body) {
+                            return body
+                              .replace(/\{\{1\}\}/g, 'रमेश कुमार')
+                              .replace(/\{\{2\}\}/g, 'RJ/17/105/012345')
+                              .replace(/\{\{3\}\}/g, '12')
+                              .replace(/\{\{4\}\}/g, '45')
+                              .replace(/\{\{5\}\}/g, '142')
+                              .replace(/\{\{6\}\}/g, 'राजकीय उच्च प्राथमिक विद्यालय');
+                          }
+                          return `नमस्कार रमेश कुमार जी,\n\nआपकी डिजिटल मतदाता सूचना पर्ची विवरण:\n• पहचान पत्र: RJ/17/105/012345\n• वार्ड: 12 · भाग: 45\n• क्रमांक संख्या: #142\n• मतदान केंद्र: राजकीय उच्च प्राथमिक विद्यालय\n\nकृपया मतदान दिवस पर अपना पहचान पत्र साथ लाएं। आपका वोट, आपका अधिकार!`;
+                        })()}
+                      </div>
+
+                      {/* Footer & Meta Time */}
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginTop: '10px',
+                        fontSize: '10.5px',
+                        color: '#94a3b8'
+                      }}>
+                        <span>विजयसेतु चुनावी प्रबंधन</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <span>10:30 AM</span>
+                          <CheckCheck size={13} color="#34b7f1" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Instant Test Send Box */}
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  border: '1.5px solid #e2e8f0',
+                  padding: '20px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <Smartphone size={16} color="#059669" />
+                    <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                      सक्रिय टेम्पलेट का लाइव परीक्षण (Test Send)
+                    </h3>
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 14px 0', lineHeight: 1.45 }}>
+                    अपने मोबाइल नंबर पर सक्रिय टेम्पलेट भेजकर देखें कि WhatsApp पर संदेश कैसा डिलीवर होता है।
+                  </p>
+
+                  <form onSubmit={handleTestSend} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="10 अंकों का मोबाइल नंबर (e.g. 9829012345)"
+                      value={testPhone}
+                      onChange={(e) => setTestPhone(e.target.value)}
+                      style={{
+                        flex: 1,
+                        minWidth: '200px',
+                        padding: '9px 12px',
+                        fontSize: '13px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1'
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      disabled={sendingTest}
+                      style={{
+                        background: '#059669',
+                        color: '#ffffff',
+                        border: 'none',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        padding: '9px 16px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      {sendingTest ? <LoaderCircle size={15} className="spin" /> : <Send size={14} />}
+                      <span>टेस्ट मैसेज भेजें</span>
+                    </button>
+                  </form>
+
+                  {testSendResult && (
+                    <div style={{
+                      marginTop: '12px',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      fontSize: '12.5px',
+                      background: testSendResult.success ? '#dcfce7' : '#fee2e2',
+                      color: testSendResult.success ? '#15803d' : '#b91c1c',
+                      border: `1px solid ${testSendResult.success ? '#bbf7d0' : '#fecaca'}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      {testSendResult.success ? <Check size={15} /> : <AlertCircle size={15} />}
+                      <span>{testSendResult.message}</span>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </div>
           </>
         )}
 
