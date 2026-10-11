@@ -8,7 +8,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, decodeJwtPayload } from '@/lib/api';
 
 const pageTitles = new Map([
   ['/', 'मुख्य डैशबोर्ड'],
@@ -112,18 +112,18 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         return;
       }
       try {
-        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as {
+        const payload = decodeJwtPayload<{
           user?: { role?: string; modules?: unknown; name?: string; email?: string; organizationId?: string; organizationName?: string };
-        };
-        if (payload.user) {
+        }>(token);
+        if (payload?.user) {
           setUserInfo(payload.user);
           if (payload.user.role !== 'admin') {
             window.localStorage.removeItem('selectedClientOrgId');
             setSelectedClientId('');
           }
         }
-        if (payload.user?.role === 'admin') return;
-        if (active) setAllowedModules(Array.isArray(payload.user?.modules)
+        if (payload?.user?.role === 'admin') return;
+        if (active) setAllowedModules(Array.isArray(payload?.user?.modules)
           ? payload.user.modules.filter((module): module is string => typeof module === 'string')
           : []);
       } catch {

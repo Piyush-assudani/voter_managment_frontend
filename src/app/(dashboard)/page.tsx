@@ -18,7 +18,7 @@ import {
   ShieldCheck,
   Building2,
 } from 'lucide-react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, decodeJwtPayload } from '@/lib/api';
 
 interface LauncherModule {
   id: string;
@@ -149,9 +149,9 @@ export default function DashboardHomePage() {
     try {
       const token = window.localStorage.getItem('token');
       if (token) {
-        const payload = JSON.parse(
-          atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))
-        );
+        const payload = decodeJwtPayload<{
+          user?: { name?: string; organizationName?: string; role?: string; modules?: string[] };
+        }>(token);
         const user = payload?.user;
         if (user) {
           setUserInfo({

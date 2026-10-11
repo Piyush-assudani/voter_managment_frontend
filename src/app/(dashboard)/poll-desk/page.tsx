@@ -2,7 +2,7 @@
 
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, Circle, LoaderCircle, Printer, RefreshCw, Search, Vote } from 'lucide-react';
-import { apiFetch, getApiError } from '@/lib/api';
+import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { SortButton, SortState } from '@/components/SortButton';
 
 interface Voter {
@@ -25,8 +25,8 @@ const getWardsFromToken = () => {
   try {
     const token = window.localStorage.getItem('token');
     if (!token) return Array.from({ length: 9 }, (_, index) => String(index + 1));
-    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-    const allowedWards = payload.user?.allowedWards;
+    const payload = decodeJwtPayload<{ user?: { allowedWards?: string[] } }>(token);
+    const allowedWards = payload?.user?.allowedWards;
     return Array.isArray(allowedWards) && allowedWards.length > 0 
       ? allowedWards.map((w: string) => w.replace(/[^\d]/g, '')).filter(Boolean).sort((a: string, b: string) => Number(a) - Number(b))
       : Array.from({ length: 9 }, (_, index) => String(index + 1));

@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, Download, LoaderCircle, RefreshCw, Search, Trash2 } from 'lucide-react';
-import { apiFetch, getApiError } from '@/lib/api';
+import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
 
 interface Dispatch {
@@ -40,9 +40,9 @@ export default function DispatchHistoryPage() {
     const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
     if (token) {
       try {
-        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as {
+        const payload = decodeJwtPayload<{
           user?: { role?: string };
-        };
+        }>(token);
         setIsAdmin(payload?.user?.role === 'admin' || payload?.user?.role === 'tenant_admin');
       } catch {}
     }

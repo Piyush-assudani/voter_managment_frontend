@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Eye, EyeOff, KeyRound, LoaderCircle, Pencil, Plus, RefreshCw, Search, ShieldCheck, UserRoundX, X } from 'lucide-react';
-import { apiFetch, getApiError } from '@/lib/api';
+import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 
 const accessModules = [
   ['voters', 'मतदाता सूची'],
@@ -109,7 +109,7 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
     void Promise.resolve().then(async () => {
       try {
         const token = window.localStorage.getItem('token');
-        const payload = token ? JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as { user?: { role?: string } } : null;
+        const payload = decodeJwtPayload<{ user?: { role?: string } }>(token);
         const platformAdmin = payload?.user?.role === 'admin';
         setIsPlatformAdmin(platformAdmin);
         if (!platformAdmin) return;

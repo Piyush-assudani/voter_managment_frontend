@@ -24,7 +24,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { apiFetch, getApiError } from '@/lib/api';
+import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
 import { downloadSlip, downloadBulkSlipsAsZip } from '@/lib/downloadSlip';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
@@ -165,10 +165,10 @@ export default function VoterDirectoryPage() {
     const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
     if (token) {
       try {
-        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as {
+        const payload = decodeJwtPayload<{
           user?: { organizationName?: string; role?: string };
-        };
-        if (payload.user?.organizationName) {
+        }>(token);
+        if (payload?.user?.organizationName) {
           setOrganizationName(payload.user.organizationName);
         }
       } catch {}
@@ -234,9 +234,9 @@ export default function VoterDirectoryPage() {
     const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
     if (token) {
       try {
-        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as {
+        const payload = decodeJwtPayload<{
           user?: { role?: string };
-        };
+        }>(token);
         setIsAdmin(payload?.user?.role === 'admin');
       } catch {}
     }

@@ -121,3 +121,23 @@ export async function getApiError(response: Response, fallback: string) {
     return fallback;
   }
 }
+
+/**
+ * Safely decodes a JWT token payload supporting full Unicode / UTF-8 characters (e.g. Hindi Devanagari)
+ */
+export function decodeJwtPayload<T = Record<string, any>>(token: string | null | undefined): T | null {
+  if (!token || typeof token !== 'string') return null;
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const binStr = atob(base64);
+    const bytes = Uint8Array.from(binStr, (c) => c.charCodeAt(0));
+    const jsonStr = new TextDecoder().decode(bytes);
+    return JSON.parse(jsonStr) as T;
+  } catch {
+    return null;
+  }
+}
+

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import DashboardShell from '@/app/(dashboard)/DashboardShell';
 import AccountsManager from '@/components/AccountsManager';
-import { apiFetch, getApiError } from '@/lib/api';
+import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
 import { ImageCropModal } from '@/components/ImageCropModal';
@@ -368,9 +368,9 @@ export default function AdminPanel() {
     const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
     if (token) {
       try {
-        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as {
+        const payload = decodeJwtPayload<{
           user?: { role?: string };
-        };
+        }>(token);
         if (payload?.user?.role !== 'admin') {
           window.location.href = '/';
         }

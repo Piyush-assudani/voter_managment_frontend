@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { decodeJwtPayload } from '@/lib/api';
 
 declare global {
   interface Window {
@@ -15,9 +16,7 @@ function isUserAdmin(): boolean {
   try {
     const token = window.localStorage.getItem('token');
     if (!token) return false;
-    const parts = token.split('.');
-    if (parts.length !== 3) return false;
-    const payload = JSON.parse(atob(parts[1]));
+    const payload = decodeJwtPayload<{ user?: { role?: string } }>(token);
     return payload?.user?.role === 'admin';
   } catch {
     return false;

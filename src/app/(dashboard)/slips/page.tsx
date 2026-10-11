@@ -18,7 +18,7 @@ import {
   Trash2,
   Building,
 } from 'lucide-react';
-import { apiFetch, getApiError } from '@/lib/api';
+import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
 import { ImageCropModal } from '@/components/ImageCropModal';
 import { downloadSlip, downloadBulkSlipsAsZip } from '@/lib/downloadSlip';
@@ -175,7 +175,7 @@ export default function SlipsPage() {
     try {
       const token = window.localStorage.getItem('token');
       if (token) {
-        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        const payload = decodeJwtPayload<{ user?: { role?: string } }>(token);
         setIsAdmin(payload?.user?.role === 'admin');
       } else {
         setIsAdmin(false);
@@ -466,39 +466,131 @@ export default function SlipsPage() {
   };
 
   return (
-    <div className="work-page slips-studio-page">
+    <div className={`work-page slips-studio-page ${bulkMode ? 'slips-bulk-print-mode' : 'slips-single-print-mode'}`}>
       {/* Print-only CSS styling */}
       <style jsx global>{`
         @media print {
-          body * {
-            visibility: hidden;
+          @page {
+            size: A4 portrait;
+            margin: 6mm 5mm;
           }
-          .voter-slip-printable-card,
-          .voter-slip-printable-card * {
-            visibility: visible;
+
+          /* Hide all application chrome and interactive elements */
+          .app-sidebar,
+          .topbar,
+          .app-footer,
+          .page-intro,
+          .feature-actions,
+          .records-toolbar,
+          .bulk-header-bar,
+          .modal-actions,
+          .modal-backdrop,
+          button {
+            display: none !important;
           }
-          .voter-slip-printable-card {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            max-width: 580px !important;
-            margin: 0 auto !important;
+
+          html, body {
+            background: #ffffff !important;
+            margin: 0 !important;
             padding: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+
+          .app-shell,
+          .app-main,
+          .page-content,
+          .work-page,
+          .slips-studio-page {
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            min-height: auto !important;
+            overflow: visible !important;
+            background: #ffffff !important;
+          }
+
+          /* ================= BULK PRINT MODE ================= */
+          .slips-bulk-print-mode .slips-bulk-print-container {
+            display: block !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            background: transparent !important;
             box-shadow: none !important;
           }
-          .slips-bulk-print-grid,
-          .slips-bulk-print-grid * {
-            visibility: visible;
+
+          .slips-bulk-print-mode .bulk-header-bar {
+            display: none !important;
           }
-          .slips-bulk-print-grid {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
+
+          .slips-bulk-print-mode .slips-bulk-print-grid {
             display: grid !important;
-            grid-template-columns: 1fr 1fr !important;
-            gap: 15px !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 6mm 5mm !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            position: static !important;
+          }
+
+          .slips-bulk-print-mode .slips-bulk-print-item {
+            display: block !important;
+            position: static !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+          }
+
+          .slips-bulk-print-mode .voter-slip-printable-card {
+            position: relative !important;
+            left: auto !important;
+            top: auto !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+
+          /* ================= SINGLE SLIP PRINT MODE ================= */
+          .slips-single-print-mode .slips-studio-layout > section:first-child {
+            display: none !important;
+          }
+
+          .slips-single-print-mode .slips-studio-layout {
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          .slips-single-print-mode .slips-studio-layout > section:last-child {
+            display: block !important;
+            width: 100% !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+
+          .slips-single-print-mode .slips-studio-layout > section:last-child > div:first-child {
+            display: none !important;
+          }
+
+          .slips-single-print-mode .voter-slip-printable-card {
+            position: relative !important;
+            left: auto !important;
+            top: auto !important;
+            margin: 20px auto 0 !important;
+            max-width: 580px !important;
+            width: 100% !important;
+            box-shadow: none !important;
           }
         }
       `}</style>
@@ -731,6 +823,7 @@ export default function SlipsPage() {
       {bulkMode ? (
         /* ================= BULK PRINT VIEW ================= */
         <section
+          className="slips-bulk-print-container"
           style={{
             background: '#ffffff',
             borderRadius: '14px',
@@ -739,6 +832,7 @@ export default function SlipsPage() {
           }}
         >
           <div
+            className="bulk-header-bar"
             style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -789,7 +883,7 @@ export default function SlipsPage() {
             }}
           >
             {sortedVoters.map((voter) => (
-              <div key={voter._id} style={{ background: '#fff', borderRadius: '16px' }}>
+              <div key={voter._id} className="slips-bulk-print-item" style={{ background: '#fff', borderRadius: '16px' }}>
                 <VoterSlipTemplate voter={voter} config={slipConfig} isInline={true} />
               </div>
             ))}
