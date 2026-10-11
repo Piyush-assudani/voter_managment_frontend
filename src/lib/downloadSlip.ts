@@ -9,25 +9,37 @@ export const generateSlipImage = async (
   slipConfig?: SlipConfig,
   _existingElement?: HTMLElement | null
 ): Promise<string> => {
-  // Always render using a dedicated offscreen container to guarantee:
-  // 1. Pristine 600px print/card dimensions regardless of device/screen size
-  // 2. Complete full-height capture without viewport clipping or scroll truncation
-  // 3. Perfect Devanagari Hindi font anti-aliasing and matra rendering
+  // Robust offscreen rendering strategy:
+  // - Uses position:absolute (not fixed) with a large wrapper to prevent viewport clipping
+  // - Adds padding buffers around the slip so Devanagari matras and overflow:visible 
+  //   content never gets cut off at edges
+  // - Uses generous timeouts for Hindi web fonts to fully load and settle
+  // - Measures the actual rendered height including any overflow before capture
   return new Promise((resolve, reject) => {
+    // Outer wrapper: absolutely positioned off-screen, large enough to never clip
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'absolute';
+    wrapper.style.top = '-10000px';
+    wrapper.style.left = '-10000px';
+    wrapper.style.width = '700px';  // wider than 600px to absorb horizontal overflow
+    wrapper.style.opacity = '0';
+    wrapper.style.pointerEvents = 'none';
+    wrapper.style.zIndex = '-99999';
+    wrapper.style.overflow = 'visible';
+    wrapper.dir = 'ltr';
+    document.body.appendChild(wrapper);
+
+    // Inner container: precisely 600px, with vertical padding buffers for matra clipping
     const container = document.createElement('div');
-    container.style.position = 'fixed';
-    container.style.top = '0';
-    container.style.left = '0';
     container.style.width = '600px';
     container.style.minWidth = '600px';
     container.style.maxWidth = '600px';
-    container.style.opacity = '0';
-    container.style.pointerEvents = 'none';
-    container.style.zIndex = '-99999';
-    container.style.overflow = 'visible';
+    container.style.margin = '0 auto';
+    container.style.padding = '20px 0';  // vertical buffer for Devanagari matras
     container.style.boxSizing = 'border-box';
-    container.dir = 'ltr';
-    document.body.appendChild(container);
+    container.style.overflow = 'visible';
+    container.style.background = '#ffffff';
+    wrapper.appendChild(container);
 
     const root = createRoot(container);
     const ref = React.createRef<HTMLDivElement>();
@@ -45,6 +57,7 @@ export const generateSlipImage = async (
       try {
         if (!ref.current) throw new Error('Template not mounted');
 
+        // Wait for all web fonts (especially Devanagari) to be fully loaded
         if (document.fonts) {
           try {
             await document.fonts.ready;
@@ -74,13 +87,20 @@ export const generateSlipImage = async (
           })
         );
 
-        // Allow layout and web fonts to settle completely
-        await new Promise((res) => setTimeout(res, 200));
+        // Allow layout and web fonts to settle completely (extra time for Hindi fonts)
+        await new Promise((res) => setTimeout(res, 350));
 
-        const targetNode = ref.current;
+        // Capture the container (includes padding buffers), NOT just ref.current
+        // This ensures matras/overflow content at top/bottom edges are captured
+        const targetNode = container;
         const rect = targetNode.getBoundingClientRect();
-        const measuredHeight = Math.ceil(Math.max(rect.height, targetNode.scrollHeight, targetNode.offsetHeight));
-        const measuredWidth = Math.ceil(Math.max(rect.width, targetNode.scrollWidth, targetNode.offsetWidth, 600));
+
+        // Measure the full height including any overflow beyond the box model
+        const innerRect = ref.current.getBoundingClientRect();
+        const innerFullHeight = Math.max(innerRect.height, ref.current.scrollHeight, ref.current.offsetHeight);
+        // Container height = inner content + padding buffers (20px top + 20px bottom)
+        const captureHeight = Math.ceil(innerFullHeight + 40);
+        const captureWidth = 600;
 
         const canvas = await html2canvas(targetNode, {
           scale: 2.5,
@@ -92,10 +112,10 @@ export const generateSlipImage = async (
           scrollY: 0,
           x: 0,
           y: 0,
-          width: measuredWidth,
-          height: measuredHeight,
+          width: captureWidth,
+          height: captureHeight,
           windowWidth: 1200,
-          windowHeight: measuredHeight + 300,
+          windowHeight: captureHeight + 500,
           onclone: (clonedDoc) => {
             const style = clonedDoc.createElement('style');
             style.innerHTML = `
@@ -113,31 +133,97 @@ export const generateSlipImage = async (
                 font-variant-ligatures: normal !important;
                 font-feature-settings: "kern" 1, "liga" 1, "calt" 1 !important;
               }
+              .voter-slip-printable-card {
+                overflow: visible !important;
+              }
+              .voter-slip-inner-card {
+                overflow: visible !important;
+              }
               .voter-slip-ribbon {
-                min-height: 60px !important;
+                min-height: 68px !important;
+                padding: 12px 14px !important;
                 overflow: visible !important;
               }
               .voter-slip-ribbon-content,
               .voter-slip-ribbon-content * {
                 overflow: visible !important;
-                line-height: 1.5 !important;
+                line-height: 1.35 !important;
+              }
+              .voter-slip-ribbon-evm-badge,
+              .voter-slip-ribbon-evm-badge * {
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                line-height: 1 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+              }
+              .voter-slip-ribbon-pill {
+                min-height: 28px !important;
+                padding: 6px 12px !important;
+                overflow: visible !important;
+              }
+              .voter-slip-ribbon-pill span {
+                line-height: 1.25 !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                white-space: nowrap !important;
+              }
+              .voter-slip-symbol-caption,
+              .voter-slip-symbol-caption * {
+                min-height: 26px !important;
+                height: auto !important;
+                padding: 2px 4px !important;
+                line-height: 1.25 !important;
+                overflow: visible !important;
+              }
+              .voter-slip-center-column,
+              .voter-slip-center-column * {
+                overflow: visible !important;
+              }
+              .voter-slip-candidate-name,
+              .voter-slip-candidate-name div {
+                overflow: visible !important;
+                line-height: 1.4 !important;
+              }
+              .voter-slip-voter-table,
+              .voter-slip-voter-row,
+              .voter-slip-voter-label,
+              .voter-slip-voter-value {
+                overflow: visible !important;
+              }
+              .voter-slip-footer-appeal,
+              .voter-slip-footer-appeal * {
+                overflow: visible !important;
+              }
+              .voter-slip-polling-box,
+              .voter-slip-polling-box * {
+                overflow: visible !important;
               }
             `;
             clonedDoc.head.appendChild(style);
+
+            // Also force all responsive media query overrides to NOT apply
+            // by setting the cloned container to exactly 600px width
+            const allSlipCards = clonedDoc.querySelectorAll('.voter-slip-printable-card');
+            allSlipCards.forEach((el) => {
+              (el as HTMLElement).style.width = '600px';
+              (el as HTMLElement).style.maxWidth = '600px';
+              (el as HTMLElement).style.padding = '16px';
+            });
           },
         });
 
         const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
 
         root.unmount();
-        if (document.body.contains(container)) document.body.removeChild(container);
+        if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
         resolve(dataUrl);
       } catch (err) {
         root.unmount();
-        if (document.body.contains(container)) document.body.removeChild(container);
+        if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
         reject(err);
       }
-    }, 320);
+    }, 450);  // Increased initial timeout for Hindi fonts
   });
 };
 

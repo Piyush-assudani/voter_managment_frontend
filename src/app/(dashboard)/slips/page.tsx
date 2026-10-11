@@ -554,6 +554,41 @@ export default function SlipsPage() {
             <Layers size={15} />
             {bulkMode ? 'एकल पर्ची देखें' : 'बल्क पर्ची शीट'}
           </button>
+
+          <button
+            className="button-primary"
+            type="button"
+            disabled={isDownloadingBulkZip || sortedVoters.length === 0}
+            onClick={async () => {
+              setIsDownloadingBulkZip(true);
+              setBulkZipProgress({ current: 0, total: sortedVoters.length });
+              await downloadBulkSlipsAsZip(sortedVoters, slipConfig, (current, total) => {
+                setBulkZipProgress({ current, total });
+              });
+              setIsDownloadingBulkZip(false);
+            }}
+            style={{
+              background: '#1d4ed8',
+              borderColor: '#2563eb',
+              color: '#ffffff',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+            title="सभी फ़िल्टर किए गए मतदाताओं की पर्चियां एक साथ ZIP फ़ाइल में डाउनलोड करें"
+          >
+            {isDownloadingBulkZip ? (
+              <>
+                <LoaderCircle size={15} className="spin" />
+                <span>ZIP बन रहा ({bulkZipProgress.current}/{bulkZipProgress.total})...</span>
+              </>
+            ) : (
+              <>
+                <Download size={15} />
+                <span>बल्क ZIP डाउनलोड ({sortedVoters.length})</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 

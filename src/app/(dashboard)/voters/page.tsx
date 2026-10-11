@@ -1228,9 +1228,23 @@ export default function VoterDirectoryPage() {
                 void handleBulkDownload();
               }
             }}
-            title={selectedIds.length === 1 ? 'पर्ची देखें व WhatsApp भेजें' : 'पर्चियां डाउनलोड / भेजें'}
+            title={selectedIds.length === 1 ? 'पर्ची देखें व WhatsApp भेजें' : `${selectedIds.length} पर्चियों का बल्क ZIP डाउनलोड करें`}
+            disabled={isDownloading}
           >
-            <WhatsAppLogo size={14} color="#ffffff" /> {selectedIds.length > 1 ? `पर्चियां भेजें (${selectedIds.length})` : 'पर्ची भेजें'}
+            {isDownloading ? (
+              <LoaderCircle size={14} className="spin" />
+            ) : selectedIds.length > 1 ? (
+              <Download size={14} color="#ffffff" />
+            ) : (
+              <WhatsAppLogo size={14} color="#ffffff" />
+            )}
+            <span>
+              {isDownloading
+                ? 'ZIP बन रहा...'
+                : selectedIds.length > 1
+                ? `बल्क ZIP डाउनलोड (${selectedIds.length})`
+                : 'पर्ची देखें / भेजें'}
+            </span>
           </button>
 
           {isAdmin && (
