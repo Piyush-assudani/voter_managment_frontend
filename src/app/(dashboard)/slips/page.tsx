@@ -350,9 +350,8 @@ export default function SlipsPage() {
     }));
   };
 
-  // Open Customization Modal (Admin only)
+  // Open Customization Modal
   const openCustomizing = () => {
-    if (!isAdmin) return;
     setEditingConfig({ ...slipConfig });
     const currentSelected = typeof window !== 'undefined' ? window.localStorage.getItem('selectedClientOrgId') || '' : '';
     setSelectedTargetOrgId(currentSelected || activeOrgId || 'org_default');
@@ -692,19 +691,17 @@ export default function SlipsPage() {
         </div>
 
         <div className="feature-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {/* Admin-only Customize Button */}
-          {isAdmin && (
-            <button
-              className="button-primary"
-              type="button"
-              onClick={openCustomizing}
-              style={{ background: '#047857', borderColor: '#059669', color: '#fff' }}
-              title="केवल एडमिन: प्रत्याशी, पार्टी, चुनाव चिन्ह, दोनों फ़ोटो व अपील कस्टमाइज़ करें"
-            >
-              <Sliders size={15} />
-              <span>पर्ची कस्टमाइज़ करें (Admin)</span>
-            </button>
-          )}
+          {/* Customize Button */}
+          <button
+            className="button-primary"
+            type="button"
+            onClick={openCustomizing}
+            style={{ background: '#047857', borderColor: '#059669', color: '#fff' }}
+            title="प्रत्याशी, पार्टी, चुनाव चिन्ह, दोनों फ़ोटो व अपील कस्टमाइज़ करें"
+          >
+            <Sliders size={15} />
+            <span>पर्ची कस्टमाइज़ करें</span>
+          </button>
 
           <button
             className="button-secondary"
@@ -804,23 +801,21 @@ export default function SlipsPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {isAdmin && (
-            <button
-              onClick={openCustomizing}
-              style={{
-                fontSize: '12px',
-                fontWeight: 600,
-                color: '#047857',
-                background: '#ecfdf5',
-                border: '1px solid #a7f3d0',
-                padding: '4px 10px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-              }}
-            >
-              बदलाव करें
-            </button>
-          )}
+          <button
+            onClick={openCustomizing}
+            style={{
+              fontSize: '12px',
+              fontWeight: 600,
+              color: '#047857',
+              background: '#ecfdf5',
+              border: '1px solid #a7f3d0',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+            }}
+          >
+            बदलाव करें
+          </button>
 
           {/* WhatsApp Quota Pill */}
           {whatsappQuota && (
