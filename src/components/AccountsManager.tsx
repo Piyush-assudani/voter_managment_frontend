@@ -115,7 +115,8 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
         if (!platformAdmin) return;
         const response = await apiFetch('/admin/organizations', { cache: 'no-store' });
         if (!response.ok) throw new Error(await getApiError(response, 'क्लाइंट खाते लोड नहीं हुए।'));
-        const tenants = await response.json() as Organization[];
+        const rawTenants = await response.json() as Organization[];
+        const tenants = Array.from(new Map((Array.isArray(rawTenants) ? rawTenants : []).map((t) => [t.id, t])).values());
         setOrganizations(tenants);
         setOrganizationId((current) => current || tenants[0]?.id || '');
       } catch (loadError) {

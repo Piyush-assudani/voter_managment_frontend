@@ -142,7 +142,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         const res = await apiFetch('/auth/clients', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data)) setClients(data);
+          if (Array.isArray(data)) {
+            const unique = Array.from(new Map(data.map((item) => [item.id, item])).values());
+            setClients(unique);
+          }
         }
       } catch {
         // ignore
@@ -326,8 +329,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 aria-label="क्लाइंट चुनें"
               >
                 <option value="">सभी क्लाइंट्स ({clients.length} सक्रिय)</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>
+                {clients.map((c, idx) => (
+                  <option key={`${c.id}-${idx}`} value={c.id}>
                     {c.name} {c.candidateName ? `(${c.candidateName})` : ''} • {c.voterCount ? `${c.voterCount.toLocaleString('hi-IN')} वोटर` : '0 वोटर'}
                   </option>
                 ))}

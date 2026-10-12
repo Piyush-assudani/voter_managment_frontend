@@ -601,7 +601,8 @@ export default function AdminPanel() {
   const loadOrganizations = useCallback(async () => {
     const response = await apiFetch('/admin/organizations', { cache: 'no-store' });
     if (!response.ok) throw new Error(await getApiError(response, 'क्लाइंट खाते लोड नहीं हुए।'));
-    const data = (await response.json()) as Tenant[];
+    const rawData = (await response.json()) as Tenant[];
+    const data = Array.from(new Map((Array.isArray(rawData) ? rawData : []).map((item) => [item.id, item])).values());
     setOrganizations(data);
     if (data.length > 0) {
       setBrandingTargetOrgId((prev) => {
@@ -1487,9 +1488,9 @@ export default function AdminPanel() {
                 <>
                   {/* MOBILE VIEW (< 768px): Responsive Clean Client Cards */}
                   <div className="mobile-card-view" style={{ padding: '10px' }}>
-                    {organizations.map((tenant) => (
+                    {organizations.map((tenant, idx) => (
                       <div
-                        key={tenant.id}
+                        key={`${tenant.id}-${idx}`}
                         style={{
                           background: '#ffffff',
                           border: '1px solid #e2e8f0',
@@ -1590,8 +1591,8 @@ export default function AdminPanel() {
                         </tr>
                       </thead>
                       <tbody>
-                        {organizations.map((tenant) => (
-                          <tr key={tenant.id}>
+                        {organizations.map((tenant, idx) => (
+                          <tr key={`${tenant.id}-${idx}`}>
                             <td>
                               <strong className="voter-name">{tenant.name}</strong>
                               <div className="voter-subline">{tenant.id}</div>
@@ -1742,8 +1743,8 @@ export default function AdminPanel() {
                       style={{ height: '40px' }}
                     >
                       <option value="new">✨ नया अलग डेमो क्लाइंट बनाएं (New Independent Client)</option>
-                      {organizations.map((org) => (
-                        <option key={org.id} value={org.id}>
+                      {organizations.map((org, idx) => (
+                        <option key={`${org.id}-${idx}`} value={org.id}>
                           {org.name} {org.candidateName ? `(${org.candidateName})` : ''} • {org.voterCount ? `${org.voterCount.toLocaleString('hi-IN')} वोटर` : '0 वोटर'}
                         </option>
                       ))}
@@ -2241,8 +2242,8 @@ export default function AdminPanel() {
                       minWidth: '220px',
                     }}
                   >
-                    {organizations.map((org) => (
-                      <option key={org.id} value={org.id}>
+                    {organizations.map((org, idx) => (
+                      <option key={`${org.id}-${idx}`} value={org.id}>
                         {org.name} {org.slipConfig?.candidateName ? `(${org.slipConfig.candidateName})` : ''}
                       </option>
                     ))}
@@ -2254,11 +2255,11 @@ export default function AdminPanel() {
               {organizations.length > 1 && (
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
                   <span style={{ fontSize: '12px', color: '#64748b', alignSelf: 'center', fontWeight: 600 }}>त्वरित चयन:</span>
-                  {organizations.map((org) => {
+                  {organizations.map((org, idx) => {
                     const isSelected = org.id === brandingTargetOrgId;
                     return (
                       <button
-                        key={org.id}
+                        key={`${org.id}-${idx}`}
                         type="button"
                         onClick={() => handleSelectBrandingOrg(org.id)}
                         style={{
@@ -3049,11 +3050,11 @@ export default function AdminPanel() {
                   >
                     ग्लोबल डिफ़ॉल्ट (सभी संगठन)
                   </button>
-                  {organizations.map((org) => {
+                  {organizations.map((org, idx) => {
                     const isSel = templateTargetOrgId === org.id;
                     return (
                       <button
-                        key={org.id}
+                        key={`${org.id}-${idx}`}
                         type="button"
                         onClick={() => {
                           setTemplateTargetOrgId(org.id);
@@ -3774,7 +3775,7 @@ export default function AdminPanel() {
                 <div><h2>वोटर मास्टर डेटा</h2><p>वोटर सूची डेटाबेस से; full export Excel workbook में उपलब्ध है।</p></div>
                 <label className="ward-select-label">क्लाइंट
                   <select aria-label="वोटर डेटा क्लाइंट" value={organizationId} onChange={(event) => { setOrganizationId(event.target.value); setWardFilter(''); }}>
-                    <option value="">सभी क्लाइंट</option>{organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}
+                    <option value="">सभी क्लाइंट</option>{organizations.map((tenant, idx) => <option key={`${tenant.id}-${idx}`} value={tenant.id}>{tenant.name}</option>)}
                   </select>
                 </label>
                 <label className="ward-select-label">वार्ड
@@ -3847,8 +3848,8 @@ export default function AdminPanel() {
           <section className="records-panel">
             <div className="records-toolbar"><div><h2>सभी टीम अकाउंट</h2><p>Worker accounts, tenant और access सेटिंग देखने/बदलने के लिए अकाउंट प्रबंधन खोलें।</p></div><a className="button-secondary" href="/accounts"><UsersRound size={15} /> अकाउंट प्रबंधन</a></div>
             {loading ? <div className="empty-state"><LoaderCircle size={20} className="spin" /><p>क्लाइंट खाते लोड हो रहे हैं…</p></div> : <div className="table-scroll"><table className="voter-table desk-table"><thead><tr><th>क्लाइंट</th><th>सक्रिय कार्यकर्ता</th><th>मतदाता</th><th>अवस्था</th></tr></thead><tbody>
-              {organizations.map((tenant) => (
-                <Fragment key={tenant.id}>
+              {organizations.map((tenant, idx) => (
+                <Fragment key={`${tenant.id}-${idx}`}>
                   <tr style={{ cursor: 'pointer', transition: 'background-color 0.2s' }} onClick={() => setExpandedOrgId(expandedOrgId === tenant.id ? null : tenant.id)}>
                     <td style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       {expandedOrgId === tenant.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -3890,7 +3891,7 @@ export default function AdminPanel() {
                   <label>क्लाइंट (संगठन) <span style={{ color: '#d93025' }}>*</span>
                     <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
                       <option value="">क्लाइंट चुनें</option>
-                      {organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}
+                      {organizations.map((tenant, idx) => <option key={`${tenant.id}-${idx}`} value={tenant.id}>{tenant.name}</option>)}
                     </select>
                   </label>
 
@@ -4016,7 +4017,7 @@ export default function AdminPanel() {
                   <label>क्लाइंट (संगठन) <span style={{ color: '#d93025' }}>*</span>
                     <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
                       <option value="">क्लाइंट चुनें</option>
-                      {organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}
+                      {organizations.map((tenant, idx) => <option key={`${tenant.id}-${idx}`} value={tenant.id}>{tenant.name}</option>)}
                     </select>
                   </label>
 
@@ -4302,7 +4303,7 @@ export default function AdminPanel() {
               <label>क्लाइंट
                 <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
                   <option value="">सभी क्लाइंट (All Data)</option>
-                  {organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}
+                  {organizations.map((tenant, idx) => <option key={`${tenant.id}-${idx}`} value={tenant.id}>{tenant.name}</option>)}
                 </select>
               </label>
             </div>
