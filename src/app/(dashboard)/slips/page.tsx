@@ -25,6 +25,7 @@ import { downloadSlip, downloadBulkSlipsAsZip, generateSlipImage } from '@/lib/d
 import { shareVoterSlipToWhatsApp } from '@/lib/whatsappShare';
 import { SortButton, SortState } from '@/components/SortButton';
 import { WhatsAppLogo } from '@/components/WhatsAppLogo';
+import { WhatsAppWebHelperModal } from '@/components/WhatsAppWebHelperModal';
 
 interface Voter {
   _id: string;
@@ -137,6 +138,13 @@ export default function SlipsPage() {
   const [wpPhone, setWpPhone] = useState('');
   const [wpSending, setWpSending] = useState(false);
   const [wpMessage, setWpMessage] = useState('');
+  const [whatsappHelperData, setWhatsappHelperData] = useState<{
+    isOpen: boolean;
+    voterName: string;
+    epic: string;
+    imageDataUrl: string;
+    waLink?: string;
+  } | null>(null);
 
   // Bulk Print Mode
   const [bulkMode, setBulkMode] = useState(false);
@@ -503,8 +511,19 @@ export default function SlipsPage() {
       }
 
       setWpMessage(result.message);
-      if (result.success && result.method !== 'desktop_clipboard') {
-        setTimeout(() => setIsWpModalOpen(false), 2200);
+      if (result.success) {
+        if (result.method === 'desktop_clipboard' && result.imageDataUrl) {
+          setIsWpModalOpen(false);
+          setWhatsappHelperData({
+            isOpen: true,
+            voterName: result.voterName || selectedVoter.nameHi || selectedVoter.nameEn,
+            epic: result.epic || selectedVoter.epic,
+            imageDataUrl: result.imageDataUrl,
+            waLink: result.waLink,
+          });
+        } else {
+          setTimeout(() => setIsWpModalOpen(false), 2200);
+        }
       }
     } catch (err) {
       setWpMessage(err instanceof Error ? err.message : 'संदेश भेजने में त्रुटि हुई');
@@ -1777,6 +1796,18 @@ export default function SlipsPage() {
         onCropComplete={handleCropComplete}
         onClose={() => setCropModalOpen(false)}
       />
+
+      {/* WhatsApp Web Helper Modal for Desktop Clipboard */}
+      {whatsappHelperData && (
+        <WhatsAppWebHelperModal
+          isOpen={whatsappHelperData.isOpen}
+          onClose={() => setWhatsappHelperData(null)}
+          voterName={whatsappHelperData.voterName}
+          epic={whatsappHelperData.epic}
+          imageDataUrl={whatsappHelperData.imageDataUrl}
+          waLink={whatsappHelperData.waLink}
+        />
+      )}
     </div>
   );
 }

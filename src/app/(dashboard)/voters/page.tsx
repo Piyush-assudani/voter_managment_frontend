@@ -30,6 +30,7 @@ import { downloadSlip, downloadBulkSlipsAsZip, generateSlipImage } from '@/lib/d
 import { shareVoterSlipToWhatsApp } from '@/lib/whatsappShare';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
 import { WhatsAppLogo } from '@/components/WhatsAppLogo';
+import { WhatsAppWebHelperModal } from '@/components/WhatsAppWebHelperModal';
 
 interface Voter {
   _id: string;
@@ -133,6 +134,13 @@ export default function VoterDirectoryPage() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [whatsappHelperData, setWhatsappHelperData] = useState<{
+    isOpen: boolean;
+    voterName: string;
+    epic?: string;
+    imageDataUrl?: string;
+    waLink?: string;
+  } | null>(null);
 
   const [whatsappQuota, setWhatsappQuota] = useState<{
     whatsappEnabled: boolean;
@@ -668,7 +676,15 @@ export default function VoterDirectoryPage() {
       }
 
       setActionMessage(result.message);
-      if (result.success && result.method !== 'desktop_clipboard') {
+      if (result.method === 'desktop_clipboard') {
+        setWhatsappHelperData({
+          isOpen: true,
+          voterName: result.voterName || slipVoter.nameHi || slipVoter.nameEn,
+          epic: result.epic || slipVoter.epic,
+          imageDataUrl: result.imageDataUrl || cachedSlipImageDataUrl || undefined,
+          waLink: result.waLink,
+        });
+      } else if (result.success) {
         setTimeout(() => setSlipVoter(null), 2200);
       }
     } catch (err) {
@@ -2330,6 +2346,18 @@ export default function VoterDirectoryPage() {
             </form>
           </section>
         </div>
+      )}
+
+      {/* 9. WhatsApp Web Helper Modal */}
+      {whatsappHelperData && (
+        <WhatsAppWebHelperModal
+          isOpen={whatsappHelperData.isOpen}
+          onClose={() => setWhatsappHelperData(null)}
+          voterName={whatsappHelperData.voterName}
+          epic={whatsappHelperData.epic}
+          imageDataUrl={whatsappHelperData.imageDataUrl}
+          waLink={whatsappHelperData.waLink}
+        />
       )}
     </div>
   );

@@ -18,6 +18,51 @@ export interface WhatsAppShareResult {
   message: string;
   remainingCredits?: number;
   waLink?: string;
+  imageDataUrl?: string;
+  viewUrl?: string;
+  voterName?: string;
+  epic?: string;
+}
+
+/**
+ * Convert data URL to PNG Blob (Required for navigator.clipboard.write on Chromium/Safari)
+ */
+export async function convertToPngBlob(dataUrl: string): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return reject(new Error('Canvas 2D context not available'));
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error('Failed to create PNG blob'));
+      }, 'image/png');
+    };
+    img.onerror = () => reject(new Error('Failed to decode image data'));
+    img.src = dataUrl;
+  });
+}
+
+/**
+ * Copy image data URL directly to clipboard as PNG
+ */
+export async function copySlipImageToClipboard(dataUrl: string): Promise<boolean> {
+  if (typeof window === 'undefined' || !navigator.clipboard || typeof ClipboardItem === 'undefined') {
+    return false;
+  }
+  try {
+    const pngBlob = await convertToPngBlob(dataUrl);
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
+    return true;
+  } catch (err) {
+    console.warn('Clipboard write error:', err);
+    return false;
+  }
 }
 
 /**
@@ -140,32 +185,9 @@ export async function shareVoterSlipToWhatsApp(
       }
     }
 
-    // B. Copy image to clipboard for instant Ctrl + V in WhatsApp Web
-    if (slipImageDataUrl && typeof window !== 'undefined' && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
-      try {
-        const res = await fetch(slipImageDataUrl);
-        const blob = await res.blob();
-        try {
-          await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-        } catch {
-          // If JPEG rejected by clipboard, convert to PNG
-          const img = new Image();
-          img.src = slipImageDataUrl;
-          await img.decode();
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0);
-          canvas.toBlob(async (pngBlob) => {
-            if (pngBlob) {
-              await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
-            }
-          }, 'image/png');
-        }
-      } catch (clipErr) {
-        console.warn('Clipboard write error:', clipErr);
-      }
+    // B. Copy image to clipboard as PNG for instant Ctrl + V in WhatsApp Web
+    if (slipImageDataUrl) {
+      await copySlipImageToClipboard(slipImageDataUrl);
     }
 
     // C. Open WhatsApp Web chat
@@ -174,13 +196,17 @@ export async function shareVoterSlipToWhatsApp(
       window.open(waLink, '_blank');
     }
 
-    onStatusUpdate?.('📋 फोटो क्लिपबोर्ड में कॉपी हो गई (Download भी हो गई)! WhatsApp Web में Ctrl + V दबाकर फोटो भेजें।');
+    onStatusUpdate?.('📋 फोटो क्लिपबोर्ड में कॉपी हो गई (Download भी हो गई)! WhatsApp Web में Cmd + V (Ctrl + V) दबाकर फोटो भेजें।');
     return {
       success: true,
       method: 'desktop_clipboard',
-      message: 'फोटो डाउनलोड और क्लिपबोर्ड में कॉपी हो गई है! WhatsApp Web खुलते ही Ctrl + V दबाकर फोटो तुरंत भेजें।',
+      message: 'फोटो डाउनलोड और क्लिपबोर्ड में कॉपी हो गई है! WhatsApp Web खुलते ही Cmd + V (Ctrl + V) दबाकर फोटो तुरंत भेजें।',
       remainingCredits: backendData.remainingCredits,
       waLink,
+      imageDataUrl: slipImageDataUrl,
+      viewUrl: backendData.viewUrl || backendData.slipImageUrl,
+      voterName: voter.nameHi || voter.nameEn || 'मतदाता',
+      epic: voter.epic,
     };
   }
 
@@ -188,5 +214,9 @@ export async function shareVoterSlipToWhatsApp(
     success: true,
     method: 'desktop_clipboard',
     message: 'संदेश तैयार है।',
+    imageDataUrl: slipImageDataUrl,
+    viewUrl: backendData.viewUrl || backendData.slipImageUrl,
+    voterName: voter.nameHi || voter.nameEn || 'मतदाता',
+    epic: voter.epic,
   };
 }
