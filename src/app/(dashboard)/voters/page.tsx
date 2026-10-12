@@ -27,6 +27,7 @@ import {
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
 import { downloadSlip, downloadBulkSlipsAsZip, generateSlipImage } from '@/lib/downloadSlip';
+import { shareVoterSlipToWhatsApp } from '@/lib/whatsappShare';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
 import { WhatsAppLogo } from '@/components/WhatsAppLogo';
 
@@ -45,6 +46,9 @@ interface Voter {
   partNo: string;
   serialNo: number;
   phone: string;
+  mobileNo?: string;
+  boothName?: string;
+  villageName?: string;
   caste: string;
   surety: string;
   supportStatus: string;
@@ -112,10 +116,14 @@ export default function VoterDirectoryPage() {
     partNo: '',
     serialNo: '',
     phone: '',
+    boothName: '',
+    villageName: '',
+    familyId: '',
   });
 
   // Slip modal state
   const [slipVoter, setSlipVoter] = useState<Voter | null>(null);
+  const [cachedSlipImageDataUrl, setCachedSlipImageDataUrl] = useState<string | null>(null);
   const modalSlipRef = useRef<HTMLDivElement>(null);
   const [isDownloadingSingleSlip, setIsDownloadingSingleSlip] = useState(false);
   const [workersList, setWorkersList] = useState<Array<{ id: string; name: string }>>([]);
@@ -285,7 +293,12 @@ export default function VoterDirectoryPage() {
       if (!records) {
         throw new Error('सर्वर से सूची का सही उत्तर नहीं मिला।');
       }
-      setVoters(records as Voter[]);
+      const normalizedRecords = (records as Array<Record<string, unknown>>).map((r) => ({
+        ...r,
+        phone: String(r.phone || r.mobileNo || ''),
+        mobileNo: String(r.mobileNo || r.phone || ''),
+      })) as Voter[];
+      setVoters(normalizedRecords);
       setTotalRecords(
         result && typeof result === 'object' && 'total' in result && typeof result.total === 'number'
           ? result.total
@@ -414,9 +427,19 @@ export default function VoterDirectoryPage() {
   // ===================== SEPARATE TAG MODAL =====================
   const openTagModal = (voter: Voter) => {
     setActionMessage('');
+    const defaultSurety =
+      voter.surety ||
+      (voter.supportStatus === 'core'
+        ? '100% पक्का'
+        : voter.supportStatus === 'swing'
+        ? '50-50'
+        : voter.supportStatus === 'opposition'
+        ? 'विरोधी'
+        : 'सामान्य');
+
     setTagFormData({
       caste: voter.caste || '',
-      surety: voter.surety || '',
+      surety: defaultSurety,
       supportStatus: voter.supportStatus || 'unmarked',
       assignedWorker: voter.assignedWorker || '',
       familyHead: voter.familyId || voter.familyHead || '',
@@ -478,7 +501,10 @@ export default function VoterDirectoryPage() {
       wardNo: voter.wardNo || '',
       partNo: voter.partNo || '',
       serialNo: voter.serialNo?.toString() || '',
-      phone: voter.phone || '',
+      phone: voter.phone || voter.mobileNo || '',
+      boothName: voter.boothName || '',
+      villageName: voter.villageName || '',
+      familyId: voter.familyId || '',
     });
     setEditVoter(voter);
   };
@@ -490,10 +516,14 @@ export default function VoterDirectoryPage() {
     setActionMessage('');
 
     try {
+      const payload = {
+        ...editFormData,
+        mobileNo: editFormData.phone,
+      };
       const response = await apiFetch(`/voters/${encodeURIComponent(editVoter._id)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editFormData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -502,6 +532,8 @@ export default function VoterDirectoryPage() {
 
       const updatedRecord: Partial<Voter> = {
         ...editFormData,
+        phone: editFormData.phone,
+        mobileNo: editFormData.phone,
         age: Number(editFormData.age) || 0,
         serialNo: Number(editFormData.serialNo) || 0,
       };
@@ -527,6 +559,26 @@ export default function VoterDirectoryPage() {
     setSlipVoter(voter);
     void loadWhatsappQuota();
   };
+
+  // Pre-generate slip image as soon as voter is opened for instantaneous WhatsApp share
+  useEffect(() => {
+    let active = true;
+    if (slipVoter) {
+      setCachedSlipImageDataUrl(null);
+      generateSlipImage(slipVoter, slipConfig, modalSlipRef.current)
+        .then((dataUrl) => {
+          if (active) setCachedSlipImageDataUrl(dataUrl);
+        })
+        .catch((err) => {
+          console.warn('Pre-rendering slip image failed:', err);
+        });
+    } else {
+      setCachedSlipImageDataUrl(null);
+    }
+    return () => {
+      active = false;
+    };
+  }, [slipVoter, slipConfig]);
 
   // Filter by family / houseNo
   const filterByFamily = (houseNo: string, wardNo = '', partNo = '') => {
@@ -561,11 +613,13 @@ export default function VoterDirectoryPage() {
     setSending(true);
     setActionMessage('पर्ची की फोटो और संदेश Meta API द्वारा भेजा जा रहा है...');
     try {
-      let slipImageDataUrl: string | undefined;
-      try {
-        slipImageDataUrl = await generateSlipImage(slipVoter, slipConfig, modalSlipRef.current);
-      } catch (imgErr) {
-        console.warn('Failed to pre-render slip image for Meta API:', imgErr);
+      let slipImageDataUrl = cachedSlipImageDataUrl || undefined;
+      if (!slipImageDataUrl) {
+        try {
+          slipImageDataUrl = await generateSlipImage(slipVoter, slipConfig, modalSlipRef.current);
+        } catch (imgErr) {
+          console.warn('Failed to pre-render slip image for Meta API:', imgErr);
+        }
       }
 
       const response = await apiFetch('/whatsapp/send-slip', {
@@ -592,91 +646,33 @@ export default function VoterDirectoryPage() {
     }
   };
 
-  // Direct WhatsApp (Mobile Share with Photo + Desktop Clipboard Paste)
+  // Direct WhatsApp (Mobile Share with Photo + Desktop Clipboard Paste + Android Native Bridge)
   const sendManualSlip = async () => {
     if (!slipVoter) return;
     setSending(true);
-    setActionMessage('पर्ची की फोटो और संदेश तैयार किया जा रहा है...');
     try {
-      // 1. Generate crisp slip image dataUrl
-      let slipImageDataUrl: string | undefined;
-      try {
-        slipImageDataUrl = await generateSlipImage(slipVoter, slipConfig, modalSlipRef.current);
-      } catch (imgErr) {
-        console.warn('Failed to pre-render slip image for direct WhatsApp:', imgErr);
-      }
-
-      // 2. Call backend send-manual with image
-      const response = await apiFetch('/whatsapp/send-manual', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          voterId: slipVoter._id,
-          phoneNumber: slipPhone,
-          slipImageDataUrl
-        }),
+      const result = await shareVoterSlipToWhatsApp({
+        voter: slipVoter,
+        slipConfig,
+        phoneNumber: slipPhone,
+        preGeneratedImageDataUrl: cachedSlipImageDataUrl || undefined,
+        existingElement: modalSlipRef.current,
+        onStatusUpdate: (msg) => setActionMessage(msg),
       });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'WhatsApp पर्ची नहीं भेजी जा सकी।');
-      }
 
-      if (typeof data.remainingCredits === 'number') {
+      if (typeof result.remainingCredits === 'number') {
+        const remaining = result.remainingCredits;
         setWhatsappQuota((prev) =>
-          prev ? { ...prev, whatsappCredits: data.remainingCredits, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev
+          prev ? { ...prev, whatsappCredits: remaining, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev
         );
       }
 
-      // 3. Mobile Web Share API: Directly attaches the image file to WhatsApp!
-      let sharedViaNative = false;
-      if (slipImageDataUrl && typeof window !== 'undefined') {
-        try {
-          const res = await fetch(slipImageDataUrl);
-          const blob = await res.blob();
-          const slipFile = new File([blob], `VoterSlip_${slipVoter.epic || 'parchi'}.png`, { type: 'image/png' });
-
-          if (navigator.canShare && navigator.canShare({ files: [slipFile] })) {
-            await navigator.share({
-              title: `मतदाता पर्ची - ${slipVoter.nameHi || slipVoter.nameEn || 'मतदाता'}`,
-              text: data.messageText || '',
-              files: [slipFile]
-            });
-            sharedViaNative = true;
-            setActionMessage('✅ WhatsApp शेयर खुल गया! फोटो व विवरण साथ में भेजा जा रहा है।');
-          }
-        } catch (shareErr) {
-          if ((shareErr as Error).name === 'AbortError') {
-            setSending(false);
-            return;
-          }
-          console.warn('Native Web Share failed, falling back to clipboard + web:', shareErr);
-        }
+      setActionMessage(result.message);
+      if (result.success && result.method !== 'desktop_clipboard') {
+        setTimeout(() => setSlipVoter(null), 2200);
       }
-
-      // 4. Desktop Fallback: Copy image to clipboard + open WhatsApp Web
-      if (!sharedViaNative) {
-        if (slipImageDataUrl && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
-          try {
-            const res = await fetch(slipImageDataUrl);
-            const blob = await res.blob();
-            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-          } catch (clipErr) {
-            console.warn('Clipboard write error:', clipErr);
-          }
-        }
-
-        if (data.waLink) {
-          window.open(data.waLink, '_blank');
-        }
-
-        setActionMessage('📋 पर्ची फोटो क्लिपबोर्ड में कॉपी हो गई है! WhatsApp Web खुलते ही Ctrl + V (Paste) दबाकर फोटो तुरंत भेजें।');
-      }
-
-      setTimeout(() => {
-        setSlipVoter(null);
-      }, 2500);
     } catch (err) {
-      setActionMessage(err instanceof Error ? err.message : 'मैनुअल WhatsApp संदेश नहीं भेजा जा सका।');
+      setActionMessage(err instanceof Error ? err.message : 'WhatsApp शेयर करने में त्रुटि हुई');
     } finally {
       setSending(false);
     }
@@ -1127,15 +1123,25 @@ export default function VoterDirectoryPage() {
                           <Phone size={10} /> {voter.phone}
                         </span>
                       )}
-                      {voter.supportStatus && voter.supportStatus !== 'unmarked' && (
-                        <span className={`sb-tag-support sb-support-${voter.supportStatus}`}>
-                          {voter.supportStatus === 'core'
-                            ? '1- 100% पक्का समर्थक'
-                            : voter.supportStatus === 'swing'
-                            ? '2- 50/50 स्विंग वोटर'
-                            : voter.supportStatus === 'opposition'
-                            ? '3- एंटी वोटर'
-                            : '4- सामान्य'}
+                      {((voter.surety && voter.surety !== '' && voter.surety !== 'सामान्य') || (voter.supportStatus && voter.supportStatus !== 'unmarked')) && (
+                        <span
+                          className={`sb-tag-support sb-support-${
+                            voter.surety === '100% पक्का' || voter.supportStatus === 'core'
+                              ? 'core'
+                              : voter.surety === '50-50' || voter.supportStatus === 'swing'
+                              ? 'swing'
+                              : voter.surety === 'विरोधी' || voter.supportStatus === 'opposition'
+                              ? 'opposition'
+                              : 'unmarked'
+                          }`}
+                        >
+                          {voter.surety === '100% पक्का' || voter.supportStatus === 'core'
+                            ? '🟢 100% पक्का'
+                            : voter.surety === '50-50' || voter.supportStatus === 'swing'
+                            ? '🟡 50-50'
+                            : voter.surety === 'विरोधी' || voter.supportStatus === 'opposition'
+                            ? '🔴 विरोधी'
+                            : '⚪ सामान्य'}
                         </span>
                       )}
                       {voter.isMigrant && (
@@ -1145,7 +1151,7 @@ export default function VoterDirectoryPage() {
                       )}
                     </div>
 
-                    {/* Bottom Actions Row: TAG / EDIT, FAMILY, PARCHI */}
+                    {/* Bottom Actions Row: TAG, EDIT, FAMILY, PARCHI */}
                     <div className="sb-card-bottom">
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                         <button
@@ -1155,10 +1161,20 @@ export default function VoterDirectoryPage() {
                             openTagModal(voter);
                           }}
                           className="sb-btn-tag"
-                          title="मतदाता चुनाव टैग व संपादन"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          title="मतदाता चुनाव टैग व प्रबंधन"
                         >
-                          <Pencil size={12} /> टैग / एडिट
+                          <Tag size={12} /> टैग
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditModal(voter);
+                          }}
+                          className="sb-btn-edit"
+                          title="मतदाता विवरण संपादित करें"
+                        >
+                          <Pencil size={12} /> एडिट
                         </button>
                       </div>
 
@@ -1467,9 +1483,9 @@ export default function VoterDirectoryPage() {
                   className="button-secondary"
                   style={{ borderColor: '#22c55e', color: '#166534', background: '#f0fdf4', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   onClick={() => void sendManualSlip()}
-                  title="सीधे WhatsApp में पर्ची संदेश खोलें"
+                  title="WhatsApp पर पर्ची की फोटो व संदेश साथ में भेजें"
                 >
-                  <WhatsAppLogo size={15} color="#25D366" /> डायरेक्ट WhatsApp
+                  <WhatsAppLogo size={15} color="#25D366" /> डायरेक्ट WhatsApp (फोटो + पर्ची)
                 </button>
                 <button
                   type="submit"
@@ -1744,36 +1760,98 @@ export default function VoterDirectoryPage() {
                   />
                 </div>
 
-                {/* Support & Surety Class in 2 columns */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-                  <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    समर्थन वर्ग
-                    <select
-                      value={tagFormData.supportStatus}
-                      onChange={(e) => setTagFormData({ ...tagFormData, supportStatus: e.target.value })}
-                      style={{ height: '38px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 8px' }}
-                    >
-                      <option value="unmarked">4- सामान्य</option>
-                      <option value="core">1- 100% पक्का समर्थक</option>
-                      <option value="swing">2- 50/50 स्विंग वोटर</option>
-                      <option value="opposition">3- एंटी वोटर</option>
-                    </select>
+                {/* 5. Political Sentiment Pill Selector (ss2) */}
+                <div style={{ marginTop: '2px' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '13px',
+                      fontWeight: 800,
+                      color: '#1e293b',
+                      letterSpacing: '0.02em',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    राजनीतिक रुझान (POLITICAL SENTIMENT):
                   </label>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    {[
+                      {
+                        key: 'core',
+                        surety: '100% पक्का',
+                        supportStatus: 'core',
+                        label: '100% पक्का',
+                        emoji: '🟢',
+                      },
+                      {
+                        key: 'swing',
+                        surety: '50-50',
+                        supportStatus: 'swing',
+                        label: '50-50',
+                        emoji: '🟡',
+                      },
+                      {
+                        key: 'opposition',
+                        surety: 'विरोधी',
+                        supportStatus: 'opposition',
+                        label: 'विरोधी',
+                        emoji: '🔴',
+                      },
+                      {
+                        key: 'unmarked',
+                        surety: 'सामान्य',
+                        supportStatus: 'unmarked',
+                        label: 'सामान्य',
+                        emoji: '⚪',
+                      },
+                    ].map((item) => {
+                      const isSelected =
+                        tagFormData.surety === item.surety ||
+                        (!tagFormData.surety && tagFormData.supportStatus === item.supportStatus) ||
+                        (!tagFormData.surety && !tagFormData.supportStatus && item.key === 'unmarked');
 
-                  <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    मतदाता स्थिति
-                    <select
-                      value={tagFormData.surety}
-                      onChange={(e) => setTagFormData({ ...tagFormData, surety: e.target.value })}
-                      style={{ height: '38px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 8px' }}
-                    >
-                      <option value="">चुनें</option>
-                      <option value="100% पक्का">100% पक्का</option>
-                      <option value="50-50">50-50</option>
-                      <option value="विरोधी">विरोधी</option>
-                      <option value="सामान्य">सामान्य</option>
-                    </select>
-                  </label>
+                      return (
+                        <button
+                          key={item.key}
+                          type="button"
+                          onClick={() => {
+                            setTagFormData({
+                              ...tagFormData,
+                              surety: item.surety,
+                              supportStatus: item.supportStatus,
+                            });
+                          }}
+                          style={{
+                            padding: '9px 20px',
+                            borderRadius: '9999px',
+                            fontSize: '13.5px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            transition: 'all 0.15s ease',
+                            background: isSelected ? '#334155' : '#ffffff',
+                            color: isSelected ? '#ffffff' : '#1e293b',
+                            border: isSelected ? '1.5px solid #1e293b' : '1.5px solid #cbd5e1',
+                            boxShadow: isSelected
+                              ? '0 2px 6px rgba(15, 23, 42, 0.25)'
+                              : '0 1px 2px rgba(0, 0, 0, 0.04)',
+                          }}
+                        >
+                          <span style={{ fontSize: '14px', lineHeight: 1 }}>{item.emoji}</span>
+                          <span>{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Migrant Box */}
@@ -1904,151 +1982,306 @@ export default function VoterDirectoryPage() {
             <form onSubmit={saveEdit} className="modal-form" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div
                 style={{
-                  maxHeight: '62vh',
+                  maxHeight: '68vh',
                   overflowY: 'auto',
                   paddingRight: '6px',
                   paddingBottom: '12px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '14px',
+                  gap: '16px',
                 }}
               >
-                {/* Row 1: EPIC, Age, Gender */}
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr', gap: '12px' }}>
-                  <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                    EPIC (Voter ID)
-                    <input
-                      value={editFormData.epic}
-                      onChange={(e) => setEditFormData({ ...editFormData, epic: e.target.value.toUpperCase().trim() })}
-                      style={{ marginTop: '4px', height: '38px' }}
-                    />
-                  </label>
-                  <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                    उम्र
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={editFormData.age}
-                      onChange={(e) => setEditFormData({ ...editFormData, age: e.target.value.replace(/\D/g, '').slice(0, 3) })}
-                      placeholder="उदा. 35"
-                      style={{ marginTop: '4px', height: '38px' }}
-                    />
-                  </label>
-                  <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                    लिंग
-                    <select
-                      value={editFormData.gender}
-                      onChange={(e) => setEditFormData({ ...editFormData, gender: e.target.value })}
-                      style={{ marginTop: '4px', height: '38px' }}
+                {/* 1. DEDICATED PROMINENT MOBILE NO SECTION */}
+                <div
+                  style={{
+                    background: '#f0fdf4',
+                    border: '1.5px solid #86efac',
+                    borderRadius: '12px',
+                    padding: '14px 16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    boxShadow: '0 1px 3px rgba(22, 101, 52, 0.08)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <label
+                      htmlFor="edit-phone-input"
+                      style={{
+                        margin: 0,
+                        fontSize: '13px',
+                        fontWeight: 800,
+                        color: '#166534',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        letterSpacing: '0.02em',
+                      }}
                     >
-                      <option value="">चुनें</option>
-                      <option value="पुरुष">पुरुष</option>
-                      <option value="स्त्री">स्त्री</option>
-                      <option value="अन्य">अन्य</option>
-                    </select>
-                  </label>
-                </div>
-
-                {/* Row 2: Names En & Hi */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                    नाम (English)
-                    <input
-                      value={editFormData.nameEn}
-                      onChange={(e) => setEditFormData({ ...editFormData, nameEn: e.target.value })}
-                      style={{ marginTop: '4px', height: '38px' }}
-                    />
-                  </label>
-                  <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                    नाम (हिंदी)
-                    <input
-                      value={editFormData.nameHi}
-                      onChange={(e) => setEditFormData({ ...editFormData, nameHi: e.target.value })}
-                      placeholder="हिंदी में नाम"
-                      style={{ marginTop: '4px', height: '38px' }}
-                    />
-                  </label>
-                </div>
-
-                {/* Row 3: Relation & Relatives */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1.2fr', gap: '12px' }}>
-                  <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                    संबंध प्रकार
-                    <select
-                      value={editFormData.relationType}
-                      onChange={(e) => setEditFormData({ ...editFormData, relationType: e.target.value })}
-                      style={{ marginTop: '4px', height: '38px' }}
+                      <Phone size={16} color="#16a34a" /> मोबाइल नंबर (MOBILE / WHATSAPP NO.)
+                    </label>
+                    <span
+                      style={{
+                        fontSize: '11.5px',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        background: editFormData.phone.length === 10 ? '#dcfce7' : '#fef3c7',
+                        color: editFormData.phone.length === 10 ? '#15803d' : '#b45309',
+                      }}
                     >
-                      <option value="पिता">पिता</option>
-                      <option value="पति">पति</option>
-                      <option value="माता">माता</option>
-                      <option value="पत्नी">पत्नी</option>
-                      <option value="अन्य">अन्य</option>
-                    </select>
-                  </label>
-                  <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                    संबंधी (English)
-                    <input
-                      value={editFormData.relativeNameEn}
-                      onChange={(e) => setEditFormData({ ...editFormData, relativeNameEn: e.target.value })}
-                      style={{ marginTop: '4px', height: '38px' }}
-                    />
-                  </label>
-                  <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                    संबंधी (हिंदी)
-                    <input
-                      value={editFormData.relativeNameHi}
-                      onChange={(e) => setEditFormData({ ...editFormData, relativeNameHi: e.target.value })}
-                      style={{ marginTop: '4px', height: '38px' }}
-                    />
-                  </label>
+                      {editFormData.phone.length === 10 ? '✓ 10 अंक मान्य' : `${editFormData.phone.length}/10 अंक`}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div
+                      style={{
+                        background: '#ffffff',
+                        border: '1.5px solid #86efac',
+                        borderRadius: '8px',
+                        padding: '0 12px',
+                        height: '42px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        fontSize: '13px',
+                        fontWeight: 800,
+                        color: '#166534',
+                        userSelect: 'none',
+                      }}
+                    >
+                      🇮🇳 +91
+                    </div>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                      <input
+                        id="edit-phone-input"
+                        type="tel"
+                        inputMode="numeric"
+                        value={editFormData.phone}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            phone: e.target.value.replace(/\D/g, '').slice(0, 10),
+                          })
+                        }
+                        placeholder="10 अंकों का मोबाइल नंबर दर्ज करें (उदा. 9829012345)"
+                        style={{
+                          width: '100%',
+                          height: '42px',
+                          borderRadius: '8px',
+                          border: '1.5px solid #86efac',
+                          background: '#ffffff',
+                          padding: '0 36px 0 12px',
+                          fontSize: '14.5px',
+                          fontWeight: 700,
+                          color: '#0f172a',
+                          outline: 'none',
+                          letterSpacing: '0.04em',
+                        }}
+                      />
+                      {editFormData.phone && (
+                        <button
+                          type="button"
+                          onClick={() => setEditFormData({ ...editFormData, phone: '' })}
+                          style={{
+                            position: 'absolute',
+                            right: '8px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            color: '#94a3b8',
+                            cursor: 'pointer',
+                            padding: '4px',
+                          }}
+                          title="नंबर हटाएँ"
+                        >
+                          <X size={15} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '11.5px', color: '#166534' }}>
+                    * यह नंबर डिजिटल मतदाता पर्ची व्हाट्सएप पर भेजने एवं अभियान संपर्क के लिए प्रयुक्त होगा।
+                  </p>
                 </div>
 
-                {/* Row 4: Phone */}
-                <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                  फ़ोन नंबर (Mobile No)
-                  <input
-                    type="tel"
-                    value={editFormData.phone}
-                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                    placeholder="10 अंकों का मोबाइल नंबर"
-                    style={{ marginTop: '4px', height: '38px' }}
-                  />
-                </label>
+                {/* 2. SECTION: पहचान व मतदान केंद्र विवरण (Polling & Identity) */}
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#f8fafc' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
+                    📋 पहचान व मतदान केंद्र विवरण (POLLING & IDENTITY)
+                  </div>
 
-                {/* Row 5: House, Ward, Part, Serial */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginBottom: '10px' }}>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      EPIC (पहचान पत्र क्रमांक)
+                      <input
+                        value={editFormData.epic}
+                        onChange={(e) => setEditFormData({ ...editFormData, epic: e.target.value.toUpperCase().trim() })}
+                        style={{ marginTop: '4px', height: '38px', textTransform: 'uppercase', fontWeight: 700 }}
+                      />
+                    </label>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      भाग नं. (Part No)
+                      <input
+                        value={editFormData.partNo}
+                        onChange={(e) => setEditFormData({ ...editFormData, partNo: e.target.value })}
+                        style={{ marginTop: '4px', height: '38px' }}
+                      />
+                    </label>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      क्रम नं. (Serial No)
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={editFormData.serialNo}
+                        onChange={(e) => setEditFormData({ ...editFormData, serialNo: e.target.value.replace(/\D/g, '') })}
+                        style={{ marginTop: '4px', height: '38px' }}
+                      />
+                    </label>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      वार्ड नं. (Ward No)
+                      <input
+                        value={editFormData.wardNo}
+                        onChange={(e) => setEditFormData({ ...editFormData, wardNo: e.target.value })}
+                        style={{ marginTop: '4px', height: '38px' }}
+                      />
+                    </label>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      मकान नं. (House No)
+                      <input
+                        value={editFormData.houseNo}
+                        onChange={(e) => setEditFormData({ ...editFormData, houseNo: e.target.value })}
+                        style={{ marginTop: '4px', height: '38px' }}
+                      />
+                    </label>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      मतदान केंद्र / बूथ (Booth Name)
+                      <input
+                        value={editFormData.boothName}
+                        onChange={(e) => setEditFormData({ ...editFormData, boothName: e.target.value })}
+                        placeholder="उदा: रा.उ.मा.वि. कमरा नं. 1"
+                        style={{ marginTop: '4px', height: '38px' }}
+                      />
+                    </label>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      गाँव / मोहल्ला / क्षेत्र (Village / Area)
+                      <input
+                        value={editFormData.villageName}
+                        onChange={(e) => setEditFormData({ ...editFormData, villageName: e.target.value })}
+                        placeholder="उदा: जेलातरा"
+                        style={{ marginTop: '4px', height: '38px' }}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* 3. SECTION: व्यक्तिगत विवरण (Personal Details) */}
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#f8fafc' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
+                    👤 व्यक्तिगत विवरण (PERSONAL DETAILS)
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      नाम (हिंदी में)
+                      <input
+                        value={editFormData.nameHi}
+                        onChange={(e) => setEditFormData({ ...editFormData, nameHi: e.target.value })}
+                        placeholder="उदा: हंसराज"
+                        style={{ marginTop: '4px', height: '38px', fontWeight: 600 }}
+                      />
+                    </label>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      नाम (English में)
+                      <input
+                        value={editFormData.nameEn}
+                        onChange={(e) => setEditFormData({ ...editFormData, nameEn: e.target.value })}
+                        placeholder="e.g. Hansraj"
+                        style={{ marginTop: '4px', height: '38px' }}
+                      />
+                    </label>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      उम्र (Age)
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={editFormData.age}
+                        onChange={(e) => setEditFormData({ ...editFormData, age: e.target.value.replace(/\D/g, '').slice(0, 3) })}
+                        placeholder="उदा: 35"
+                        style={{ marginTop: '4px', height: '38px' }}
+                      />
+                    </label>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      लिंग (Gender)
+                      <select
+                        value={editFormData.gender}
+                        onChange={(e) => setEditFormData({ ...editFormData, gender: e.target.value })}
+                        style={{ marginTop: '4px', height: '38px' }}
+                      >
+                        <option value="">चुनें</option>
+                        <option value="पुरुष">पुरुष (Male)</option>
+                        <option value="स्त्री">स्त्री (Female)</option>
+                        <option value="अन्य">अन्य (Other)</option>
+                      </select>
+                    </label>
+                  </div>
+                </div>
+
+                {/* 4. SECTION: संबंधी व परिवार विवरण (Relation & Family) */}
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#f8fafc' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
+                    👨‍👩‍👧 संबंधी व परिवार विवरण (RELATION & FAMILY)
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1.2fr', gap: '10px', marginBottom: '10px' }}>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      संबंध प्रकार
+                      <select
+                        value={editFormData.relationType}
+                        onChange={(e) => setEditFormData({ ...editFormData, relationType: e.target.value })}
+                        style={{ marginTop: '4px', height: '38px' }}
+                      >
+                        <option value="पिता">पिता</option>
+                        <option value="पति">पति</option>
+                        <option value="माता">माता</option>
+                        <option value="पत्नी">पत्नी</option>
+                        <option value="अन्य">अन्य</option>
+                      </select>
+                    </label>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      संबंधी का नाम (हिंदी में)
+                      <input
+                        value={editFormData.relativeNameHi}
+                        onChange={(e) => setEditFormData({ ...editFormData, relativeNameHi: e.target.value })}
+                        placeholder="संबंधी का हिंदी नाम"
+                        style={{ marginTop: '4px', height: '38px' }}
+                      />
+                    </label>
+                    <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                      संबंधी का नाम (English)
+                      <input
+                        value={editFormData.relativeNameEn}
+                        onChange={(e) => setEditFormData({ ...editFormData, relativeNameEn: e.target.value })}
+                        placeholder="Relative English Name"
+                        style={{ marginTop: '4px', height: '38px' }}
+                      />
+                    </label>
+                  </div>
+
                   <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                    मकान नं.
+                    परिवार आईडी / मुखिया (Family ID / Head)
                     <input
-                      value={editFormData.houseNo}
-                      onChange={(e) => setEditFormData({ ...editFormData, houseNo: e.target.value })}
-                      style={{ marginTop: '4px', height: '38px' }}
-                    />
-                  </label>
-                  <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                    वार्ड नं.
-                    <input
-                      value={editFormData.wardNo}
-                      onChange={(e) => setEditFormData({ ...editFormData, wardNo: e.target.value })}
-                      style={{ marginTop: '4px', height: '38px' }}
-                    />
-                  </label>
-                  <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                    भाग नं.
-                    <input
-                      value={editFormData.partNo}
-                      onChange={(e) => setEditFormData({ ...editFormData, partNo: e.target.value })}
-                      style={{ marginTop: '4px', height: '38px' }}
-                    />
-                  </label>
-                  <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                    क्रम नं.
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={editFormData.serialNo}
-                      onChange={(e) => setEditFormData({ ...editFormData, serialNo: e.target.value.replace(/\D/g, '') })}
+                      value={editFormData.familyId}
+                      onChange={(e) => setEditFormData({ ...editFormData, familyId: e.target.value })}
+                      placeholder="उदा: जीवराज नाथू कुम्हार"
                       style={{ marginTop: '4px', height: '38px' }}
                     />
                   </label>
@@ -2057,11 +2290,40 @@ export default function VoterDirectoryPage() {
 
               {actionMessage && <p className="form-error" role="alert">{actionMessage}</p>}
 
-              <div className="modal-actions" style={{ marginTop: '12px' }}>
-                <button className="button-secondary" type="button" onClick={() => setEditVoter(null)}>
+              <div className="modal-actions" style={{ marginTop: '14px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditVoter(null)}
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    color: '#334155',
+                    padding: '8px 18px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
                   रद्द करें
                 </button>
-                <button className="button-primary" type="submit" disabled={saving}>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  style={{
+                    background: '#2563eb',
+                    border: 'none',
+                    color: '#ffffff',
+                    padding: '8px 20px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
                   {saving ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />} विवरण सेव करें
                 </button>
               </div>

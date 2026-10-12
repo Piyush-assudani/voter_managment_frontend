@@ -38,6 +38,7 @@ export const defaultSlipConfig: SlipConfig = {
 
 
 export interface VoterSlipData {
+  _id?: string;
   epic?: string;
   nameEn?: string;
   nameHi?: string;
@@ -51,6 +52,7 @@ export interface VoterSlipData {
   partNo?: string;
   serialNo?: number | string;
   boothName?: string;
+  phone?: string;
 }
 
 export interface VoterSlipTemplateProps {
