@@ -809,7 +809,8 @@ export default function AdminPanel() {
   };
 
   const copyDemoCredentials = (email: string, pass: string, id: string) => {
-    const portalUrl = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const portalUrl = typeof window !== 'undefined' && window.location.origin && !isLocal
       ? `${window.location.origin}/login`
       : 'https://vijaysetu.vercel.app/login';
     const text = `विजयसेतु डेमो पोर्टल:\nलॉगिन लिंक: ${portalUrl}\nआईडी / ईमेल: ${email}\nपासवर्ड: ${pass}\nसहायता संपर्क: Roots Reach Media (+91 72310 77770)`;
@@ -820,7 +821,8 @@ export default function AdminPanel() {
   };
 
   const shareDemoWhatsApp = (email: string, pass: string, name: string) => {
-    const portalUrl = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const portalUrl = typeof window !== 'undefined' && window.location.origin && !isLocal
       ? `${window.location.origin}/login`
       : 'https://vijaysetu.vercel.app/login';
     const msg = `*नमस्ते ${name}!*\n\nआपका *VijaySetu (विजयसेतु)* इलेक्शन मैनेजमेंट डेमो पोर्टल तैयार है:\n\n🔗 *लॉगिन लिंक:* ${portalUrl}\n📧 *आईडी / ईमेल:* ${email}\n🔑 *पासवर्ड:* ${pass}\n\nपोर्टल में 25 सैंपल मतदाताओं का डेटा, 1-सेकंड पर्ची जनरेटर, लाइव पोल-डेस्क व जातिगत समीकरण पहले से सक्रिय हैं।\n\nकिसी भी सहायता के लिए संपर्क करें:\n*Roots Reach Media* - 📞 +91 72310 77770`;

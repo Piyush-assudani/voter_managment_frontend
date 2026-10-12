@@ -3,11 +3,14 @@ const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
 export const API_BASE_URL = (() => {
   if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
     // When developing on localhost, route through local Next.js proxy to bypass CORS
-    if (!configuredApiUrl || configuredApiUrl.includes('vijaysetu.piyushassudani.in') || configuredApiUrl === '/api') {
-      return '/api';
-    }
+    return '/api';
   }
-  return (configuredApiUrl || 'https://vijaysetu.piyushassudani.in/api').replace(/\/+$/, '');
+  // When running on Vercel or any deployed domain, if NEXT_PUBLIC_API_URL is relative (/api) or unset,
+  // directly point to the live backend URL (https://vijaysetu.piyushassudani.in/api) which has CORS enabled.
+  if (!configuredApiUrl || configuredApiUrl === '/api') {
+    return 'https://vijaysetu.piyushassudani.in/api';
+  }
+  return configuredApiUrl.replace(/\/+$/, '');
 })();
 
 export function apiUrl(path: string) {

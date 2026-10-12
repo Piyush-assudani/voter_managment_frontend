@@ -31,8 +31,10 @@ export default function LoginPage() {
       if (!result.token) {
         throw new Error('सर्वर से साइन इन टोकन नहीं मिला।');
       }
+      window.localStorage.removeItem('account_suspended');
+      window.localStorage.removeItem('selectedClientOrgId');
       window.localStorage.setItem('token', result.token);
-      router.push('/');
+      window.location.href = '/';
     } catch (loginError) {
       setError(loginError instanceof Error
         ? loginError.message
