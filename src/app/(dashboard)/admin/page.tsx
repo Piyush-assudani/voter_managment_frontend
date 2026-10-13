@@ -250,15 +250,38 @@ export default function AdminPanel() {
     whatsappCredits?: number;
     wards?: string[];
   }) => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const portalUrl = 'https://vijaysetu.vercel.app/';
+    const emailStr = details.email || '';
+    const passStr = details.password || '(सुरक्षित / पूर्व सेट)';
+    const creditsCount = typeof details.whatsappCredits === 'number' ? details.whatsappCredits : 500;
     const regionParts = [details.district, details.ulbPanchayatSamiti, details.ulbWardGramPanchayat].filter(Boolean);
-    const regionLine = regionParts.length ? `\n📍 *क्षेत्र:* ${regionParts.join(' • ')}` : '';
-    const emailLine = details.email ? `\n📧 *लॉगिन ईमेल:* ${details.email}` : '';
-    const passLine = details.password ? `\n🔑 *पासवर्ड:* ${details.password}` : '\n🔑 *पासवर्ड:* (सुरक्षित / पूर्व सेट)';
-    const creditsLine = typeof details.whatsappCredits === 'number' ? `\n💬 *WhatsApp क्रेडिट:* ${details.whatsappCredits} संदेश` : '';
-    const wardsLine = details.wards && details.wards.length ? `\n🏘️ *अनुमत वार्ड:* ${details.wards.join(', ')}` : '';
 
-    return `🎯 *विजयसेतु - क्लाइंट लॉगिन विवरण*\n==============================\n🏢 *क्लाइंट / संगठन:* ${details.name}${regionLine}${emailLine}${passLine}\n🌐 *लॉगिन पोर्टल:* ${origin}${creditsLine}${wardsLine}\n==============================\n📌 *नोट:* कृपया लॉगिन करने के बाद पासवर्ड सुरक्षित रखें।\nजय विजय! 🇮🇳`;
+    const lines: string[] = [
+      '*विजयसेतु - क्लाइंट लॉगिन विवरण*',
+      '==============================',
+      `*क्लाइंट / संगठन:* ${details.name}`,
+    ];
+
+    if (regionParts.length > 0) {
+      lines.push(` *क्षेत्र:* ${regionParts.join(' - ')}`);
+    }
+
+    if (emailStr) {
+      lines.push(` *लॉगिन ईमेल:* ${emailStr}`);
+    }
+
+    lines.push(` *पासवर्ड:* ${passStr}`);
+    lines.push(` *लॉगिन पोर्टल:* ${portalUrl}`);
+    lines.push(` *WhatsApp क्रेडिट:* ${creditsCount} संदेश`);
+
+    if (details.wards && details.wards.length > 0) {
+      lines.push(` *वार्ड:* ${details.wards.join(', ')}`);
+    }
+
+    lines.push('==============================');
+    lines.push(' *नोट:* कृपया लॉगिन करने के बाद पासवर्ड सुरक्षित रखें।');
+
+    return lines.join('\n');
   };
 
   const copyTenantDetails = (tenant: Tenant) => {
