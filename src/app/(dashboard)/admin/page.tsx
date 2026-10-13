@@ -2,8 +2,8 @@
 
 import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  AlertCircle, AlertTriangle, Check, CheckCheck, ChevronDown, ChevronRight, Copy, Download, Eye, EyeOff, FileSpreadsheet,
-  FileText, KeyRound, Layers, LoaderCircle, MapPin, MessageCircle, MessageSquareCode, Phone, Plus, RefreshCw, Send,
+  AlertCircle, AlertTriangle, Check, CheckCheck, CheckCircle2, ChevronDown, ChevronRight, Copy, Download, Eye, EyeOff, FileSpreadsheet,
+  FileText, Info, KeyRound, Layers, LoaderCircle, MapPin, MessageCircle, MessageSquareCode, Phone, Plus, RefreshCw, Send,
   Settings2, Smartphone, Sparkles, Tag, Ticket, Trash2, Upload, User, UserPlus, UsersRound, X,
 } from 'lucide-react';
 import DashboardShell from '@/app/(dashboard)/DashboardShell';
@@ -107,6 +107,9 @@ interface Tenant {
   whatsappUsed?: number;
   candidateName?: string;
   slipConfig?: SlipConfig;
+  district?: string;
+  ulbPanchayatSamiti?: string;
+  ulbWardGramPanchayat?: string;
 }
 
 interface AdminVoter {
@@ -161,6 +164,25 @@ interface DemoUserRecord {
   createdAt: string;
 }
 
+interface ToastNotification {
+  id: string;
+  type: 'success' | 'error' | 'info';
+  title?: string;
+  message: string;
+}
+
+interface CreatedClientDetails {
+  name: string;
+  email: string;
+  password?: string;
+  modules: string[];
+  wards: string[];
+  whatsappCredits: number;
+  district?: string;
+  ulbPanchayatSamiti?: string;
+  ulbWardGramPanchayat?: string;
+}
+
 type AdminView = 'tenants' | 'demo' | 'branding' | 'templates' | 'leads' | 'records' | 'users' | 'import' | 'export';
 
 export default function AdminPanel() {
@@ -169,6 +191,61 @@ export default function AdminPanel() {
   const [deletingTenant, setDeletingTenant] = useState<Tenant | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeletingClient, setIsDeletingClient] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [toast, setToast] = useState<ToastNotification | null>(null);
+  const [createdClientInfo, setCreatedClientInfo] = useState<CreatedClientDetails | null>(null);
+  const [isCreateClientModalOpen, setIsCreateClientModalOpen] = useState(false);
+  const [copiedClientCreds, setCopiedClientCreds] = useState(false);
+  const [showCreatedClientPassword, setShowCreatedClientPassword] = useState(true);
+
+  const showToast = useCallback((type: 'success' | 'error' | 'info', message: string, title?: string) => {
+    if (!message) return;
+    const id = Math.random().toString(36).substring(2, 9);
+    setToast({
+      id,
+      type,
+      message,
+      title: title || (type === 'success' ? 'सफलतापूर्वक संपन्न!' : type === 'error' ? 'त्रुटि / ध्यान दें' : 'सूचना'),
+    });
+  }, []);
+
+  // Synchronize notice and error state changes to auto-show floating toast pop-up
+  useEffect(() => {
+    if (notice) {
+      showToast('success', notice, 'सफलता');
+      const timer = setTimeout(() => {
+        setNotice('');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notice, showToast]);
+
+  useEffect(() => {
+    if (error) {
+      showToast('error', error, 'त्रुटि');
+    }
+  }, [error, showToast]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 5500);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const copyCreatedClientCreds = () => {
+    if (!createdClientInfo) return;
+    const regionLine = [createdClientInfo.district, createdClientInfo.ulbPanchayatSamiti, createdClientInfo.ulbWardGramPanchayat].filter(Boolean).join(' • ');
+    const text = `🎯 विजयसेतु - नया क्लाइंट लॉगिन क्रेडेंशियल्स\n------------------------------\n🏢 संगठन / क्लाइंट: ${createdClientInfo.name}${regionLine ? `\n📍 क्षेत्र: ${regionLine}` : ''}\n📧 एडमिन ईमेल: ${createdClientInfo.email}\n🔑 शुरुआती पासवर्ड: ${createdClientInfo.password || '(सुरक्षित)'}\n🌐 लॉगिन यूआरएल: ${typeof window !== 'undefined' ? window.location.origin : ''}\n------------------------------`;
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+    }
+    setCopiedClientCreds(true);
+    showToast('success', 'लॉगिन क्रेडेंशियल्स क्लिपबोर्ड में कॉपी कर लिए गए!', 'क्रेडेंशियल्स कॉपी हुए');
+    setTimeout(() => setCopiedClientCreds(false), 3000);
+  };
   const [voters, setVoters] = useState<AdminVoter[]>([]);
   const [demoUsers, setDemoUsers] = useState<DemoUserRecord[]>([]);
   const [demoLoading, setDemoLoading] = useState(false);
@@ -184,8 +261,6 @@ export default function AdminPanel() {
   const [expandedOrgId, setExpandedOrgId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
   const [organizationId, setOrganizationId] = useState('');
   const [wardFilter, setWardFilter] = useState('');
   const [tenantName, setTenantName] = useState('');
@@ -194,6 +269,9 @@ export default function AdminPanel() {
   const [showTenantPassword, setShowTenantPassword] = useState(false);
   const [tenantModules, setTenantModules] = useState<string[]>(moduleOptions.map(([key]) => key));
   const [tenantWards, setTenantWards] = useState('');
+  const [tenantDistrict, setTenantDistrict] = useState('');
+  const [tenantUlbPanchayat, setTenantUlbPanchayat] = useState('');
+  const [tenantUlbWardGram, setTenantUlbWardGram] = useState('');
   const [tenantWhatsappEnabled, setTenantWhatsappEnabled] = useState(true);
   const [tenantWhatsappCredits, setTenantWhatsappCredits] = useState('500');
   const [tenantSlipConfig, setTenantSlipConfig] = useState<SlipConfig>({
@@ -935,32 +1013,90 @@ export default function AdminPanel() {
     }
   };
 
-  const createTenant = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const createTenant = async (event?: FormEvent<HTMLFormElement>) => {
+    if (event) event.preventDefault();
+
+    // Instant Client-side validation with immediate Toast Pop-up
+    if (!tenantName.trim()) {
+      showToast('error', 'कृपया क्लाइंट या संगठन का नाम दर्ज करें।', 'नाम आवश्यक है');
+      setError('कृपया क्लाइंट या संगठन का नाम दर्ज करें।');
+      return;
+    }
+    if (!tenantEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tenantEmail.trim())) {
+      showToast('error', 'कृपया वैध क्लाइंट एडमिन ईमेल दर्ज करें (उदा. admin@party.com)।', 'ईमेल अमान्य है');
+      setError('कृपया वैध क्लाइंट एडमिन ईमेल दर्ज करें।');
+      return;
+    }
+    if (!tenantPassword || tenantPassword.length < 8) {
+      showToast('error', 'सुरक्षा कारणों से पासवर्ड कम-से-कम 8 अक्षरों का होना अनिवार्य है।', 'पासवर्ड 8+ अक्षर रखें');
+      setError('पासवर्ड कम-से-कम 8 अक्षरों का होना अनिवार्य है।');
+      return;
+    }
+    if (tenantModules.length === 0) {
+      showToast('error', 'कृपया क्लाइंट के लिए कम-से-कम 1 फीचर/मॉड्यूल चुनें।', 'मॉड्यूल चुनें');
+      setError('कृपया कम-से-कम 1 फीचर/मॉड्यूल चुनें।');
+      return;
+    }
+
     setSaving(true);
     setError('');
     setNotice('');
+    const orgName = tenantName.trim();
+    const adminEmail = tenantEmail.trim().toLowerCase();
+    const plainPassword = tenantPassword;
+    const assignedWards = tenantWards.split(',').map((ward) => ward.trim()).filter(Boolean);
+    const credits = Number.parseInt(tenantWhatsappCredits, 10) || 500;
+
     try {
       const response = await apiFetch('/admin/organizations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: tenantName,
-          email: tenantEmail,
-          password: tenantPassword,
+          name: orgName,
+          email: adminEmail,
+          password: plainPassword,
           modules: tenantModules,
-          wards: tenantWards.split(',').map((ward) => ward.trim()).filter(Boolean),
+          wards: assignedWards,
           whatsappEnabled: tenantWhatsappEnabled,
-          whatsappCredits: Number.parseInt(tenantWhatsappCredits, 10) || 0,
+          whatsappCredits: credits,
           slipConfig: tenantSlipConfig,
+          district: tenantDistrict.trim(),
+          ulbPanchayatSamiti: tenantUlbPanchayat.trim(),
+          ulbWardGramPanchayat: tenantUlbWardGram.trim(),
         }),
       });
       if (!response.ok) throw new Error(await getApiError(response, 'क्लाइंट खाता नहीं बन सका।'));
-      setNotice('क्लाइंट और उसका एडमिन अकाउंट बना दिया गया।');
+
+      const resData = await response.json().catch(() => ({}));
+      const successMsg = resData.message || `'${orgName}' क्लाइंट और उसका एडमिन अकाउंट बना दिया गया।`;
+
+      // Trigger Celebration Modal Pop-up
+      setCreatedClientInfo({
+        name: orgName,
+        email: adminEmail,
+        password: plainPassword,
+        modules: [...tenantModules],
+        wards: assignedWards,
+        whatsappCredits: credits,
+        district: tenantDistrict.trim(),
+        ulbPanchayatSamiti: tenantUlbPanchayat.trim(),
+        ulbWardGramPanchayat: tenantUlbWardGram.trim(),
+      });
+
+      // Trigger Floating Toast Pop-up
+      showToast('success', successMsg, '🎉 नया क्लाइंट तैयार!');
+      setNotice(successMsg);
+
+      // Close modal if open
+      setIsCreateClientModalOpen(false);
+
       setTenantName('');
       setTenantEmail('');
       setTenantPassword('');
       setTenantWards('');
+      setTenantDistrict('');
+      setTenantUlbPanchayat('');
+      setTenantUlbWardGram('');
       setTenantWhatsappCredits('500');
       setTenantSlipConfig({
         candidateName: '',
@@ -978,7 +1114,9 @@ export default function AdminPanel() {
       });
       await loadOrganizations();
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : 'क्लाइंट खाता नहीं बन सका।');
+      const errMsg = createError instanceof Error ? createError.message : 'क्लाइंट खाता नहीं बन सका।';
+      setError(errMsg);
+      showToast('error', errMsg, '❌ क्लाइंट नहीं बन सका');
     } finally {
       setSaving(false);
     }
@@ -1002,6 +1140,9 @@ export default function AdminPanel() {
           whatsappEnabled: editingTenant.whatsappEnabled ?? true,
           whatsappCredits: editingTenant.whatsappCredits ?? 0,
           slipConfig: editingTenant.slipConfig || {},
+          district: editingTenant.district || '',
+          ulbPanchayatSamiti: editingTenant.ulbPanchayatSamiti || '',
+          ulbWardGramPanchayat: editingTenant.ulbWardGramPanchayat || '',
         }),
       });
       if (!response.ok) throw new Error(await getApiError(response, 'क्लाइंट सेटिंग सेव नहीं हुई।'));
@@ -1255,7 +1396,7 @@ export default function AdminPanel() {
                 <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', marginBottom: '4px' }}>नया क्लाइंट खाता</h2>
                 <p style={{ fontSize: '14px', color: '#7d8981' }}>एक ही login से क्लाइंट एडमिन अपना configurable workspace खोलेंगे।</p>
               </div>
-              <form className="modal-form" onSubmit={createTenant}>
+              <form className="modal-form" onSubmit={createTenant} noValidate>
                 <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
                   <label>क्लाइंट / संगठन का नाम<input required value={tenantName} onChange={(event) => setTenantName(event.target.value)} /></label>
                   <label>क्लाइंट एडमिन ईमेल<input type="email" autoComplete="username" required value={tenantEmail} onChange={(event) => setTenantEmail(event.target.value)} /></label>
@@ -1284,6 +1425,56 @@ export default function AdminPanel() {
                     </span>
                   </label>
                   <label>अनुमत वार्ड <span className="optional-label">कॉमा से अलग; खाली = पूरा संगठन</span><input value={tenantWards} onChange={(event) => setTenantWards(event.target.value)} placeholder="वार्ड 1, वार्ड 2" /></label>
+                </div>
+
+                {/* राज्य निर्वाचन आयोग (SEC Rajasthan) अनुसार वैकल्पिक भौगोलिक / चुनावी क्षेत्र */}
+                <div
+                  style={{
+                    marginTop: '16px',
+                    padding: '14px 16px',
+                    borderRadius: '12px',
+                    border: '1.5px dashed #cbd5e1',
+                    background: '#f8fafc',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e293b', fontWeight: 700, fontSize: '13px' }}>
+                      <MapPin size={16} style={{ color: '#0284c7' }} />
+                      <span>चुनावी / प्रशासनिक क्षेत्र (State Election Commission Format)</span>
+                    </div>
+                    <span style={{ fontSize: '11px', background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                      वैकल्पिक (Optional)
+                    </span>
+                  </div>
+                  <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+                    <label style={{ fontSize: '12.5px' }}>
+                      District (जिला)
+                      <input
+                        value={tenantDistrict}
+                        onChange={(e) => setTenantDistrict(e.target.value)}
+                        placeholder="उदा. PALI"
+                        style={{ marginTop: '4px' }}
+                      />
+                    </label>
+                    <label style={{ fontSize: '12.5px' }}>
+                      ULB / PanchayatSamiti (निकाय / पं. समिति)
+                      <input
+                        value={tenantUlbPanchayat}
+                        onChange={(e) => setTenantUlbPanchayat(e.target.value)}
+                        placeholder="उदा. SOJAT PANCHAYAT SAMITI"
+                        style={{ marginTop: '4px' }}
+                      />
+                    </label>
+                    <label style={{ fontSize: '12.5px' }}>
+                      ULB Ward / GramPanchayat (वार्ड / ग्रा.पं.)
+                      <input
+                        value={tenantUlbWardGram}
+                        onChange={(e) => setTenantUlbWardGram(e.target.value)}
+                        placeholder="उदा. RAMASANI BALA"
+                        style={{ marginTop: '4px' }}
+                      />
+                    </label>
+                  </div>
                 </div>
                 <fieldset
                   style={{
@@ -1450,9 +1641,35 @@ export default function AdminPanel() {
                   </div>
                 </div>
 
-                <div className="admin-form-actions" style={{ marginTop: '20px' }}>
+                {error && (
+                  <div className="inline-notice error-notice" style={{ marginTop: '16px', marginBottom: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <AlertCircle size={15} /> {error}
+                    </div>
+                  </div>
+                )}
+                {notice && (
+                  <div className="inline-notice" style={{ marginTop: '16px', marginBottom: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Check size={15} /> {notice}
+                    </div>
+                  </div>
+                )}
+
+                <div className="admin-form-actions" style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <button className="button-primary" type="submit" disabled={saving}>
-                    {saving ? <LoaderCircle size={15} className="spin" /> : <UserPlus size={15} />} क्लाइंट बनाएँ
+                    {saving ? <LoaderCircle size={15} className="spin" /> : <UserPlus size={15} />} {saving ? 'क्लाइंट बन रहा है...' : 'क्लाइंट बनाएँ'}
+                  </button>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => {
+                      setIsCreateClientModalOpen(true);
+                      setError('');
+                    }}
+                    style={{ fontSize: '13px' }}
+                  >
+                    पॉप-अप में खोलें (Open in Modal)
                   </button>
                 </div>
               </form>
@@ -1464,23 +1681,46 @@ export default function AdminPanel() {
                   <h2>क्लाइंट संगठन</h2>
                   <p>मॉड्यूल, वार्ड, पर्ची ब्रांडिंग, WhatsApp क्रेडिट और खाते की स्थिति नियंत्रित करें।</p>
                 </div>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '4px 12px',
-                    borderRadius: '20px',
-                    background: '#e0f2fe',
-                    color: '#0369a1',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    width: 'fit-content',
-                    border: '1px solid #bae6fd',
-                  }}
-                >
-                  कुल {organizations.length} संगठन
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="button-primary"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '7px 14px',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      background: 'linear-gradient(135deg, #16a34a, #15803d)',
+                      boxShadow: '0 4px 12px rgba(22, 163, 74, 0.25)',
+                    }}
+                    onClick={() => {
+                      setIsCreateClientModalOpen(true);
+                      setError('');
+                    }}
+                  >
+                    <UserPlus size={15} /> + नया क्लाइंट जोड़ें (Pop-up)
+                  </button>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      background: '#e0f2fe',
+                      color: '#0369a1',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      width: 'fit-content',
+                      border: '1px solid #bae6fd',
+                    }}
+                  >
+                    कुल {organizations.length} संगठन
+                  </span>
+                </div>
               </div>
               {loading ? (
                 <div className="empty-state"><LoaderCircle size={20} className="spin" /><p>क्लाइंट लोड हो रहे हैं…</p></div>
@@ -1508,6 +1748,13 @@ export default function AdminPanel() {
                             {tenant.isActive ? 'सक्रिय' : 'बंद'}
                           </span>
                         </div>
+
+                        {(tenant.district || tenant.ulbPanchayatSamiti || tenant.ulbWardGramPanchayat) && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: '#0369a1', background: '#e0f2fe', padding: '3px 8px', borderRadius: '6px', marginBottom: '8px', fontWeight: 600 }}>
+                            <MapPin size={12} />
+                            <span>{[tenant.district, tenant.ulbPanchayatSamiti, tenant.ulbWardGramPanchayat].filter(Boolean).join(' • ')}</span>
+                          </div>
+                        )}
 
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
                           <span style={{ fontSize: '11px', background: '#f1f5f9', color: '#334155', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
@@ -1596,6 +1843,12 @@ export default function AdminPanel() {
                             <td>
                               <strong className="voter-name">{tenant.name}</strong>
                               <div className="voter-subline">{tenant.id}</div>
+                              {(tenant.district || tenant.ulbPanchayatSamiti || tenant.ulbWardGramPanchayat) && (
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#0369a1', background: '#e0f2fe', padding: '1px 6px', borderRadius: '4px', marginTop: '3px', fontWeight: 600 }}>
+                                  <MapPin size={11} />
+                                  <span>{[tenant.district, tenant.ulbPanchayatSamiti, tenant.ulbWardGramPanchayat].filter(Boolean).join(' • ')}</span>
+                                </div>
+                              )}
                             </td>
                             <td>{tenant.wards.length ? tenant.wards.join(', ') : 'सभी'}</td>
                             <td>
@@ -4338,6 +4591,42 @@ export default function AdminPanel() {
                   <label>क्लाइंट नाम<input required value={editingTenant.name} onChange={(event) => setEditingTenant({ ...editingTenant, name: event.target.value })} /></label>
                   <label>अनुमत वार्ड <span className="optional-label">कॉमा से अलग; खाली = सभी वार्ड</span><input value={editingTenant.wards.join(', ')} onChange={(event) => setEditingTenant({ ...editingTenant, wards: event.target.value.split(',').map((ward) => ward.trim()).filter(Boolean) })} /></label>
                 </div>
+
+                <div style={{ marginTop: '14px', padding: '12px 14px', borderRadius: '10px', border: '1.5px dashed #cbd5e1', background: '#f8fafc' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', color: '#1e293b', fontWeight: 600, fontSize: '12.5px' }}>
+                    <MapPin size={14} style={{ color: '#0284c7' }} />
+                    <span>चुनावी / प्रशासनिक क्षेत्र (State Election Commission Format - वैकल्पिक)</span>
+                  </div>
+                  <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                    <label style={{ fontSize: '12px', margin: 0 }}>
+                      District (जिला)
+                      <input
+                        type="text"
+                        value={editingTenant.district || ''}
+                        onChange={(e) => setEditingTenant({ ...editingTenant, district: e.target.value })}
+                        placeholder="उदा. PALI"
+                      />
+                    </label>
+                    <label style={{ fontSize: '12px', margin: 0 }}>
+                      ULB / PanchayatSamiti (निकाय / पं. समिति)
+                      <input
+                        type="text"
+                        value={editingTenant.ulbPanchayatSamiti || ''}
+                        onChange={(e) => setEditingTenant({ ...editingTenant, ulbPanchayatSamiti: e.target.value })}
+                        placeholder="उदा. SOJAT PANCHAYAT SAMITI"
+                      />
+                    </label>
+                    <label style={{ fontSize: '12px', margin: 0 }}>
+                      ULB Ward / GramPanchayat (वार्ड / ग्रा.पं.)
+                      <input
+                        type="text"
+                        value={editingTenant.ulbWardGramPanchayat || ''}
+                        onChange={(e) => setEditingTenant({ ...editingTenant, ulbWardGramPanchayat: e.target.value })}
+                        placeholder="उदा. RAMASANI BALA"
+                      />
+                    </label>
+                  </div>
+                </div>
                 <fieldset className="feature-module-fieldset" style={{ marginTop: '20px' }}>
                   <legend>सक्षम फीचर</legend>
                   <div className="feature-module-grid">
@@ -4748,6 +5037,512 @@ export default function AdminPanel() {
                 </button>
               </div>
             </section>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* CREATE CLIENT POP-UP MODAL                                        */}
+        {/* ================================================================= */}
+        {isCreateClientModalOpen && (
+          <div
+            className="feature-modal-backdrop"
+            role="presentation"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget && !saving) setIsCreateClientModalOpen(false);
+            }}
+          >
+            <section
+              className="feature-modal"
+              role="dialog"
+              aria-modal="true"
+              style={{ maxWidth: '780px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}
+            >
+              <div className="feature-modal-heading">
+                <div>
+                  <span className="eyebrow-label"><UserPlus size={13} /> TENANT PROVISIONING</span>
+                  <h2>नया क्लाइंट खाता जोड़ें (New Client)</h2>
+                </div>
+                <button
+                  className="icon-button"
+                  type="button"
+                  disabled={saving}
+                  onClick={() => setIsCreateClientModalOpen(false)}
+                  aria-label="बंद करें"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form className="modal-form" onSubmit={createTenant} noValidate>
+                <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+                  <label>
+                    क्लाइंट / संगठन का नाम <span style={{ color: '#dc2626' }}>*</span>
+                    <input
+                      required
+                      value={tenantName}
+                      onChange={(event) => setTenantName(event.target.value)}
+                      placeholder="उदा. आदर्श जन सेवा समिति"
+                    />
+                  </label>
+                  <label>
+                    क्लाइंट एडमिन ईमेल <span style={{ color: '#dc2626' }}>*</span>
+                    <input
+                      type="email"
+                      autoComplete="username"
+                      required
+                      value={tenantEmail}
+                      onChange={(event) => setTenantEmail(event.target.value)}
+                      placeholder="admin@election.in"
+                    />
+                  </label>
+                  <label>
+                    शुरुआती पासवर्ड <span style={{ color: '#dc2626' }}>* (8+ अक्षर)</span>
+                    <span className="feature-password-field" style={{ marginTop: '4px' }}>
+                      <KeyRound size={14} />
+                      <input
+                        type={showTenantPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        minLength={8}
+                        required
+                        value={tenantPassword}
+                        onChange={(event) => setTenantPassword(event.target.value)}
+                        placeholder="कम-से-कम 8 अक्षर"
+                      />
+                      <button
+                        type="button"
+                        className="password-eye-btn"
+                        onClick={() => setShowTenantPassword((prev) => !prev)}
+                        title={showTenantPassword ? 'पासवर्ड छिपाएं' : 'पासवर्ड देखें'}
+                      >
+                        {showTenantPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </span>
+                  </label>
+                  <label>
+                    अनुमत वार्ड <span className="optional-label">कॉमा से अलग; खाली = पूरा संगठन</span>
+                    <input
+                      value={tenantWards}
+                      onChange={(event) => setTenantWards(event.target.value)}
+                      placeholder="वार्ड 1, वार्ड 2"
+                    />
+                  </label>
+                </div>
+
+                {/* राज्य निर्वाचन आयोग (SEC Rajasthan) अनुसार वैकल्पिक भौगोलिक / चुनावी क्षेत्र */}
+                <div
+                  style={{
+                    marginTop: '16px',
+                    padding: '14px 16px',
+                    borderRadius: '12px',
+                    border: '1.5px dashed #cbd5e1',
+                    background: '#f8fafc',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e293b', fontWeight: 700, fontSize: '13px' }}>
+                      <MapPin size={16} style={{ color: '#0284c7' }} />
+                      <span>चुनावी / प्रशासनिक क्षेत्र (State Election Commission Format)</span>
+                    </div>
+                    <span style={{ fontSize: '11px', background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                      वैकल्पिक (Optional)
+                    </span>
+                  </div>
+                  <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+                    <label style={{ fontSize: '12.5px' }}>
+                      District (जिला)
+                      <input
+                        value={tenantDistrict}
+                        onChange={(e) => setTenantDistrict(e.target.value)}
+                        placeholder="उदा. PALI"
+                        style={{ marginTop: '4px' }}
+                      />
+                    </label>
+                    <label style={{ fontSize: '12.5px' }}>
+                      ULB / PanchayatSamiti (निकाय / पं. समिति)
+                      <input
+                        value={tenantUlbPanchayat}
+                        onChange={(e) => setTenantUlbPanchayat(e.target.value)}
+                        placeholder="उदा. SOJAT PANCHAYAT SAMITI"
+                        style={{ marginTop: '4px' }}
+                      />
+                    </label>
+                    <label style={{ fontSize: '12.5px' }}>
+                      ULB Ward / GramPanchayat (वार्ड / ग्रा.पं.)
+                      <input
+                        value={tenantUlbWardGram}
+                        onChange={(e) => setTenantUlbWardGram(e.target.value)}
+                        placeholder="उदा. RAMASANI BALA"
+                        style={{ marginTop: '4px' }}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <fieldset
+                  style={{
+                    marginTop: '20px',
+                    padding: '16px 18px',
+                    borderRadius: '12px',
+                    border: '1.5px solid #e2e8f0',
+                    background: '#ffffff',
+                  }}
+                >
+                  <legend style={{ fontWeight: 700, color: '#0f172a', fontSize: '13px', padding: '0 8px' }}>
+                    इस क्लाइंट के लिए सक्रिय फीचर्स
+                  </legend>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                      gap: '10px',
+                      marginTop: '6px',
+                    }}
+                  >
+                    {moduleOptions.map(([module, label]) => {
+                      const isChecked = tenantModules.includes(module);
+                      return (
+                        <label
+                          key={module}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '9px',
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${isChecked ? '#86efac' : '#e2e8f0'}`,
+                            background: isChecked ? '#f0fdf4' : '#f8fafc',
+                            color: isChecked ? '#166534' : '#334155',
+                            fontWeight: isChecked ? 700 : 500,
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleModule(module)}
+                            style={{ width: '16px', height: '16px', accentColor: '#16a34a', cursor: 'pointer' }}
+                          />
+                          <span>{label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+
+                <div
+                  style={{
+                    marginTop: '16px',
+                    padding: '14px 16px',
+                    background: '#f0fdf4',
+                    borderRadius: '12px',
+                    border: '1.5px solid #bbf7d0',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 700, color: '#166534', cursor: 'pointer', margin: 0, fontSize: '13px' }}>
+                      <input
+                        type="checkbox"
+                        checked={tenantWhatsappEnabled}
+                        onChange={(e) => setTenantWhatsappEnabled(e.target.checked)}
+                        style={{ width: '16px', height: '16px', accentColor: '#16a34a', cursor: 'pointer' }}
+                      />
+                      <MessageCircle size={16} />
+                      WhatsApp संदेश सेवा सक्षम करें
+                    </label>
+                    <span style={{ fontSize: '11px', color: '#15803d', fontWeight: 600, background: '#dcfce7', padding: '2px 8px', borderRadius: '12px' }}>
+                      {tenantWhatsappEnabled ? 'सक्रिय (Active)' : 'निष्क्रिय (Disabled)'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', paddingTop: '8px', borderTop: '1px dashed #bbf7d0' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '13px', color: '#166534', fontWeight: 600 }}>
+                      प्रारंभिक WhatsApp क्रेडिट्स:
+                      <input
+                        type="number"
+                        min="0"
+                        value={tenantWhatsappCredits}
+                        onChange={(e) => setTenantWhatsappCredits(e.target.value)}
+                        style={{ width: '85px', padding: '5px 8px', borderRadius: '6px', border: '1.5px solid #86efac', background: '#ffffff', fontWeight: 700, fontSize: '13px', color: '#166534' }}
+                      />
+                    </label>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {['100', '500', '1000'].map((quick) => (
+                        <button
+                          key={quick}
+                          type="button"
+                          className="button-quiet"
+                          style={{ fontSize: '11px', padding: '3px 8px', background: '#ffffff', border: '1px solid #86efac', borderRadius: '4px', cursor: 'pointer', color: '#166534', fontWeight: 700 }}
+                          onClick={() => setTenantWhatsappCredits(quick)}
+                        >
+                          +{quick}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="inline-notice error-notice" style={{ marginTop: '14px', marginBottom: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <AlertCircle size={15} /> {error}
+                    </div>
+                  </div>
+                )}
+                {notice && (
+                  <div className="inline-notice" style={{ marginTop: '14px', marginBottom: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Check size={15} /> {notice}
+                    </div>
+                  </div>
+                )}
+
+                <div className="modal-actions" style={{ marginTop: '20px', borderTop: '1px solid #f1f5f9', paddingTop: '14px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    disabled={saving}
+                    onClick={() => setIsCreateClientModalOpen(false)}
+                  >
+                    रद्द करें
+                  </button>
+                  <button className="button-primary" type="submit" disabled={saving}>
+                    {saving ? <LoaderCircle size={15} className="spin" /> : <UserPlus size={15} />}
+                    {saving ? 'क्लाइंट बन रहा है...' : 'हाँ, क्लाइंट खाता बनाएँ'}
+                  </button>
+                </div>
+              </form>
+            </section>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* NEW CLIENT SUCCESS CELEBRATION MODAL POPUP                        */}
+        {/* ================================================================= */}
+        {createdClientInfo && (
+          <div
+            className="feature-modal-backdrop"
+            role="presentation"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setCreatedClientInfo(null);
+            }}
+          >
+            <section
+              className="form-modal"
+              role="dialog"
+              aria-modal="true"
+              style={{
+                maxWidth: '520px',
+                width: '95%',
+                borderRadius: '16px',
+                border: '1.5px solid #86efac',
+                boxShadow: '0 25px 50px -12px rgba(22, 163, 74, 0.25)',
+                padding: '24px',
+                background: '#ffffff',
+              }}
+            >
+              <div style={{ textAlign: 'center', marginBottom: '18px' }}>
+                <div
+                  style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '50%',
+                    background: '#dcfce7',
+                    color: '#16a34a',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 12px',
+                    boxShadow: '0 0 0 8px #f0fdf4',
+                  }}
+                >
+                  <CheckCircle2 size={32} />
+                </div>
+                <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px' }}>
+                  🎉 नया क्लाइंट सफलतापूर्वक तैयार!
+                </h2>
+                <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+                  क्लाइंट एडमिन खाता तैयार है। कृपया नीचे दिए क्रेडेंशियल्स सुरक्षित रख लें।
+                </p>
+              </div>
+
+              <div
+                style={{
+                  background: '#f8fafc',
+                  border: '1.5px solid #e2e8f0',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  fontSize: '13px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>क्लाइंट / संगठन:</span>
+                  <strong style={{ color: '#0f172a', fontSize: '14px' }}>{createdClientInfo.name}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>एडमिन ईमेल:</span>
+                  <code style={{ background: '#e2e8f0', padding: '2px 8px', borderRadius: '4px', color: '#0f172a', fontWeight: 700 }}>
+                    {createdClientInfo.email}
+                  </code>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>शुरुआती पासवर्ड:</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <code style={{ background: '#fef3c7', padding: '2px 8px', borderRadius: '4px', color: '#92400e', fontWeight: 700 }}>
+                      {showCreatedClientPassword ? createdClientInfo.password : '••••••••'}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => setShowCreatedClientPassword((prev) => !prev)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#64748b' }}
+                      title={showCreatedClientPassword ? 'छिपाएं' : 'देखें'}
+                    >
+                      {showCreatedClientPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>सक्रिय मॉड्यूल:</span>
+                  <span style={{ color: '#166534', fontWeight: 700, background: '#dcfce7', padding: '1px 8px', borderRadius: '10px', fontSize: '12px' }}>
+                    {createdClientInfo.modules.length} फीचर्स चालू
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>WhatsApp क्रेडिट:</span>
+                  <span style={{ color: '#0369a1', fontWeight: 700 }}>
+                    {createdClientInfo.whatsappCredits} संदेश
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>अनुमत वार्ड:</span>
+                  <span style={{ color: '#475569', fontWeight: 600 }}>
+                    {createdClientInfo.wards.length > 0 ? createdClientInfo.wards.join(', ') : 'पूरा संगठन (सभी वार्ड)'}
+                  </span>
+                </div>
+                {(createdClientInfo.district || createdClientInfo.ulbPanchayatSamiti || createdClientInfo.ulbWardGramPanchayat) && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingTop: '6px', borderTop: '1px dashed #e2e8f0' }}>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>चुनावी क्षेत्र:</span>
+                    <span style={{ color: '#0369a1', fontWeight: 600, textAlign: 'right' }}>
+                      {[createdClientInfo.district, createdClientInfo.ulbPanchayatSamiti, createdClientInfo.ulbWardGramPanchayat].filter(Boolean).join(' • ')}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                <button
+                  type="button"
+                  className="button-primary"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '11px',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    borderRadius: '10px',
+                    background: copiedClientCreds ? '#15803d' : '#16a34a',
+                  }}
+                  onClick={copyCreatedClientCreds}
+                >
+                  {copiedClientCreds ? <Check size={16} /> : <Copy size={16} />}
+                  {copiedClientCreds ? 'क्रेडेंशियल्स कॉपी हो गए!' : 'लॉगिन क्रेडेंशियल्स कॉपी करें'}
+                </button>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  style={{ width: '100%', padding: '10px', borderRadius: '10px', fontWeight: 600 }}
+                  onClick={() => setCreatedClientInfo(null)}
+                >
+                  ठीक है, धन्यवाद
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* GLOBAL FLOATING TOAST POP-UP NOTIFICATION                        */}
+        {/* ================================================================= */}
+        {toast && (
+          <div
+            style={{
+              position: 'fixed',
+              top: '24px',
+              right: '24px',
+              zIndex: 99999,
+              maxWidth: '420px',
+              width: 'calc(100vw - 48px)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px',
+              padding: '16px 18px',
+              borderRadius: '14px',
+              background: toast.type === 'success'
+                ? 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)'
+                : toast.type === 'error'
+                ? 'linear-gradient(135deg, #fef2f2 0%, #ffffff 100%)'
+                : 'linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%)',
+              border: `1.5px solid ${toast.type === 'success' ? '#86efac' : toast.type === 'error' ? '#fca5a5' : '#7dd3fc'}`,
+              boxShadow: '0 20px 35px -10px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0,0,0,0.05)',
+              backdropFilter: 'blur(8px)',
+            }}
+            role="status"
+            aria-live="polite"
+          >
+            <div
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                background: toast.type === 'success' ? '#dcfce7' : toast.type === 'error' ? '#fee2e2' : '#e0f2fe',
+                color: toast.type === 'success' ? '#16a34a' : toast.type === 'error' ? '#dc2626' : '#0284c7',
+              }}
+            >
+              {toast.type === 'success' ? <CheckCircle2 size={20} /> : toast.type === 'error' ? <AlertCircle size={20} /> : <Info size={20} />}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {toast.title && (
+                <div style={{ fontWeight: 800, fontSize: '14px', color: toast.type === 'success' ? '#14532d' : toast.type === 'error' ? '#7f1d1d' : '#0c4a6e', marginBottom: '2px' }}>
+                  {toast.title}
+                </div>
+              )}
+              <div style={{ fontSize: '13px', color: '#334155', lineHeight: 1.5, wordBreak: 'break-word' }}>
+                {toast.message}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setToast(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                color: '#94a3b8',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              title="बंद करें"
+            >
+              <X size={16} />
+            </button>
           </div>
         )}
       </div>
