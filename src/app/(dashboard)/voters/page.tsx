@@ -1116,12 +1116,22 @@ export default function VoterDirectoryPage() {
                     {/* Middle Info (shows En / Hi format as in ss5) */}
                     <div className="sb-card-info">
                       <h3 className="sb-voter-name">
-                        {voter.nameEn && voter.nameHi ? `${voter.nameEn} / ${voter.nameHi}` : (voter.nameHi || voter.nameEn || '—')}
+                        {voter.nameEn &&
+                        voter.nameHi &&
+                        voter.nameEn.trim() !== voter.nameHi.trim() &&
+                        /[a-zA-Z]/.test(voter.nameEn)
+                          ? `${voter.nameEn} / ${voter.nameHi}`
+                          : (voter.nameHi || voter.nameEn || '—')}
                       </h3>
                       <p className="sb-voter-relative">
                         <span className="sb-relative-label">{voter.relationType || 'पिता'}: </span>
                         <span className="sb-relative-val">
-                          {voter.relativeNameEn && voter.relativeNameHi ? `${voter.relativeNameEn} / ${voter.relativeNameHi}` : (voter.relativeNameHi || voter.relativeNameEn || '—')}
+                          {voter.relativeNameEn &&
+                          voter.relativeNameHi &&
+                          voter.relativeNameEn.trim() !== voter.relativeNameHi.trim() &&
+                          /[a-zA-Z]/.test(voter.relativeNameEn)
+                            ? `${voter.relativeNameEn} / ${voter.relativeNameHi}`
+                            : (voter.relativeNameHi || voter.relativeNameEn || '—')}
                         </span>
                       </p>
                     </div>
