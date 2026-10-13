@@ -148,6 +148,7 @@ export default function SlipsPage() {
 
   // Bulk Print Mode
   const [bulkMode, setBulkMode] = useState(false);
+  const [perA4, setPerA4] = useState<4 | 8 | 12>(12);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDownloadingBulkZip, setIsDownloadingBulkZip] = useState(false);
   const [bulkZipProgress, setBulkZipProgress] = useState({ current: 0, total: 0 });
@@ -548,13 +549,13 @@ export default function SlipsPage() {
   };
 
   return (
-    <div className={`work-page slips-studio-page ${bulkMode ? 'slips-bulk-print-mode' : 'slips-single-print-mode'}`}>
+    <div className={`work-page slips-studio-page ${bulkMode ? `slips-bulk-print-mode slips-per-a4-${perA4}` : 'slips-single-print-mode'}`}>
       {/* Print-only CSS styling */}
       <style jsx global>{`
         @media print {
           @page {
             size: A4 portrait;
-            margin: 6mm 5mm;
+            margin: 5mm;
           }
 
           /* Hide all application chrome and interactive elements */
@@ -608,16 +609,6 @@ export default function SlipsPage() {
             display: none !important;
           }
 
-          .slips-bulk-print-mode .slips-bulk-print-grid {
-            display: grid !important;
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: 6mm 5mm !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            position: static !important;
-          }
-
           .slips-bulk-print-mode .slips-bulk-print-item {
             display: block !important;
             position: static !important;
@@ -626,6 +617,7 @@ export default function SlipsPage() {
             margin: 0 !important;
             padding: 0 !important;
             background: #ffffff !important;
+            box-sizing: border-box !important;
           }
 
           .slips-bulk-print-mode .voter-slip-printable-card {
@@ -634,11 +626,83 @@ export default function SlipsPage() {
             top: auto !important;
             width: 100% !important;
             max-width: 100% !important;
+            height: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
             box-shadow: none !important;
             break-inside: avoid !important;
             page-break-inside: avoid !important;
+          }
+
+          /* 4 in 1 A4: 2 columns × 2 rows (page break every 4 slips) */
+          .slips-per-a4-4 .slips-bulk-print-grid {
+            display: grid !important;
+            grid-template-columns: repeat(2, 96mm) !important;
+            grid-auto-rows: 136mm !important;
+            gap: 5mm 6mm !important;
+            justify-content: center !important;
+            width: 198mm !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+          }
+          .slips-per-a4-4 .slips-bulk-print-item {
+            width: 96mm !important;
+            height: 136mm !important;
+            max-height: 136mm !important;
+          }
+          .slips-per-a4-4 .slips-bulk-print-item:nth-child(4n) {
+            page-break-after: always !important;
+            break-after: page !important;
+          }
+
+          /* 8 in 1 A4: 2 columns × 4 rows (page break every 8 slips) */
+          .slips-per-a4-8 .slips-bulk-print-grid {
+            display: grid !important;
+            grid-template-columns: repeat(2, 96mm) !important;
+            grid-auto-rows: 68mm !important;
+            gap: 2.5mm 6mm !important;
+            justify-content: center !important;
+            width: 198mm !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+          }
+          .slips-per-a4-8 .slips-bulk-print-item {
+            width: 96mm !important;
+            height: 68mm !important;
+            max-height: 68mm !important;
+          }
+          .slips-per-a4-8 .slips-bulk-print-item:nth-child(8n) {
+            page-break-after: always !important;
+            break-after: page !important;
+          }
+
+          /* 12 in 1 A4: 3 columns × 4 rows (page break every 12 slips) */
+          .slips-per-a4-12 .slips-bulk-print-grid {
+            display: grid !important;
+            grid-template-columns: repeat(3, 63mm) !important;
+            grid-auto-rows: 68mm !important;
+            gap: 2.5mm 4mm !important;
+            justify-content: center !important;
+            width: 198mm !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+          }
+          .slips-per-a4-12 .slips-bulk-print-item {
+            width: 63mm !important;
+            height: 68mm !important;
+            max-height: 68mm !important;
+          }
+          .slips-per-a4-12 .slips-bulk-print-item:nth-child(12n) {
+            page-break-after: always !important;
+            break-after: page !important;
+          }
+
+          /* Prevent blank trailing page on exact page multiples */
+          .slips-per-a4-4 .slips-bulk-print-item:last-child,
+          .slips-per-a4-8 .slips-bulk-print-item:last-child,
+          .slips-per-a4-12 .slips-bulk-print-item:last-child {
+            page-break-after: auto !important;
+            break-after: auto !important;
           }
 
           /* ================= SINGLE SLIP PRINT MODE ================= */
@@ -913,56 +977,209 @@ export default function SlipsPage() {
             className="bulk-header-bar"
             style={{
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '20px',
+              flexDirection: 'column',
+              gap: '16px',
+              marginBottom: '24px',
+              paddingBottom: '16px',
+              borderBottom: '1px solid #e2e8f0',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <h2 style={{ fontSize: '18px', margin: 0 }}>
-                बल्क पर्ची प्रिंट शीट ({voters.length} पर्चियां)
-              </h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <SortButton label="क्रम संख्या" field="serialNo" type="numeric" currentSort={sort} onSort={handleSort} />
-                <SortButton label="नाम" field="name" type="alpha" currentSort={sort} onSort={handleSort} />
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
+              <div>
+                <h2 style={{ fontSize: '19px', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+                  बल्क पर्ची A4 प्रिंट शीट ({sortedVoters.length} मतदाता)
+                </h2>
+                <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
+                  A4 शीट पर प्रिंट करने के लिए अपनी पसंद अनुसार 4, 8 या 12 पर्ची प्रति पेज का लेआउट चुनें।
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <SortButton label="क्रम संख्या" field="serialNo" type="numeric" currentSort={sort} onSort={handleSort} />
+                  <SortButton label="नाम" field="name" type="alpha" currentSort={sort} onSort={handleSort} />
+                </div>
+
+                <button
+                  className="button-primary"
+                  type="button"
+                  onClick={handlePrint}
+                  style={{
+                    background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                    borderColor: '#16a34a',
+                    padding: '8px 18px',
+                    fontSize: '13.5px',
+                    fontWeight: 700,
+                    boxShadow: '0 2px 6px rgba(22, 163, 74, 0.25)',
+                  }}
+                >
+                  <Printer size={16} /> A4 प्रिंट करें ({perA4} पर्ची/पेज)
+                </button>
+
+                <button
+                  className="button-primary"
+                  type="button"
+                  disabled={isDownloadingBulkZip || sortedVoters.length === 0}
+                  onClick={async () => {
+                    setIsDownloadingBulkZip(true);
+                    setBulkZipProgress({ current: 0, total: sortedVoters.length });
+                    await downloadBulkSlipsAsZip(sortedVoters, slipConfig, (current, total) => {
+                      setBulkZipProgress({ current, total });
+                    });
+                    setIsDownloadingBulkZip(false);
+                  }}
+                  style={{ background: '#1d4ed8', borderColor: '#2563eb', padding: '8px 16px', fontSize: '13px' }}
+                >
+                  {isDownloadingBulkZip ? (
+                    <><LoaderCircle size={15} className="spin" /> ZIP बन रहा... ({bulkZipProgress.current}/{bulkZipProgress.total})</>
+                  ) : (
+                    <><Download size={15} /> सभी JPG डाउनलोड (.zip)</>
+                  )}
+                </button>
               </div>
             </div>
-            <button className="button-primary" type="button" onClick={handlePrint}>
-              <Printer size={15} /> पूरी शीट प्रिंट करें
-            </button>
-            <button
-              className="button-primary"
-              type="button"
-              disabled={isDownloadingBulkZip || sortedVoters.length === 0}
-              onClick={async () => {
-                setIsDownloadingBulkZip(true);
-                setBulkZipProgress({ current: 0, total: sortedVoters.length });
-                await downloadBulkSlipsAsZip(sortedVoters, slipConfig, (current, total) => {
-                  setBulkZipProgress({ current, total });
-                });
-                setIsDownloadingBulkZip(false);
+
+            {/* A4 Format Selector Strip */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+                background: '#f8fafc',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: '1.5px solid #e2e8f0',
               }}
-              style={{ background: '#1d4ed8', borderColor: '#2563eb' }}
             >
-              {isDownloadingBulkZip ? (
-                <><LoaderCircle size={15} className="spin" /> ZIP बन रहा... ({bulkZipProgress.current}/{bulkZipProgress.total})</>
-              ) : (
-                <><Download size={15} /> बल्क ZIP डाउनलोड (सभी JPG)</>  
-              )}
-            </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#334155' }}>
+                  एक A4 शीट में कितनी पर्ची चाहिए?
+                </span>
+
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    background: '#e2e8f0',
+                    padding: '3px',
+                    borderRadius: '8px',
+                    gap: '4px',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setPerA4(4)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: perA4 === 4 ? '#ffffff' : 'transparent',
+                      color: perA4 === 4 ? '#0f172a' : '#64748b',
+                      fontWeight: perA4 === 4 ? 800 : 600,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      boxShadow: perA4 === 4 ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                      transition: 'all 0.15s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <span>📄 4 पर्ची / A4</span>
+                    <span style={{ fontSize: '10.5px', color: perA4 === 4 ? '#2563eb' : '#94a3b8', fontWeight: 700 }}>(2×2 बड़ी पर्ची)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPerA4(8)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: perA4 === 8 ? '#ffffff' : 'transparent',
+                      color: perA4 === 8 ? '#0f172a' : '#64748b',
+                      fontWeight: perA4 === 8 ? 800 : 600,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      boxShadow: perA4 === 8 ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                      transition: 'all 0.15s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <span>📑 8 पर्ची / A4</span>
+                    <span style={{ fontSize: '10.5px', color: perA4 === 8 ? '#2563eb' : '#94a3b8', fontWeight: 700 }}>(2×4 मध्यम पर्ची)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPerA4(12)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: perA4 === 12 ? '#ffffff' : 'transparent',
+                      color: perA4 === 12 ? '#ea580c' : '#64748b',
+                      fontWeight: perA4 === 12 ? 900 : 600,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      boxShadow: perA4 === 12 ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                      transition: 'all 0.15s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <span>⚡ 12 पर्ची / A4</span>
+                    <span style={{ fontSize: '10.5px', color: perA4 === 12 ? '#ea580c' : '#94a3b8', fontWeight: 700 }}>(3×4 मानक चुनाव पर्ची)</span>
+                  </button>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  color: '#475569',
+                  background: '#ffffff',
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                }}
+              >
+                कुल अनुमानित कागज:{' '}
+                <strong style={{ color: '#0f172a' }}>{Math.ceil(sortedVoters.length / perA4)} A4 शीट</strong>{' '}
+                ({sortedVoters.length} पर्चियां)
+              </div>
+            </div>
           </div>
 
           <div
             className="slips-bulk-print-grid"
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 460px), 1fr))',
-              gap: '24px',
+              gridTemplateColumns:
+                perA4 === 12
+                  ? 'repeat(auto-fill, minmax(240px, 1fr))'
+                  : perA4 === 8
+                  ? 'repeat(auto-fill, minmax(320px, 1fr))'
+                  : 'repeat(auto-fill, minmax(380px, 1fr))',
+              gap: perA4 === 12 ? '14px' : perA4 === 8 ? '18px' : '24px',
             }}
           >
             {sortedVoters.map((voter) => (
-              <div key={voter._id} className="slips-bulk-print-item" style={{ background: '#fff', borderRadius: '16px' }}>
-                <VoterSlipTemplate voter={voter} config={slipConfig} isInline={true} />
+              <div key={voter._id} className="slips-bulk-print-item" style={{ background: '#fff', borderRadius: perA4 === 12 ? '6px' : '10px' }}>
+                <VoterSlipTemplate voter={voter} config={slipConfig} isInline={true} perA4={perA4} />
               </div>
             ))}
           </div>

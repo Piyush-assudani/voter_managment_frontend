@@ -61,6 +61,7 @@ export interface VoterSlipTemplateProps {
   forwardedRef?: React.Ref<HTMLDivElement>;
   isInline?: boolean;
   isEditable?: boolean;
+  perA4?: 4 | 8 | 12;
   onConfigChange?: (newConfig: SlipConfig) => void;
   onImageUpload?: (file: File | string, field: 'partySymbolImage' | 'candidateImage' | 'headerGraphicImage') => void;
   onRemoveImage?: (field: 'partySymbolImage' | 'candidateImage' | 'headerGraphicImage') => void;
@@ -185,12 +186,413 @@ const InlineText: React.FC<InlineTextProps> = ({
   );
 };
 
+// ==========================================
+// COMPACT 8-PER-A4 VOTER SLIP (2 Cols × 4 Rows)
+// ==========================================
+interface CompactProps {
+  voter: VoterSlipData;
+  merged: SlipConfig;
+  voterName: string;
+  relativeName: string;
+  relLabel: string;
+  part: string;
+  serial: string | number;
+  house: string;
+  ageGender: string;
+  epic: string;
+  pollingStation: string;
+  forwardedRef?: React.Ref<HTMLDivElement>;
+}
+
+// ==========================================
+// COMPACT 4-PER-A4 VOTER SLIP (2 Cols × 2 Rows - 96mm × 136mm)
+// ==========================================
+const VoterSlipCompact4: React.FC<CompactProps> = ({
+  merged,
+  voterName,
+  relativeName,
+  relLabel,
+  part,
+  serial,
+  house,
+  ageGender,
+  epic,
+  pollingStation,
+  forwardedRef,
+}) => {
+  return (
+    <div
+      ref={forwardedRef}
+      className="voter-slip-printable-card voter-slip-compact-4"
+      style={{
+        width: '100%',
+        height: '100%',
+        minHeight: '130mm',
+        maxHeight: '136mm',
+        boxSizing: 'border-box',
+        background: '#ffffff',
+        border: '2px solid #16a34a',
+        borderRadius: '10px',
+        padding: '10px 12px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        fontFamily: 'var(--font-noto-sans-devanagari), var(--font-anek-devanagari), "Noto Sans Devanagari", sans-serif',
+        color: '#0f172a',
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
+      {/* Top Header: Symbol + Candidate/Party + EVM + Photo */}
+      {merged.useHeaderGraphic && merged.headerGraphicImage ? (
+        <div style={{ width: '100%', maxHeight: '34mm', overflow: 'hidden', borderRadius: '6px', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={merged.headerGraphicImage} alt="" style={{ width: '100%', height: 'auto', maxHeight: '34mm', objectFit: 'contain' }} />
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', borderBottom: '1.5px solid #e2e8f0', paddingBottom: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+            {merged.partySymbolImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={merged.partySymbolImage} alt="" style={{ width: '36px', height: '36px', objectFit: 'contain', flexShrink: 0 }} />
+            ) : (
+              <div style={{ width: '36px', height: '36px', borderRadius: '6px', background: '#fff7ed', border: '1.5px solid #fdba74', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, flexShrink: 0 }}>
+                {merged.partySymbolName?.charAt(0) || '★'}
+              </div>
+            )}
+            <div style={{ minWidth: 0, lineHeight: 1.2 }}>
+              <div style={{ fontSize: '15px', fontWeight: 900, color: '#1e3a8a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {merged.candidateName || 'प्रत्याशी नाम'}
+              </div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#ea580c', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {merged.partyName || 'भारतीय जनता पार्टी'}
+              </div>
+              {merged.subTitle && (
+                <div style={{ fontSize: '9.5px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {merged.subTitle}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            <div style={{ background: '#ea580c', color: '#ffffff', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', fontWeight: 900, display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+              <span style={{ fontSize: '8px', opacity: 0.9 }}>EVM क्रमांक</span>
+              <strong style={{ fontSize: '16px', marginTop: '2px' }}>{merged.evmNumber || '1'}</strong>
+            </div>
+            {merged.candidateImage && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={merged.candidateImage} alt="" style={{ width: '34px', height: '42px', objectFit: 'cover', borderRadius: '5px', border: '1px solid #cbd5e1' }} />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Highlights: Part & Serial Badges */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', margin: '4px 0' }}>
+        <div style={{ background: '#eff6ff', border: '1.5px solid #93c5fd', borderRadius: '6px', padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: '9px', fontWeight: 700, color: '#1e40af', lineHeight: 1 }}>भाग संख्या</div>
+            <div style={{ fontSize: '8.5px', color: '#3b82f6', fontWeight: 600 }}>PART NO</div>
+          </div>
+          <strong style={{ fontSize: '18px', fontWeight: 900, color: '#1e3a8a' }}>{part}</strong>
+        </div>
+        <div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: '6px', padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: '9px', fontWeight: 700, color: '#c2410c', lineHeight: 1 }}>क्रम संख्या</div>
+            <div style={{ fontSize: '8.5px', color: '#f97316', fontWeight: 600 }}>SERIAL NO</div>
+          </div>
+          <strong style={{ fontSize: '20px', fontWeight: 900, color: '#ea580c' }}>{serial}</strong>
+        </div>
+      </div>
+
+      {/* Voter Details Card */}
+      <div style={{ background: '#f8fafc', padding: '6px 10px', borderRadius: '7px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11.5px', lineHeight: 1.35 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderBottom: '1px solid #e2e8f0', paddingBottom: '3px' }}>
+          <span style={{ color: '#64748b', fontSize: '11px' }}>मतदाता का नाम:</span>
+          <strong style={{ color: '#0f172a', fontWeight: 900, fontSize: '13px' }}>{voterName}</strong>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <span style={{ color: '#64748b', fontSize: '11px' }}>{relLabel}:</span>
+          <strong style={{ color: '#1e293b', fontWeight: 700 }}>{relativeName}</strong>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', borderTop: '1px dotted #cbd5e1', paddingTop: '3px' }}>
+          <div>
+            <span style={{ color: '#64748b', fontSize: '10.5px' }}>मकान नं.: </span>
+            <strong style={{ color: '#0f172a' }}>{house}</strong>
+          </div>
+          <div>
+            <span style={{ color: '#64748b', fontSize: '10.5px' }}>उम्र / लिंग: </span>
+            <strong style={{ color: '#0f172a' }}>{ageGender}</strong>
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1.5px solid #e2e8f0', paddingTop: '4px' }}>
+          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>पहचान पत्र (EPIC NO):</span>
+          <strong style={{ fontSize: '13px', color: '#1d4ed8', fontWeight: 900, letterSpacing: '0.5px' }}>{epic}</strong>
+        </div>
+      </div>
+
+      {/* Polling Station */}
+      <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '6px', padding: '4px 8px', fontSize: '10px', lineHeight: 1.3 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#0284c7', fontWeight: 800, marginBottom: '1px' }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+          <span>मतदान केंद्र (Polling Station):</span>
+        </div>
+        <div style={{ color: '#0f172a', fontWeight: 800 }}>{pollingStation}</div>
+      </div>
+
+      {/* Footer: Appeal */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', textAlign: 'center' }}>
+        <div style={{ background: '#ea580c', color: '#ffffff', borderRadius: '5px', padding: '3px 8px', fontWeight: 900, fontSize: '11px', letterSpacing: '0.2px' }}>
+          {merged.footerAppeal || `${merged.partySymbolName || 'कमल'} का बटन दबाएं और भारी मतों से विजयी बनाएं`}
+        </div>
+        <div style={{ fontSize: '8.5px', color: '#64748b', fontWeight: 500 }}>
+          कृपया मतदान के दिन अपना पहचान पत्र (Voter ID / आधार कार्ड) साथ लाएं।
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==========================================
+// COMPACT 8-PER-A4 VOTER SLIP (2 Cols × 4 Rows)
+// ==========================================
+const VoterSlipCompact8: React.FC<CompactProps> = ({
+  merged,
+  voterName,
+  relativeName,
+  relLabel,
+  part,
+  serial,
+  house,
+  ageGender,
+  epic,
+  pollingStation,
+  forwardedRef,
+}) => {
+  return (
+    <div
+      ref={forwardedRef}
+      className="voter-slip-printable-card voter-slip-compact-8"
+      style={{
+        width: '100%',
+        height: '100%',
+        minHeight: '66mm',
+        maxHeight: '68mm',
+        boxSizing: 'border-box',
+        background: '#ffffff',
+        border: '1.5px solid #16a34a',
+        borderRadius: '8px',
+        padding: '5px 7px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        fontFamily: 'var(--font-noto-sans-devanagari), var(--font-anek-devanagari), "Noto Sans Devanagari", sans-serif',
+        color: '#0f172a',
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
+      {/* Top Header: Symbol + Candidate/Party + EVM + Photo */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', borderBottom: '1px solid #e2e8f0', paddingBottom: '3px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0, flex: 1 }}>
+          {merged.partySymbolImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={merged.partySymbolImage} alt="" style={{ width: '22px', height: '22px', objectFit: 'contain', flexShrink: 0 }} />
+          ) : (
+            <div style={{ width: '22px', height: '22px', borderRadius: '4px', background: '#fff7ed', border: '1px solid #fdba74', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 800, flexShrink: 0 }}>
+              {merged.partySymbolName?.charAt(0) || '★'}
+            </div>
+          )}
+          <div style={{ minWidth: 0, lineHeight: 1.15 }}>
+            <div style={{ fontSize: '12.5px', fontWeight: 900, color: '#1e3a8a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {merged.candidateName || 'प्रत्याशी नाम'}
+            </div>
+            <div style={{ fontSize: '9px', fontWeight: 700, color: '#ea580c', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {merged.partyName || 'भाजपा प्रत्याशी'}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+          <div style={{ background: '#ea580c', color: '#ffffff', borderRadius: '4px', padding: '2px 5px', fontSize: '10px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '2px' }}>
+            <span style={{ fontSize: '8px', opacity: 0.9 }}>EVM</span>
+            <strong style={{ fontSize: '12px' }}>{merged.evmNumber || '1'}</strong>
+          </div>
+          {merged.candidateImage && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={merged.candidateImage} alt="" style={{ width: '22px', height: '26px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+          )}
+        </div>
+      </div>
+
+      {/* Highlights: Part & Serial Badges */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', margin: '2px 0' }}>
+        <div style={{ background: '#eff6ff', border: '1px solid #93c5fd', borderRadius: '5px', padding: '2px 6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '9.5px', fontWeight: 700, color: '#1e40af' }}>भाग (PART):</span>
+          <strong style={{ fontSize: '14px', fontWeight: 900, color: '#1e3a8a' }}>{part}</strong>
+        </div>
+        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '5px', padding: '2px 6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '9.5px', fontWeight: 700, color: '#c2410c' }}>क्रमांक (SL):</span>
+          <strong style={{ fontSize: '15px', fontWeight: 900, color: '#ea580c' }}>{serial}</strong>
+        </div>
+      </div>
+
+      {/* Voter Details 2-Column Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2px 8px', fontSize: '10.5px', lineHeight: 1.3, background: '#f8fafc', padding: '3px 6px', borderRadius: '5px', border: '1px solid #f1f5f9' }}>
+        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ color: '#64748b' }}>नाम: </span>
+          <strong style={{ color: '#0f172a', fontWeight: 800 }}>{voterName}</strong>
+        </div>
+        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ color: '#64748b' }}>मकान: </span>
+          <strong style={{ color: '#0f172a' }}>{house}</strong>
+        </div>
+        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ color: '#64748b' }}>{relLabel}: </span>
+          <strong style={{ color: '#334155' }}>{relativeName}</strong>
+        </div>
+        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ color: '#64748b' }}>उम्र/लिंग: </span>
+          <strong style={{ color: '#334155' }}>{ageGender}</strong>
+        </div>
+        <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dotted #e2e8f0', paddingTop: '2px' }}>
+          <span style={{ fontSize: '9.5px', color: '#64748b' }}>पहचान पत्र (EPIC):</span>
+          <strong style={{ fontSize: '10.5px', color: '#1d4ed8', fontWeight: 800 }}>{epic}</strong>
+        </div>
+      </div>
+
+      {/* Footer: Polling Station & Bottom Appeal */}
+      <div style={{ fontSize: '8.5px', lineHeight: 1.2, display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '1px' }}>
+        <div style={{ color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontWeight: 700, color: '#0369a1' }}>केंद्र: </span>{pollingStation}
+        </div>
+        <div style={{ background: '#ea580c', color: '#ffffff', borderRadius: '3px', padding: '1px 4px', textAlign: 'center', fontWeight: 800, fontSize: '8.5px', letterSpacing: '0.2px' }}>
+          {merged.footerAppeal || `${merged.partySymbolName || 'कमल'} का बटन दबाएं और भारी मतों से विजयी बनाएं`}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==========================================
+// COMPACT 12-PER-A4 VOTER SLIP (3 Cols × 4 Rows)
+// ==========================================
+const VoterSlipCompact12: React.FC<CompactProps> = ({
+  merged,
+  voterName,
+  relativeName,
+  relLabel,
+  part,
+  serial,
+  house,
+  ageGender,
+  epic,
+  pollingStation,
+  forwardedRef,
+}) => {
+  return (
+    <div
+      ref={forwardedRef}
+      className="voter-slip-printable-card voter-slip-compact-12"
+      style={{
+        width: '100%',
+        height: '100%',
+        minHeight: '66mm',
+        maxHeight: '68mm',
+        boxSizing: 'border-box',
+        background: '#ffffff',
+        border: '1.5px solid #16a34a',
+        borderRadius: '6px',
+        padding: '4px 5px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        fontFamily: 'var(--font-noto-sans-devanagari), var(--font-anek-devanagari), "Noto Sans Devanagari", sans-serif',
+        color: '#0f172a',
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
+      {/* Top Header: Symbol + Candidate Name + EVM */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', borderBottom: '1px solid #e2e8f0', paddingBottom: '2px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, flex: 1 }}>
+          {merged.partySymbolImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={merged.partySymbolImage} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} />
+          ) : (
+            <div style={{ width: '18px', height: '18px', borderRadius: '3px', background: '#fff7ed', border: '1px solid #fdba74', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 800, flexShrink: 0 }}>
+              {merged.partySymbolName?.charAt(0) || '★'}
+            </div>
+          )}
+          <div style={{ minWidth: 0, lineHeight: 1.1 }}>
+            <div style={{ fontSize: '11px', fontWeight: 900, color: '#1e3a8a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {merged.candidateName || 'प्रत्याशी'}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ background: '#ea580c', color: '#ffffff', borderRadius: '3px', padding: '1px 4px', fontSize: '9px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+          <span style={{ fontSize: '7.5px' }}>EVM</span>
+          <strong style={{ fontSize: '11px' }}>{merged.evmNumber || '1'}</strong>
+        </div>
+      </div>
+
+      {/* Highlight Row: Part & Serial Badges */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', margin: '2px 0' }}>
+        <div style={{ background: '#eff6ff', border: '1px solid #93c5fd', borderRadius: '4px', padding: '2px 4px', textAlign: 'center' }}>
+          <div style={{ fontSize: '8px', color: '#1e40af', fontWeight: 700, lineHeight: 1 }}>भाग (PART)</div>
+          <div style={{ fontSize: '13px', fontWeight: 900, color: '#1e3a8a', lineHeight: 1.15 }}>{part}</div>
+        </div>
+        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '4px', padding: '2px 4px', textAlign: 'center' }}>
+          <div style={{ fontSize: '8px', color: '#c2410c', fontWeight: 700, lineHeight: 1 }}>क्रमांक (SL)</div>
+          <div style={{ fontSize: '14px', fontWeight: 900, color: '#ea580c', lineHeight: 1.15 }}>{serial}</div>
+        </div>
+      </div>
+
+      {/* Voter Details */}
+      <div style={{ fontSize: '9.5px', lineHeight: 1.25, background: '#f8fafc', padding: '2px 4px', borderRadius: '4px', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ color: '#64748b' }}>नाम: </span>
+          <strong style={{ color: '#0f172a', fontWeight: 800 }}>{voterName}</strong>
+        </div>
+        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ color: '#64748b' }}>{relLabel}: </span>
+          <span style={{ color: '#334155', fontWeight: 600 }}>{relativeName}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#334155' }}>
+          <span>मकान: <strong>{house}</strong></span>
+          <span>उम्र: <strong>{ageGender.split('|')[0]?.trim() || '—'}</strong></span>
+        </div>
+        <div style={{ borderTop: '1px dotted #cbd5e1', paddingTop: '1px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '8.5px', color: '#64748b' }}>EPIC:</span>
+          <strong style={{ fontSize: '9.5px', color: '#1d4ed8', fontWeight: 800 }}>{epic}</strong>
+        </div>
+      </div>
+
+      {/* Footer: Booth & Mini Appeal */}
+      <div style={{ fontSize: '8px', lineHeight: 1.15, display: 'flex', flexDirection: 'column', gap: '1px' }}>
+        <div style={{ color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontWeight: 700, color: '#0369a1' }}>केंद्र: </span>{pollingStation}
+        </div>
+        <div style={{ background: '#ea580c', color: '#ffffff', borderRadius: '2px', padding: '1px 3px', textAlign: 'center', fontWeight: 800, fontSize: '8px' }}>
+          {merged.partySymbolName || 'कमल'} पर बटन दबाएं
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
   voter = {},
   config = {},
   forwardedRef,
   isInline = false,
   isEditable = false,
+  perA4,
   onConfigChange,
   onImageUpload,
   onRemoveImage,
@@ -264,6 +666,64 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
   const ageGender = `${voter.age || '28'} वर्ष | ${voter.gender || 'पुरुष'}`;
   const epic = voter.epic || 'RLJ1213180';
   const pollingStation = voter.boothName || merged.pollingStationFallback || `${part} - सामुदायिक भवन, जाटा बास, महामंदिर, जोधपुर`;
+
+  // Specialized compact renderers for 4, 8, and 12-per-A4 bulk print modes
+  if (perA4 === 4 && !isEditable) {
+    return (
+      <VoterSlipCompact4
+        voter={voter}
+        merged={merged}
+        voterName={voterName}
+        relativeName={relativeName}
+        relLabel={relLabel}
+        part={part}
+        serial={serial}
+        house={house}
+        ageGender={ageGender}
+        epic={epic}
+        pollingStation={pollingStation}
+        forwardedRef={forwardedRef}
+      />
+    );
+  }
+
+  if (perA4 === 8 && !isEditable) {
+    return (
+      <VoterSlipCompact8
+        voter={voter}
+        merged={merged}
+        voterName={voterName}
+        relativeName={relativeName}
+        relLabel={relLabel}
+        part={part}
+        serial={serial}
+        house={house}
+        ageGender={ageGender}
+        epic={epic}
+        pollingStation={pollingStation}
+        forwardedRef={forwardedRef}
+      />
+    );
+  }
+
+  if (perA4 === 12 && !isEditable) {
+    return (
+      <VoterSlipCompact12
+        voter={voter}
+        merged={merged}
+        voterName={voterName}
+        relativeName={relativeName}
+        relLabel={relLabel}
+        part={part}
+        serial={serial}
+        house={house}
+        ageGender={ageGender}
+        epic={epic}
+        pollingStation={pollingStation}
+        forwardedRef={forwardedRef}
+      />
+    );
+  }
 
   const containerStyle: React.CSSProperties = isInline
     ? {
