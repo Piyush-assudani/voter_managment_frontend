@@ -47,7 +47,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="hi">
+    <html lang="hi" suppressHydrationWarning>
       <body
         className={`${inter.variable} ${notoSansDevanagari.variable} ${outfit.variable} ${anekDevanagari.variable} bg-[#FAFAFA] text-[#111827]`}
         suppressHydrationWarning
