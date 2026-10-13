@@ -616,7 +616,7 @@ export default function SlipsPage() {
         @media print {
           @page {
             size: A4 portrait;
-            margin: 5mm 6mm;
+            margin: 4mm 5mm;
           }
 
           * {
@@ -685,11 +685,11 @@ export default function SlipsPage() {
             padding: 0 !important;
           }
 
-          /* Strict A4 Sheet Pagination Container - perfectly fits within printer margins without page bleed */
+          /* Strict A4 Sheet Pagination Container - centered on page with exact scissor margins */
           .a4-sheet-page {
-            width: 198mm !important;
-            height: 282mm !important;
-            max-height: 282mm !important;
+            width: 200mm !important;
+            height: 288mm !important;
+            max-height: 288mm !important;
             page-break-after: always !important;
             break-after: page !important;
             overflow: hidden !important;
@@ -698,7 +698,8 @@ export default function SlipsPage() {
             padding: 0 !important;
             display: flex !important;
             flex-direction: column !important;
-            justify-content: flex-start !important;
+            justify-content: center !important;
+            align-items: center !important;
             background: transparent !important;
             border: none !important;
             box-shadow: none !important;
@@ -739,26 +740,14 @@ export default function SlipsPage() {
           .slips-bulk-print-mode .voter-slip-inner-card {
             box-shadow: none !important;
           }
-          .slips-per-a4-12 .voter-slip-inner-card {
-            padding: 11px 13px 13px 13px !important;
-            gap: 9px !important;
-            border-width: 2px !important;
-            border-radius: 8px !important;
-          }
-          .slips-per-a4-8 .voter-slip-inner-card {
-            padding: 13px 15px 15px 15px !important;
-            gap: 10px !important;
-            border-width: 2.5px !important;
-            border-radius: 10px !important;
-          }
 
           /* 4 in 1 A4: 2 columns × 2 rows (strictly 4 per sheet, generous scissor cutting space) */
           .slips-per-a4-4 .a4-sheet-grid {
             display: grid !important;
             grid-template-columns: repeat(2, 96mm) !important;
-            grid-template-rows: repeat(2, 137mm) !important;
-            gap: 5mm 5mm !important;
-            width: 198mm !important;
+            grid-template-rows: repeat(2, 136mm) !important;
+            gap: 6mm 6mm !important;
+            width: 200mm !important;
             height: 280mm !important;
             max-height: 280mm !important;
             box-sizing: border-box !important;
@@ -768,24 +757,28 @@ export default function SlipsPage() {
           }
           .slips-per-a4-4 .slips-bulk-print-item {
             width: 96mm !important;
-            height: 137mm !important;
-            max-height: 137mm !important;
+            height: 136mm !important;
+            max-height: 136mm !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            overflow: hidden !important;
           }
           .slips-per-a4-4 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.61 !important;
+            zoom: 0.70 !important;
             width: 560px !important;
             max-width: 560px !important;
           }
 
-          /* 8 in 1 A4: 2 columns × 4 rows (strictly 8 per sheet, 3.5mm scissor cutting margin) */
+          /* 8 in 1 A4: 2 columns × 4 rows (strictly 8 per sheet, 4mm scissor cutting margin) */
           .slips-per-a4-8 .a4-sheet-grid {
             display: grid !important;
             grid-template-columns: repeat(2, 96mm) !important;
-            grid-template-rows: repeat(4, 66.5mm) !important;
-            gap: 3.5mm 4mm !important;
-            width: 198mm !important;
-            height: 278mm !important;
-            max-height: 278mm !important;
+            grid-template-rows: repeat(4, 67mm) !important;
+            gap: 4mm 8mm !important;
+            width: 200mm !important;
+            height: 280mm !important;
+            max-height: 280mm !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
             margin: 0 auto !important;
@@ -793,38 +786,207 @@ export default function SlipsPage() {
           }
           .slips-per-a4-8 .slips-bulk-print-item {
             width: 96mm !important;
-            height: 66.5mm !important;
-            max-height: 66.5mm !important;
+            height: 67mm !important;
+            max-height: 67mm !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            overflow: hidden !important;
           }
           .slips-per-a4-8 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.41 !important;
-            width: 560px !important;
-            max-width: 560px !important;
+            zoom: 0.52 !important;
+            width: 530px !important;
+            max-width: 530px !important;
+          }
+          .slips-per-a4-8 .voter-slip-inner-card {
+            padding: 8px 12px 10px 12px !important;
+            gap: 6px !important;
+            border-width: 2px !important;
+            border-radius: 8px !important;
+            box-shadow: none !important;
+            width: 100% !important;
+          }
+          .slips-per-a4-8 .voter-slip-symbol-box,
+          .slips-per-a4-8 .voter-slip-photo-box {
+            width: 82px !important;
+            min-width: 82px !important;
+            max-width: 82px !important;
+            height: 98px !important;
+            min-height: 98px !important;
+            max-height: 98px !important;
+          }
+          .slips-per-a4-8 .voter-slip-ribbon {
+            min-height: 40px !important;
+            padding: 5px 10px !important;
+          }
+          .slips-per-a4-8 .voter-slip-metric-num {
+            font-size: 22px !important;
           }
 
-          /* 12 in 1 A4: 3 columns × 4 rows (strictly 12 per sheet, 3.5mm cutting gap, NO cut-off at bottom) */
+          /* 12 in 1 A4: 3 columns × 4 rows (strictly 12 per sheet, 4mm scissor cutting gap, NO cut-off, perfectly centered) */
           .slips-per-a4-12 .a4-sheet-grid {
             display: grid !important;
-            grid-template-columns: repeat(3, 63mm) !important;
-            grid-template-rows: repeat(4, 66.5mm) !important;
-            gap: 3.5mm 3.5mm !important;
-            width: 198mm !important;
-            height: 278mm !important;
-            max-height: 278mm !important;
+            grid-template-columns: repeat(3, 64mm) !important;
+            grid-template-rows: repeat(4, 67mm) !important;
+            gap: 4mm 4mm !important;
+            width: 200mm !important;
+            height: 280mm !important;
+            max-height: 280mm !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
             margin: 0 auto !important;
             padding: 0 !important;
           }
           .slips-per-a4-12 .slips-bulk-print-item {
-            width: 63mm !important;
-            height: 66.5mm !important;
-            max-height: 66.5mm !important;
+            width: 64mm !important;
+            height: 67mm !important;
+            max-height: 67mm !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            overflow: hidden !important;
+            background: transparent !important;
           }
           .slips-per-a4-12 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.405 !important;
-            width: 560px !important;
-            max-width: 560px !important;
+            zoom: 0.52 !important;
+            width: 530px !important;
+            max-width: 530px !important;
+          }
+
+          /* Dedicated Compact Styles for 12-in-1 Slips to Prevent Overflow and Cut-off */
+          .slips-per-a4-12 .voter-slip-inner-card {
+            padding: 7px 10px 9px 10px !important;
+            gap: 5px !important;
+            border-width: 1.5px !important;
+            border-radius: 6px !important;
+            box-shadow: none !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .slips-per-a4-12 .voter-slip-header-row {
+            gap: 6px !important;
+          }
+          .slips-per-a4-12 .voter-slip-symbol-box,
+          .slips-per-a4-12 .voter-slip-photo-box {
+            width: 78px !important;
+            min-width: 78px !important;
+            max-width: 78px !important;
+            height: 96px !important;
+            min-height: 96px !important;
+            max-height: 96px !important;
+            border-radius: 6px !important;
+            border-width: 1.5px !important;
+          }
+          .slips-per-a4-12 .voter-slip-serial-badge {
+            height: 19px !important;
+            font-size: 10px !important;
+          }
+          .slips-per-a4-12 .voter-slip-symbol-caption {
+            min-height: 18px !important;
+            font-size: 8.5px !important;
+            padding: 1px 2px !important;
+          }
+          .slips-per-a4-12 .voter-slip-party-headline {
+            font-size: 11.5px !important;
+            line-height: 1.2 !important;
+          }
+          .slips-per-a4-12 .voter-slip-appeal-headline {
+            font-size: 9.5px !important;
+          }
+          .slips-per-a4-12 .voter-slip-candidate-name {
+            font-size: 17px !important;
+            line-height: 1.15 !important;
+          }
+          .slips-per-a4-12 .voter-slip-candidate-name-en {
+            font-size: 11px !important;
+          }
+          .slips-per-a4-12 .voter-slip-subtitle {
+            font-size: 9.5px !important;
+          }
+          .slips-per-a4-12 .voter-slip-header-banner-card {
+            min-height: 80px !important;
+            max-height: 105px !important;
+          }
+          .slips-per-a4-12 .voter-slip-header-banner-card img {
+            max-height: 105px !important;
+          }
+          .slips-per-a4-12 .voter-slip-ribbon {
+            min-height: 38px !important;
+            padding: 4px 8px !important;
+            gap: 6px !important;
+            border-radius: 6px !important;
+          }
+          .slips-per-a4-12 .voter-slip-ribbon-evm-badge {
+            width: 26px !important;
+            height: 26px !important;
+            font-size: 15px !important;
+            border-radius: 4px !important;
+          }
+          .slips-per-a4-12 .voter-slip-ribbon-content div:first-child {
+            font-size: 10px !important;
+          }
+          .slips-per-a4-12 .voter-slip-ribbon-content div:last-child {
+            font-size: 11px !important;
+          }
+          .slips-per-a4-12 .voter-slip-ribbon-pill {
+            min-height: 22px !important;
+            padding: 2px 6px !important;
+            font-size: 9.5px !important;
+          }
+          .slips-per-a4-12 .voter-slip-metric-grid {
+            gap: 6px !important;
+          }
+          .slips-per-a4-12 .voter-slip-metric-card {
+            padding: 3px 6px !important;
+            border-radius: 6px !important;
+            border-width: 1px !important;
+          }
+          .slips-per-a4-12 .voter-slip-metric-label {
+            font-size: 9.5px !important;
+          }
+          .slips-per-a4-12 .voter-slip-metric-num {
+            font-size: 20px !important;
+            line-height: 1.1 !important;
+          }
+          .slips-per-a4-12 .voter-slip-voter-table {
+            padding: 4px 6px !important;
+            gap: 2px !important;
+            border-radius: 6px !important;
+          }
+          .slips-per-a4-12 .voter-slip-voter-row {
+            padding: 2px 2px !important;
+            font-size: 11px !important;
+            line-height: 1.2 !important;
+          }
+          .slips-per-a4-12 .voter-slip-voter-label {
+            width: 82px !important;
+            min-width: 82px !important;
+            font-size: 10.5px !important;
+          }
+          .slips-per-a4-12 .voter-slip-voter-value {
+            font-size: 11px !important;
+          }
+          .slips-per-a4-12 .voter-slip-polling-box {
+            padding: 3px 6px !important;
+            border-radius: 5px !important;
+            font-size: 10px !important;
+            line-height: 1.2 !important;
+          }
+          .slips-per-a4-12 .voter-slip-polling-box div:first-child {
+            font-size: 9.5px !important;
+          }
+          .slips-per-a4-12 .voter-slip-polling-box div:last-child {
+            font-size: 10px !important;
+          }
+          .slips-per-a4-12 .voter-slip-footer-appeal {
+            margin-top: 1px !important;
+            gap: 2px !important;
+          }
+          .slips-per-a4-12 .voter-slip-footer-appeal div:first-child {
+            font-size: 10.5px !important;
+          }
+          .slips-per-a4-12 .voter-slip-footer-appeal div:last-child {
+            font-size: 9px !important;
           }
 
           /* ================= SINGLE SLIP PRINT MODE ================= */
