@@ -9,37 +9,23 @@ export const generateSlipImage = async (
   slipConfig?: SlipConfig,
   _existingElement?: HTMLElement | null
 ): Promise<string> => {
-  // Robust offscreen rendering strategy:
-  // - Uses position:absolute (not fixed) with a large wrapper to prevent viewport clipping
-  // - Adds padding buffers around the slip so Devanagari matras and overflow:visible 
-  //   content never gets cut off at edges
-  // - Uses generous timeouts for Hindi web fonts to fully load and settle
-  // - Measures the actual rendered height including any overflow before capture
   return new Promise((resolve, reject) => {
-    // Outer wrapper: absolutely positioned off-screen, large enough to never clip
-    const wrapper = document.createElement('div');
-    wrapper.style.position = 'absolute';
-    wrapper.style.top = '-10000px';
-    wrapper.style.left = '-10000px';
-    wrapper.style.width = '700px';  // wider than 600px to absorb horizontal overflow
-    wrapper.style.opacity = '0';
-    wrapper.style.pointerEvents = 'none';
-    wrapper.style.zIndex = '-99999';
-    wrapper.style.overflow = 'visible';
-    wrapper.dir = 'ltr';
-    document.body.appendChild(wrapper);
-
-    // Inner container: precisely 600px, with vertical padding buffers for matra clipping
+    // Fixed positioning at 0, 0 with opacity 0 ensures real layout engine metrics,
+    // perfect Devanagari text measuring, and zero viewport/crop clipping issues
     const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.top = '0';
+    container.style.left = '0';
     container.style.width = '600px';
     container.style.minWidth = '600px';
     container.style.maxWidth = '600px';
-    container.style.margin = '0 auto';
-    container.style.padding = '20px 0';  // vertical buffer for Devanagari matras
-    container.style.boxSizing = 'border-box';
-    container.style.overflow = 'visible';
+    container.style.opacity = '0';
+    container.style.pointerEvents = 'none';
+    container.style.zIndex = '-99999';
     container.style.background = '#ffffff';
-    wrapper.appendChild(container);
+    container.style.overflow = 'visible';
+    container.dir = 'ltr';
+    document.body.appendChild(container);
 
     const root = createRoot(container);
     const ref = React.createRef<HTMLDivElement>();
@@ -88,34 +74,15 @@ export const generateSlipImage = async (
         );
 
         // Allow layout and web fonts to settle completely (extra time for Hindi fonts)
-        await new Promise((res) => setTimeout(res, 350));
+        await new Promise((res) => setTimeout(res, 200));
 
-        // Capture the container (includes padding buffers), NOT just ref.current
-        // This ensures matras/overflow content at top/bottom edges are captured
-        const targetNode = container;
-        const rect = targetNode.getBoundingClientRect();
-
-        // Measure the full height including any overflow beyond the box model
-        const innerRect = ref.current.getBoundingClientRect();
-        const innerFullHeight = Math.max(innerRect.height, ref.current.scrollHeight, ref.current.offsetHeight);
-        // Container height = inner content + padding buffers (20px top + 20px bottom)
-        const captureHeight = Math.ceil(innerFullHeight + 40);
-        const captureWidth = 600;
-
+        const targetNode = ref.current;
         const canvas = await html2canvas(targetNode, {
           scale: 2.5,
           useCORS: true,
           allowTaint: true,
           backgroundColor: '#ffffff',
           logging: false,
-          scrollX: 0,
-          scrollY: 0,
-          x: 0,
-          y: 0,
-          width: captureWidth,
-          height: captureHeight,
-          windowWidth: 1200,
-          windowHeight: captureHeight + 500,
           onclone: (clonedDoc) => {
             const style = clonedDoc.createElement('style');
             style.innerHTML = `
@@ -135,9 +102,13 @@ export const generateSlipImage = async (
               }
               .voter-slip-printable-card {
                 overflow: visible !important;
+                height: auto !important;
+                max-height: none !important;
               }
               .voter-slip-inner-card {
                 overflow: visible !important;
+                height: auto !important;
+                max-height: none !important;
               }
               .voter-slip-ribbon {
                 min-height: 68px !important;
@@ -202,8 +173,7 @@ export const generateSlipImage = async (
             `;
             clonedDoc.head.appendChild(style);
 
-            // Also force all responsive media query overrides to NOT apply
-            // by setting the cloned container to exactly 600px width
+            // Ensure cards in clone stay at full width
             const allSlipCards = clonedDoc.querySelectorAll('.voter-slip-printable-card');
             allSlipCards.forEach((el) => {
               (el as HTMLElement).style.width = '600px';
@@ -216,14 +186,14 @@ export const generateSlipImage = async (
         const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
 
         root.unmount();
-        if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
+        if (document.body.contains(container)) document.body.removeChild(container);
         resolve(dataUrl);
       } catch (err) {
         root.unmount();
-        if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
+        if (document.body.contains(container)) document.body.removeChild(container);
         reject(err);
       }
-    }, 450);  // Increased initial timeout for Hindi fonts
+    }, 280);
   });
 };
 

@@ -148,7 +148,7 @@ export default function SlipsPage() {
 
   // Bulk Print Mode
   const [bulkMode, setBulkMode] = useState(false);
-  const [perA4, setPerA4] = useState<4 | 8 | 12>(12);
+  const [perA4, setPerA4] = useState<4 | 8 | 12>(4);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDownloadingBulkZip, setIsDownloadingBulkZip] = useState(false);
   const [bulkZipProgress, setBulkZipProgress] = useState({ current: 0, total: 0 });
@@ -253,7 +253,8 @@ export default function SlipsPage() {
     try {
       const params = new URLSearchParams({
         page: '1',
-        pageSize: '100',
+        pageSize: '10000',
+        all: 'true',
       });
       if (searchQuery.trim()) params.set('search', searchQuery.trim());
       if (wardFilter) params.set('ward', wardFilter);

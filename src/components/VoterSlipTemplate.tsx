@@ -507,17 +507,17 @@ const VoterSlipCompact12: React.FC<CompactProps> = ({
         background: '#ffffff',
         border: '1.5px solid #16a34a',
         borderRadius: '6px',
-        padding: '4px 5px',
+        padding: '4px 6px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
         fontFamily: 'var(--font-noto-sans-devanagari), var(--font-anek-devanagari), "Noto Sans Devanagari", sans-serif',
         color: '#0f172a',
-        overflow: 'hidden',
+        boxShadow: 'none',
         position: 'relative',
       }}
     >
-      {/* Top Header: Symbol + Candidate Name + EVM */}
+      {/* Top Header: Symbol + Candidate Name + Party + EVM + Candidate Photo */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', borderBottom: '1px solid #e2e8f0', paddingBottom: '2px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, flex: 1 }}>
           {merged.partySymbolImage ? (
@@ -532,29 +532,40 @@ const VoterSlipCompact12: React.FC<CompactProps> = ({
             <div style={{ fontSize: '11px', fontWeight: 900, color: '#1e3a8a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {merged.candidateName || 'प्रत्याशी'}
             </div>
+            {merged.partyName && (
+              <div style={{ fontSize: '7.5px', color: '#ea580c', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {merged.partyName}
+              </div>
+            )}
           </div>
         </div>
 
-        <div style={{ background: '#ea580c', color: '#ffffff', borderRadius: '3px', padding: '1px 4px', fontSize: '9px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
-          <span style={{ fontSize: '7.5px' }}>EVM</span>
-          <strong style={{ fontSize: '11px' }}>{merged.evmNumber || '1'}</strong>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
+          <div style={{ background: '#ea580c', color: '#ffffff', borderRadius: '3px', padding: '1px 4px', fontSize: '9px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+            <span style={{ fontSize: '7px', opacity: 0.9 }}>EVM</span>
+            <strong style={{ fontSize: '11px' }}>{merged.evmNumber || '1'}</strong>
+          </div>
+          {merged.candidateImage && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={merged.candidateImage} alt="" style={{ width: '18px', height: '22px', objectFit: 'cover', borderRadius: '3px', border: '1px solid #cbd5e1' }} />
+          )}
         </div>
       </div>
 
       {/* Highlight Row: Part & Serial Badges */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', margin: '2px 0' }}>
-        <div style={{ background: '#eff6ff', border: '1px solid #93c5fd', borderRadius: '4px', padding: '2px 4px', textAlign: 'center' }}>
-          <div style={{ fontSize: '8px', color: '#1e40af', fontWeight: 700, lineHeight: 1 }}>भाग (PART)</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', margin: '1px 0' }}>
+        <div style={{ background: '#eff6ff', border: '1px solid #93c5fd', borderRadius: '4px', padding: '1px 4px', textAlign: 'center' }}>
+          <div style={{ fontSize: '7.5px', color: '#1e40af', fontWeight: 700, lineHeight: 1 }}>भाग (PART)</div>
           <div style={{ fontSize: '13px', fontWeight: 900, color: '#1e3a8a', lineHeight: 1.15 }}>{part}</div>
         </div>
-        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '4px', padding: '2px 4px', textAlign: 'center' }}>
-          <div style={{ fontSize: '8px', color: '#c2410c', fontWeight: 700, lineHeight: 1 }}>क्रमांक (SL)</div>
+        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '4px', padding: '1px 4px', textAlign: 'center' }}>
+          <div style={{ fontSize: '7.5px', color: '#c2410c', fontWeight: 700, lineHeight: 1 }}>क्रमांक (SL)</div>
           <div style={{ fontSize: '14px', fontWeight: 900, color: '#ea580c', lineHeight: 1.15 }}>{serial}</div>
         </div>
       </div>
 
       {/* Voter Details */}
-      <div style={{ fontSize: '9.5px', lineHeight: 1.25, background: '#f8fafc', padding: '2px 4px', borderRadius: '4px', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+      <div style={{ fontSize: '9px', lineHeight: 1.25, background: '#f8fafc', padding: '2px 5px', borderRadius: '4px', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '1px' }}>
         <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           <span style={{ color: '#64748b' }}>नाम: </span>
           <strong style={{ color: '#0f172a', fontWeight: 800 }}>{voterName}</strong>
@@ -565,11 +576,11 @@ const VoterSlipCompact12: React.FC<CompactProps> = ({
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', color: '#334155' }}>
           <span>मकान: <strong>{house}</strong></span>
-          <span>उम्र: <strong>{ageGender.split('|')[0]?.trim() || '—'}</strong></span>
+          <span>उम्र/लिंग: <strong>{ageGender}</strong></span>
         </div>
         <div style={{ borderTop: '1px dotted #cbd5e1', paddingTop: '1px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '8.5px', color: '#64748b' }}>EPIC:</span>
-          <strong style={{ fontSize: '9.5px', color: '#1d4ed8', fontWeight: 800 }}>{epic}</strong>
+          <span style={{ fontSize: '8px', color: '#64748b' }}>EPIC:</span>
+          <strong style={{ fontSize: '9px', color: '#1d4ed8', fontWeight: 800 }}>{epic}</strong>
         </div>
       </div>
 
