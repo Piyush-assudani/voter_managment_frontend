@@ -138,6 +138,7 @@ interface UploadJob {
   listDescription?: string;
   status: 'processing' | 'completed' | 'failed';
   progress?: number;
+  stageMessage?: string;
   extractedCount: number;
   uploadedAt: string;
   excelFilename?: string;
@@ -4709,7 +4710,7 @@ export default function AdminPanel() {
                             {job.status === 'processing' && (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: '#00875a', background: '#e6f4ea', padding: '4px 10px', borderRadius: '20px' }}>
                                 <LoaderCircle size={14} className="spin" />
-                                {job.progress ? `${job.progress}% एक्सट्रेक्ट हो रहा है...` : 'प्रोसेसिंग चालू है...'}
+                                {job.progress ? `${job.progress}%` : 'प्रोसेसिंग चालू है...'}
                               </span>
                             )}
                             {job.status === 'completed' && (
@@ -4748,10 +4749,21 @@ export default function AdminPanel() {
                           </div>
                         </div>
 
-                        {/* Progress bar if processing */}
+                        {/* Dynamic Real-Time Stage Indicator & Progress bar */}
                         {job.status === 'processing' && (
-                          <div style={{ width: '100%', height: '6px', backgroundColor: '#e4eae5', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div style={{ width: `${job.progress || 0}%`, height: '100%', backgroundColor: '#00875a', transition: 'width 0.3s ease' }} />
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#f4fbf7', border: '1px solid #cce8d7', borderRadius: '8px', padding: '10px 14px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px', fontWeight: '600', color: '#166534' }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                                <LoaderCircle size={14} className="spin" style={{ color: '#00875a' }} />
+                                {job.stageMessage || 'प्रोसेसिंग जारी है...'}
+                              </span>
+                              <span style={{ fontSize: '12px', color: '#059669', fontVariantNumeric: 'tabular-nums' }}>
+                                {job.progress || 0}%
+                              </span>
+                            </div>
+                            <div style={{ width: '100%', height: '6px', backgroundColor: '#d1e7dd', borderRadius: '4px', overflow: 'hidden' }}>
+                              <div style={{ width: `${job.progress || 0}%`, height: '100%', backgroundColor: '#00875a', transition: 'width 0.4s ease' }} />
+                            </div>
                           </div>
                         )}
 
