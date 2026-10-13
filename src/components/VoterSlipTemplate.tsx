@@ -240,24 +240,14 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
     let cleanHi = (hi || '').trim();
     if (!cleanEn && !cleanHi) return fallback;
 
-    // Auto-detect Devanagari script so Hindi is always first and English second
-    const isDevanagari = (s: string) => /[\u0900-\u097F]/.test(s);
-    if (isDevanagari(cleanEn) && !isDevanagari(cleanHi) && cleanHi) {
-      const temp = cleanEn;
-      cleanEn = cleanHi;
-      cleanHi = temp;
+    // Strict Hindi priority: always prefer and show Hindi Devanagari text
+    if (cleanHi) {
+      return cleanHi;
     }
-
-    if (cleanHi && cleanEn) {
-      if (cleanHi.toLowerCase() === cleanEn.toLowerCase()) {
-        return cleanHi;
-      }
-      return `${cleanHi} / ${cleanEn}`;
-    }
-    return cleanHi || cleanEn || fallback;
+    return cleanEn || fallback;
   };
 
-  const voterName = formatName(voter.nameEn, voter.nameHi, 'जबरा राम / Jabra Ram');
+  const voterName = formatName(voter.nameEn, voter.nameHi, 'जबरा राम');
 
   const relLabel = voter.relationType === 'husband' || voter.relationType === 'पति' 
     ? 'पति' 
@@ -265,7 +255,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
     ? 'माता'
     : 'पिता';
 
-  const relativeName = formatName(voter.relativeNameEn, voter.relativeNameHi, 'नरिगा राम / Nariga Ram');
+  const relativeName = formatName(voter.relativeNameEn, voter.relativeNameHi, 'नरिगा राम');
 
   const ward = (voter.wardNo || '82').replace(/^(वार्ड|Ward)\s*/i, '');
   const part = (voter.partNo || '1').replace(/^(भाग|Part)\s*/i, '');
