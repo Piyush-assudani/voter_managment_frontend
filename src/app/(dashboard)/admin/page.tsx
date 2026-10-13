@@ -579,7 +579,8 @@ export default function AdminPanel() {
     }
   };
 
-  const loadMetaTemplates = useCallback(async (orgId = templateTargetOrgId) => {
+  const loadMetaTemplates = useCallback(async (targetOrgId?: string) => {
+    const orgId = targetOrgId ?? templateTargetOrgId;
     setLoadingTemplates(true);
     try {
       const query = orgId ? `?organizationId=${encodeURIComponent(orgId)}` : '';

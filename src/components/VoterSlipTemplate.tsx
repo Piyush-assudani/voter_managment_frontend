@@ -240,8 +240,8 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
   };
   
   const formatName = (en?: string, hi?: string, fallback = '') => {
-    let cleanEn = (en || '').trim();
-    let cleanHi = (hi || '').trim();
+    const cleanEn = (en || '').trim();
+    const cleanHi = (hi || '').trim();
     if (!cleanEn && !cleanHi) return fallback;
 
     // Strict Hindi priority: always prefer and show Hindi Devanagari text

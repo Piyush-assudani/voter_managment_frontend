@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Terms of Service - VijaySetu Election Platform & Meta WhatsApp Services',
@@ -71,7 +72,7 @@ export default function TermsPage() {
       </main>
 
       <footer style={{ textAlign: 'center', padding: '24px 20px', fontSize: '13px', color: '#64748b', borderTop: '1px solid #e2e8f0', background: '#ffffff' }}>
-        &copy; 2026 VijaySetu. All Rights Reserved. &bull; <a href="/privacy" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</a> &bull; <a href="/" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>Dashboard</a>
+        &copy; 2026 VijaySetu. All Rights Reserved. &bull; <Link href="/privacy" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</Link> &bull; <Link href="/" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>Dashboard</Link>
       </footer>
     </div>
   );

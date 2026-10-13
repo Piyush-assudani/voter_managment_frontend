@@ -552,7 +552,9 @@ export default function SlipsPage() {
   return (
     <div className={`work-page slips-studio-page ${bulkMode ? `slips-bulk-print-mode slips-per-a4-${perA4}` : 'slips-single-print-mode'}`}>
       {/* Print & Screen CSS styling */}
-      <style jsx global>{`
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         /* ================= SCREEN STYLING FOR BULK PREVIEW ================= */
         @media screen {
           .slips-bulk-sheets-wrapper {
@@ -1023,7 +1025,7 @@ export default function SlipsPage() {
             box-shadow: none !important;
           }
         }
-      `}</style>
+      ` }} />
 
       {/* Page Header */}
       <div className="page-intro no-print" style={{ marginBottom: '16px' }}>

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy - VijaySetu Election Platform & Meta WhatsApp Services',
@@ -88,7 +89,7 @@ export default function PrivacyPage() {
       </main>
 
       <footer style={{ textAlign: 'center', padding: '24px 20px', fontSize: '13px', color: '#64748b', borderTop: '1px solid #e2e8f0', background: '#ffffff' }}>
-        &copy; 2026 VijaySetu. All Rights Reserved. &bull; <a href="/terms" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>Terms of Service</a> &bull; <a href="/" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>Dashboard</a>
+        &copy; 2026 VijaySetu. All Rights Reserved. &bull; <Link href="/terms" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>Terms of Service</Link> &bull; <Link href="/" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>Dashboard</Link>
       </footer>
     </div>
   );
