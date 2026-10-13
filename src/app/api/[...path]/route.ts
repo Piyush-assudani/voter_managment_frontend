@@ -7,28 +7,27 @@ export const maxDuration = 300;
 
 async function resolveTargetApi(): Promise<{ base: string; host?: string }> {
   if (process.env.BACKEND_API_URL) {
-    return { base: process.env.BACKEND_API_URL.replace(/\/+$/, '') };
-  }
-  // In development, prefer local backend
-  if (process.env.NODE_ENV === 'development') {
+    const raw = process.env.BACKEND_API_URL.replace(/\/+$/, '').replace(/\/api\/:path\*$/, '').replace(/\/api$/, '');
+    const base = `${raw}/api`;
     try {
-      const ping = await fetch('http://127.0.0.1:5002/', { method: 'HEAD', signal: AbortSignal.timeout(1500) });
+      const host = new URL(base).host;
+      return { base, host };
+    } catch {
+      return { base };
+    }
+  }
+
+  if (process.env.USE_LOCAL_BACKEND === 'true') {
+    try {
+      const ping = await fetch('http://127.0.0.1:5002/', { method: 'HEAD', signal: AbortSignal.timeout(1000) });
       if (ping.ok || ping.status === 200 || ping.status === 404) {
         return { base: LOCAL_API, host: '127.0.0.1:5002' };
       }
     } catch {
-      // local backend may be booting
-      return { base: LOCAL_API, host: '127.0.0.1:5002' };
+      // fallback to remote
     }
   }
-  try {
-    const ping = await fetch('http://127.0.0.1:5002/', { method: 'HEAD', signal: AbortSignal.timeout(1000) });
-    if (ping.ok || ping.status === 200 || ping.status === 404) {
-      return { base: LOCAL_API, host: '127.0.0.1:5002' };
-    }
-  } catch {
-    // local backend not reachable
-  }
+
   return { base: REMOTE_API, host: 'vijaysetu.piyushassudani.in' };
 }
 
