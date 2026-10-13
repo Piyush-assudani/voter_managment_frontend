@@ -555,6 +555,46 @@ export default function SlipsPage() {
       <style jsx global>{`
         /* ================= SCREEN STYLING FOR BULK PREVIEW ================= */
         @media screen {
+          .slips-bulk-sheets-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            width: 100%;
+          }
+          .a4-sheet-page {
+            background: #ffffff;
+            border-radius: 14px;
+            border: 1.5px solid #cbd5e1;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+            padding: 16px;
+            box-sizing: border-box;
+          }
+          .a4-sheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 14px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            border: 1px solid #e2e8f0;
+          }
+          .slips-per-a4-12 .a4-sheet-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+            gap: 14px;
+          }
+          .slips-per-a4-8 .a4-sheet-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 18px;
+          }
+          .slips-per-a4-4 .a4-sheet-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+            gap: 22px;
+          }
+
           .slips-per-a4-4 .slips-bulk-print-item .voter-slip-printable-card {
             zoom: 0.82;
             width: 560px !important;
@@ -638,6 +678,36 @@ export default function SlipsPage() {
             display: none !important;
           }
 
+          .slips-bulk-sheets-wrapper {
+            display: block !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          /* Strict A4 Sheet Pagination Container */
+          .a4-sheet-page {
+            width: 202mm !important;
+            height: 289mm !important;
+            max-height: 289mm !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            overflow: hidden !important;
+            box-sizing: border-box !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+          }
+          .a4-sheet-page:last-child {
+            page-break-after: auto !important;
+            break-after: auto !important;
+          }
+
           .slips-bulk-print-mode .slips-bulk-print-item {
             display: flex !important;
             align-items: center !important;
@@ -647,10 +717,11 @@ export default function SlipsPage() {
             page-break-inside: avoid !important;
             margin: 0 !important;
             padding: 0 !important;
-            background: #ffffff !important;
+            background: transparent !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
             border: none !important;
+            box-shadow: none !important;
           }
 
           .slips-bulk-print-mode .voter-slip-printable-card {
@@ -664,96 +735,79 @@ export default function SlipsPage() {
             page-break-inside: avoid !important;
           }
 
-          /* 4 in 1 A4: 2 columns × 2 rows (page break every 4 slips) */
-          .slips-per-a4-4 .slips-bulk-print-grid {
+          /* 4 in 1 A4: 2 columns × 2 rows (strictly 4 per sheet) */
+          .slips-per-a4-4 .a4-sheet-grid {
             display: grid !important;
-            grid-template-columns: repeat(2, 98mm) !important;
-            grid-auto-rows: 139mm !important;
-            gap: 3mm 4mm !important;
-            justify-content: center !important;
-            align-content: start !important;
-            width: 200mm !important;
+            grid-template-columns: repeat(2, 99mm) !important;
+            grid-template-rows: repeat(2, 142mm) !important;
+            gap: 3mm 3mm !important;
+            width: 202mm !important;
+            height: 288mm !important;
+            max-height: 288mm !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
             margin: 0 auto !important;
             padding: 0 !important;
-            box-sizing: border-box !important;
           }
           .slips-per-a4-4 .slips-bulk-print-item {
-            width: 98mm !important;
-            height: 139mm !important;
-            max-height: 139mm !important;
+            width: 99mm !important;
+            height: 142mm !important;
+            max-height: 142mm !important;
           }
           .slips-per-a4-4 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.62 !important;
+            zoom: 0.63 !important;
             width: 560px !important;
             max-width: 560px !important;
           }
-          .slips-per-a4-4 .slips-bulk-print-item:nth-child(4n) {
-            page-break-after: always !important;
-            break-after: page !important;
-          }
 
-          /* 8 in 1 A4: 2 columns × 4 rows (page break every 8 slips) */
-          .slips-per-a4-8 .slips-bulk-print-grid {
+          /* 8 in 1 A4: 2 columns × 4 rows (strictly 8 per sheet) */
+          .slips-per-a4-8 .a4-sheet-grid {
             display: grid !important;
-            grid-template-columns: repeat(2, 98mm) !important;
-            grid-auto-rows: 68mm !important;
-            gap: 2mm 4mm !important;
-            justify-content: center !important;
-            align-content: start !important;
-            width: 200mm !important;
+            grid-template-columns: repeat(2, 99mm) !important;
+            grid-template-rows: repeat(4, 71mm) !important;
+            gap: 1mm 3mm !important;
+            width: 202mm !important;
+            height: 288mm !important;
+            max-height: 288mm !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
             margin: 0 auto !important;
             padding: 0 !important;
-            box-sizing: border-box !important;
           }
           .slips-per-a4-8 .slips-bulk-print-item {
-            width: 98mm !important;
-            height: 68mm !important;
-            max-height: 68mm !important;
+            width: 99mm !important;
+            height: 71mm !important;
+            max-height: 71mm !important;
           }
           .slips-per-a4-8 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.33 !important;
+            zoom: 0.34 !important;
             width: 560px !important;
             max-width: 560px !important;
           }
-          .slips-per-a4-8 .slips-bulk-print-item:nth-child(8n) {
-            page-break-after: always !important;
-            break-after: page !important;
-          }
 
-          /* 12 in 1 A4: 3 columns × 4 rows (page break every 12 slips) */
-          .slips-per-a4-12 .slips-bulk-print-grid {
+          /* 12 in 1 A4: 3 columns × 4 rows (strictly 12 per sheet) */
+          .slips-per-a4-12 .a4-sheet-grid {
             display: grid !important;
-            grid-template-columns: repeat(3, 64mm) !important;
-            grid-auto-rows: 68mm !important;
-            gap: 2mm 3mm !important;
-            justify-content: center !important;
-            align-content: start !important;
-            width: 198mm !important;
+            grid-template-columns: repeat(3, 66mm) !important;
+            grid-template-rows: repeat(4, 71mm) !important;
+            gap: 1mm 2mm !important;
+            width: 202mm !important;
+            height: 288mm !important;
+            max-height: 288mm !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
             margin: 0 auto !important;
             padding: 0 !important;
-            box-sizing: border-box !important;
           }
           .slips-per-a4-12 .slips-bulk-print-item {
-            width: 64mm !important;
-            height: 68mm !important;
-            max-height: 68mm !important;
+            width: 66mm !important;
+            height: 71mm !important;
+            max-height: 71mm !important;
           }
           .slips-per-a4-12 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.30 !important;
+            zoom: 0.31 !important;
             width: 560px !important;
             max-width: 560px !important;
-          }
-          .slips-per-a4-12 .slips-bulk-print-item:nth-child(12n) {
-            page-break-after: always !important;
-            break-after: page !important;
-          }
-
-          /* Prevent blank trailing page on exact page multiples */
-          .slips-per-a4-4 .slips-bulk-print-item:last-child,
-          .slips-per-a4-8 .slips-bulk-print-item:last-child,
-          .slips-per-a4-12 .slips-bulk-print-item:last-child {
-            page-break-after: auto !important;
-            break-after: auto !important;
           }
 
           /* ================= SINGLE SLIP PRINT MODE ================= */
@@ -1216,37 +1270,47 @@ export default function SlipsPage() {
             </div>
           </div>
 
-          <div
-            className="slips-bulk-print-grid"
-            style={{
-              display: 'grid',
-              gridTemplateColumns:
-                perA4 === 12
-                  ? 'repeat(auto-fill, minmax(310px, 1fr))'
-                  : perA4 === 8
-                  ? 'repeat(auto-fill, minmax(380px, 1fr))'
-                  : 'repeat(auto-fill, minmax(460px, 1fr))',
-              gap: perA4 === 12 ? '16px' : perA4 === 8 ? '20px' : '26px',
-            }}
-          >
-            {sortedVoters.map((voter) => (
-              <div
-                key={voter._id}
-                className="slips-bulk-print-item"
-                style={{
-                  background: '#ffffff',
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.04)',
-                  border: '1px solid #e2e8f0',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  padding: '8px',
-                }}
-              >
-                <VoterSlipTemplate voter={voter} config={slipConfig} isInline={true} perA4={perA4} />
-              </div>
-            ))}
+          {/* A4 Sheet Chunking: Exactly perA4 slips per single page sheet */}
+          <div className="slips-bulk-sheets-wrapper">
+            {Array.from({ length: Math.ceil(sortedVoters.length / perA4) }, (_, pageIndex) => {
+              const startIdx = pageIndex * perA4;
+              const pageVoters = sortedVoters.slice(startIdx, startIdx + perA4);
+              return (
+                <div key={pageIndex} className="a4-sheet-page">
+                  <div className="a4-sheet-header no-print">
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#16a34a' }}></span>
+                      <strong>A4 शीट #{pageIndex + 1}</strong>
+                      <span style={{ color: '#64748b', fontWeight: 500 }}>
+                        (पर्चियां {startIdx + 1} से {startIdx + pageVoters.length})
+                      </span>
+                    </span>
+                    <span style={{ color: '#475569', fontSize: '11.5px', background: '#e2e8f0', padding: '2px 8px', borderRadius: '4px' }}>
+                      {pageVoters.length} / {perA4} पर्ची इस पेज पर प्रिंट होगी
+                    </span>
+                  </div>
+
+                  <div className="a4-sheet-grid">
+                    {pageVoters.map((voter) => (
+                      <div
+                        key={voter._id}
+                        className="slips-bulk-print-item"
+                        style={{
+                          background: '#ffffff',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <VoterSlipTemplate voter={voter} config={slipConfig} isInline={true} perA4={perA4} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
       ) : (
@@ -1637,6 +1701,37 @@ export default function SlipsPage() {
               {/* LEFT COLUMN: Input Fields & Uploaders */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 
+                {/* 📐 Image Dimension & Header Guidance Box */}
+                <div
+                  style={{
+                    background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                    border: '1.5px solid #86efac',
+                    borderRadius: '12px',
+                    padding: '12px 16px',
+                    fontSize: '12.5px',
+                    color: '#166534',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '13px', marginBottom: '8px' }}>
+                    <Sparkles size={16} color="#16a34a" />
+                    <span>📐 पर्ची हेडर व फोटो साइज़ गाइडलाइंस (Recommended Image Dimensions):</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', fontSize: '12px', lineHeight: 1.4 }}>
+                    <div style={{ background: '#ffffff', padding: '7px 10px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                      <strong style={{ color: '#0f172a' }}>1. चुनाव चिन्ह (Symbol):</strong><br />
+                      <span style={{ color: '#ea580c', fontWeight: 700 }}>120 × 120 px</span> (Square 1:1, Transparent PNG)
+                    </div>
+                    <div style={{ background: '#ffffff', padding: '7px 10px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                      <strong style={{ color: '#0f172a' }}>2. प्रत्याशी फ़ोटो (Candidate):</strong><br />
+                      <span style={{ color: '#2563eb', fontWeight: 700 }}>120 × 150 px</span> (Passport 4:5 अनुपात, HD Portrait)
+                    </div>
+                    <div style={{ background: '#ffffff', padding: '7px 10px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                      <strong style={{ color: '#0f172a' }}>3. पूरा हेडर ग्राफ़िक (Full Banner):</strong><br />
+                      <span style={{ color: '#7c3aed', fontWeight: 700 }}>560 × 120 px</span> (14:3 अनुपात, Banner Graphic)
+                    </div>
+                  </div>
+                </div>
+
                 {/* 1. Photos & Symbol Upload (Both Sides) */}
                 <div
                   style={{
@@ -1653,9 +1748,14 @@ export default function SlipsPage() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: '14px' }}>
                     {/* Left: Party Symbol */}
                     <div>
-                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                        बायां बॉक्स: चुनाव चिन्ह (Symbol Photo)
-                      </label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                          बायां: चुनाव चिन्ह
+                        </label>
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#ea580c', background: '#ffedd5', padding: '1px 5px', borderRadius: '4px' }}>
+                          120×120 px
+                        </span>
+                      </div>
                       <div
                         style={{
                           border: '2px dashed #fdba74',
@@ -1695,7 +1795,9 @@ export default function SlipsPage() {
                             <span style={{ fontSize: '11px', color: '#ea580c', fontWeight: 700, display: 'block' }}>
                               चिन्ह फोटो अपलोड करें
                             </span>
-                            <span style={{ fontSize: '10px', color: '#94a3b8' }}>PNG/JPG फोटो अपलोड करें</span>
+                            <span style={{ fontSize: '10px', color: '#64748b', display: 'block', marginTop: '2px' }}>
+                              120×120 px (Square PNG/JPG)
+                            </span>
                             <input
                               type="file"
                               accept="image/*"
@@ -1709,9 +1811,14 @@ export default function SlipsPage() {
 
                     {/* Right: Candidate Photo */}
                     <div>
-                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                        दायां बॉक्स: प्रत्याशी फ़ोटो (Candidate Portrait)
-                      </label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                          दायां: प्रत्याशी फ़ोटो
+                        </label>
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#2563eb', background: '#dbeafe', padding: '1px 5px', borderRadius: '4px' }}>
+                          120×150 px
+                        </span>
+                      </div>
                       <div
                         style={{
                           border: '2px dashed #fdba74',
@@ -1751,7 +1858,9 @@ export default function SlipsPage() {
                             <span style={{ fontSize: '11px', color: '#ea580c', fontWeight: 700, display: 'block' }}>
                               प्रत्याशी फोटो अपलोड करें
                             </span>
-                            <span style={{ fontSize: '10px', color: '#94a3b8' }}>पासपोर्ट साइज JPG/PNG</span>
+                            <span style={{ fontSize: '10px', color: '#64748b', display: 'block', marginTop: '2px' }}>
+                              120×150 px (पासपोर्ट साइज)
+                            </span>
                             <input
                               type="file"
                               accept="image/*"
@@ -1761,6 +1870,80 @@ export default function SlipsPage() {
                           </label>
                         )}
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Option for Full Custom Header Banner Graphic (560x120px) */}
+                  <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px dashed #fed7aa' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                        🎨 या पूरा कस्टम हेडर बैनर अपलोड करें (Full Header Graphic Banner)
+                      </label>
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#7c3aed', background: '#ede9fe', padding: '1px 5px', borderRadius: '4px' }}>
+                        560×120 px
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        border: '2px dashed #c084fc',
+                        borderRadius: '8px',
+                        padding: '10px',
+                        textAlign: 'center',
+                        background: '#faf5ff',
+                      }}
+                    >
+                      {editingConfig.headerGraphicImage ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={editingConfig.headerGraphicImage}
+                            alt="Header Banner"
+                            style={{ height: '48px', maxWidth: '100%', objectFit: 'contain', borderRadius: '4px' }}
+                          />
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              type="button"
+                              onClick={() => setEditingConfig((prev) => ({ ...prev, headerGraphicImage: '', useHeaderGraphic: false }))}
+                              style={{
+                                fontSize: '11px',
+                                color: '#dc2626',
+                                background: '#fee2e2',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '2px 8px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <Trash2 size={12} style={{ display: 'inline', marginRight: '3px' }} /> बैनर हटाएं
+                            </button>
+                            <label style={{ fontSize: '11px', color: '#475569', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!editingConfig.useHeaderGraphic}
+                                onChange={(e) => setEditingConfig((prev) => ({ ...prev, useHeaderGraphic: e.target.checked }))}
+                              />
+                              बैनर सक्रिय रखें
+                            </label>
+                          </div>
+                        </div>
+                      ) : (
+                        <label style={{ cursor: 'pointer', display: 'block' }}>
+                          <Upload size={22} color="#7c3aed" style={{ margin: '0 auto 4px' }} />
+                          <span style={{ fontSize: '11px', color: '#7c3aed', fontWeight: 700, display: 'block' }}>
+                            तैयार हेडर बैनर ग्राफ़िक अपलोड करें (560×120 px)
+                          </span>
+                          <span style={{ fontSize: '10px', color: '#64748b' }}>
+                            यदि ग्राफ़िक डिज़ाइनर से तैयार बैनर है, तो यहाँ अपलोड करें
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                            onChange={(e) => handleImageUpload(e, 'headerGraphicImage')}
+                          />
+                        </label>
+                      )}
                     </div>
                   </div>
                 </div>
