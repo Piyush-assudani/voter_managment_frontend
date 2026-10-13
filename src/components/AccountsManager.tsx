@@ -70,7 +70,9 @@ const newForm = (): FormState => ({
 export default function AccountsManager({ embeddedOrganizationId }: { embeddedOrganizationId?: string }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [organizationId, setOrganizationId] = useState(embeddedOrganizationId || '');
+  const [organizationId, setOrganizationId] = useState(
+    embeddedOrganizationId || (typeof window !== 'undefined' ? window.localStorage.getItem('selectedClientOrgId') || '' : '')
+  );
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -105,6 +107,17 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
 
   useEffect(() => { void Promise.resolve().then(() => load()); }, [load]);
 
+  // Keep in sync with topbar client selector
+  useEffect(() => {
+    const handleClientChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ organizationId?: string }>;
+      const newOrgId = customEvent.detail?.organizationId || '';
+      setOrganizationId(newOrgId);
+    };
+    window.addEventListener('client-changed', handleClientChange);
+    return () => window.removeEventListener('client-changed', handleClientChange);
+  }, []);
+
   useEffect(() => {
     void Promise.resolve().then(async () => {
       try {
@@ -118,7 +131,8 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
         const rawTenants = await response.json() as Organization[];
         const tenants = Array.from(new Map((Array.isArray(rawTenants) ? rawTenants : []).map((t) => [t.id, t])).values());
         setOrganizations(tenants);
-        setOrganizationId((current) => current || tenants[0]?.id || '');
+        const savedOrg = window.localStorage.getItem('selectedClientOrgId') || '';
+        setOrganizationId((current) => current || savedOrg || tenants[0]?.id || '');
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : 'क्लाइंट खाते लोड नहीं हुए।');
       }
@@ -275,8 +289,23 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
         <div className="records-toolbar">
           <div>{!embeddedOrganizationId && <h2>खाते</h2>}<p>Role और access scopes; password कभी सूची में नहीं दिखता।</p></div>
           {isPlatformAdmin && !embeddedOrganizationId && <label className="ward-select-label">क्लाइंट
-            <select aria-label="अकाउंट क्लाइंट फ़िल्टर" value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
-              <option value="">सभी क्लाइंट</option>{organizations.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}
+            <select
+              aria-label="अकाउंट क्लाइंट फ़िल्टर"
+              value={organizationId}
+              onChange={(event) => {
+                const newId = event.target.value;
+                setOrganizationId(newId);
+                if (typeof window !== 'undefined') {
+                  if (!newId || newId === 'all') {
+                    window.localStorage.removeItem('selectedClientOrgId');
+                  } else {
+                    window.localStorage.setItem('selectedClientOrgId', newId);
+                  }
+                  window.dispatchEvent(new CustomEvent('client-changed', { detail: { organizationId: newId } }));
+                }
+              }}
+            >
+              <option value="">सभी क्लाइंट</option>{organizations.map((tenant, idx) => <option key={`${tenant.id}-${idx}`} value={tenant.id}>{tenant.name}</option>)}
             </select>
           </label>}
           <span className="panel-count" style={{ whiteSpace: 'nowrap', width: 'auto' }}>

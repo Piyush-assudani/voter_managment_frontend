@@ -192,6 +192,12 @@ export default function DashboardHomePage() {
       } catch {}
     };
     void loadStats();
+
+    const handleClientChange = () => {
+      void loadStats();
+    };
+    window.addEventListener('client-changed', handleClientChange);
+    return () => window.removeEventListener('client-changed', handleClientChange);
   }, []);
 
   return (

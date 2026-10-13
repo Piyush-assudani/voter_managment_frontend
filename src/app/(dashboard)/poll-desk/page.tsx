@@ -116,6 +116,14 @@ export default function PollDeskPage() {
     if (selectedWard) void loadVoters(selectedWard);
   }, [selectedWard, loadVoters]);
 
+  useEffect(() => {
+    const handleClientChange = () => {
+      if (selectedWard) void loadVoters(selectedWard);
+    };
+    window.addEventListener('client-changed', handleClientChange);
+    return () => window.removeEventListener('client-changed', handleClientChange);
+  }, [selectedWard, loadVoters]);
+
   const [sort, setSort] = useState<SortState>({ field: 'serialNo', direction: 'asc' });
   const handleSort = (field: string) => {
     setSort((prev) => ({

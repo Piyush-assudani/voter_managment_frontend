@@ -1751,8 +1751,8 @@ export default function SlipsPage() {
                     flex: '1 1 200px',
                   }}
                 >
-                  {clientsList.map((c) => (
-                    <option key={c.id} value={c.id}>
+                  {clientsList.map((c, idx) => (
+                    <option key={`${c.id}-${idx}`} value={c.id}>
                       {c.name} ({c.id})
                     </option>
                   ))}

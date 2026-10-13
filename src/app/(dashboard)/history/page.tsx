@@ -71,6 +71,14 @@ export default function DispatchHistoryPage() {
 
   useEffect(() => { void Promise.resolve().then(() => load()); }, [load]);
 
+  useEffect(() => {
+    const handleClientChange = () => {
+      void load();
+    };
+    window.addEventListener('client-changed', handleClientChange);
+    return () => window.removeEventListener('client-changed', handleClientChange);
+  }, [load]);
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     void load(search, status);
