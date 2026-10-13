@@ -551,22 +551,50 @@ export default function SlipsPage() {
 
   return (
     <div className={`work-page slips-studio-page ${bulkMode ? `slips-bulk-print-mode slips-per-a4-${perA4}` : 'slips-single-print-mode'}`}>
-      {/* Print-only CSS styling */}
+      {/* Print & Screen CSS styling */}
       <style jsx global>{`
+        /* ================= SCREEN STYLING FOR BULK PREVIEW ================= */
+        @media screen {
+          .slips-per-a4-4 .slips-bulk-print-item .voter-slip-printable-card {
+            zoom: 0.82;
+            width: 560px !important;
+            max-width: 560px !important;
+          }
+          .slips-per-a4-8 .slips-bulk-print-item .voter-slip-printable-card {
+            zoom: 0.65;
+            width: 560px !important;
+            max-width: 560px !important;
+          }
+          .slips-per-a4-12 .slips-bulk-print-item .voter-slip-printable-card {
+            zoom: 0.52;
+            width: 560px !important;
+            max-width: 560px !important;
+          }
+        }
+
+        /* ================= PRINT STYLING ================= */
         @media print {
           @page {
             size: A4 portrait;
-            margin: 5mm;
+            margin: 4mm;
           }
 
-          /* Hide all application chrome and interactive elements */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          /* Hide all application chrome, toolbars, headers, and info bars */
+          .no-print,
+          .slips-branding-info-bar,
+          .records-toolbar,
+          .bulk-header-bar,
+          .page-intro,
+          .feature-actions,
+          .inline-notice,
           .app-sidebar,
           .topbar,
           .app-footer,
-          .page-intro,
-          .feature-actions,
-          .records-toolbar,
-          .bulk-header-bar,
           .modal-actions,
           .modal-backdrop,
           button {
@@ -611,7 +639,9 @@ export default function SlipsPage() {
           }
 
           .slips-bulk-print-mode .slips-bulk-print-item {
-            display: block !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
             position: static !important;
             break-inside: avoid !important;
             page-break-inside: avoid !important;
@@ -619,16 +649,15 @@ export default function SlipsPage() {
             padding: 0 !important;
             background: #ffffff !important;
             box-sizing: border-box !important;
+            overflow: hidden !important;
+            border: none !important;
           }
 
           .slips-bulk-print-mode .voter-slip-printable-card {
             position: relative !important;
             left: auto !important;
             top: auto !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            height: 100% !important;
-            margin: 0 !important;
+            margin: 0 auto !important;
             padding: 0 !important;
             box-shadow: none !important;
             break-inside: avoid !important;
@@ -638,18 +667,25 @@ export default function SlipsPage() {
           /* 4 in 1 A4: 2 columns × 2 rows (page break every 4 slips) */
           .slips-per-a4-4 .slips-bulk-print-grid {
             display: grid !important;
-            grid-template-columns: repeat(2, 96mm) !important;
-            grid-auto-rows: 136mm !important;
-            gap: 5mm 6mm !important;
+            grid-template-columns: repeat(2, 98mm) !important;
+            grid-auto-rows: 139mm !important;
+            gap: 3mm 4mm !important;
             justify-content: center !important;
-            width: 198mm !important;
+            align-content: start !important;
+            width: 200mm !important;
             margin: 0 auto !important;
             padding: 0 !important;
+            box-sizing: border-box !important;
           }
           .slips-per-a4-4 .slips-bulk-print-item {
-            width: 96mm !important;
-            height: 136mm !important;
-            max-height: 136mm !important;
+            width: 98mm !important;
+            height: 139mm !important;
+            max-height: 139mm !important;
+          }
+          .slips-per-a4-4 .slips-bulk-print-item .voter-slip-printable-card {
+            zoom: 0.62 !important;
+            width: 560px !important;
+            max-width: 560px !important;
           }
           .slips-per-a4-4 .slips-bulk-print-item:nth-child(4n) {
             page-break-after: always !important;
@@ -659,18 +695,25 @@ export default function SlipsPage() {
           /* 8 in 1 A4: 2 columns × 4 rows (page break every 8 slips) */
           .slips-per-a4-8 .slips-bulk-print-grid {
             display: grid !important;
-            grid-template-columns: repeat(2, 96mm) !important;
+            grid-template-columns: repeat(2, 98mm) !important;
             grid-auto-rows: 68mm !important;
-            gap: 2.5mm 6mm !important;
+            gap: 2mm 4mm !important;
             justify-content: center !important;
-            width: 198mm !important;
+            align-content: start !important;
+            width: 200mm !important;
             margin: 0 auto !important;
             padding: 0 !important;
+            box-sizing: border-box !important;
           }
           .slips-per-a4-8 .slips-bulk-print-item {
-            width: 96mm !important;
+            width: 98mm !important;
             height: 68mm !important;
             max-height: 68mm !important;
+          }
+          .slips-per-a4-8 .slips-bulk-print-item .voter-slip-printable-card {
+            zoom: 0.33 !important;
+            width: 560px !important;
+            max-width: 560px !important;
           }
           .slips-per-a4-8 .slips-bulk-print-item:nth-child(8n) {
             page-break-after: always !important;
@@ -680,18 +723,25 @@ export default function SlipsPage() {
           /* 12 in 1 A4: 3 columns × 4 rows (page break every 12 slips) */
           .slips-per-a4-12 .slips-bulk-print-grid {
             display: grid !important;
-            grid-template-columns: repeat(3, 63mm) !important;
+            grid-template-columns: repeat(3, 64mm) !important;
             grid-auto-rows: 68mm !important;
-            gap: 2.5mm 4mm !important;
+            gap: 2mm 3mm !important;
             justify-content: center !important;
+            align-content: start !important;
             width: 198mm !important;
             margin: 0 auto !important;
             padding: 0 !important;
+            box-sizing: border-box !important;
           }
           .slips-per-a4-12 .slips-bulk-print-item {
-            width: 63mm !important;
+            width: 64mm !important;
             height: 68mm !important;
             max-height: 68mm !important;
+          }
+          .slips-per-a4-12 .slips-bulk-print-item .voter-slip-printable-card {
+            zoom: 0.30 !important;
+            width: 560px !important;
+            max-width: 560px !important;
           }
           .slips-per-a4-12 .slips-bulk-print-item:nth-child(12n) {
             page-break-after: always !important;
@@ -743,7 +793,7 @@ export default function SlipsPage() {
       `}</style>
 
       {/* Page Header */}
-      <div className="page-intro" style={{ marginBottom: '16px' }}>
+      <div className="page-intro no-print" style={{ marginBottom: '16px' }}>
         <div>
           <div className="eyebrow-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span className="eyebrow-mark" />
@@ -755,7 +805,7 @@ export default function SlipsPage() {
           </p>
         </div>
 
-        <div className="feature-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div className="feature-actions no-print" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {/* Customize Button */}
           <button
             className="button-primary"
@@ -829,10 +879,11 @@ export default function SlipsPage() {
         </div>
       </div>
 
-      {error && <div className="inline-notice error-notice" role="alert">{error}</div>}
+      {error && <div className="inline-notice error-notice no-print" role="alert">{error}</div>}
 
       {/* Slip Branding Info Bar */}
       <div
+        className="slips-branding-info-bar no-print"
         style={{
           background: '#ffffff',
           borderRadius: '12px',
@@ -906,7 +957,7 @@ export default function SlipsPage() {
 
       {/* Filter Toolbar */}
       <div
-        className="records-toolbar"
+        className="records-toolbar no-print"
         style={{
           background: '#ffffff',
           borderRadius: '12px',
@@ -975,7 +1026,7 @@ export default function SlipsPage() {
           }}
         >
           <div
-            className="bulk-header-bar"
+            className="bulk-header-bar no-print"
             style={{
               display: 'flex',
               flexDirection: 'column',
@@ -1171,15 +1222,28 @@ export default function SlipsPage() {
               display: 'grid',
               gridTemplateColumns:
                 perA4 === 12
-                  ? 'repeat(auto-fill, minmax(240px, 1fr))'
+                  ? 'repeat(auto-fill, minmax(310px, 1fr))'
                   : perA4 === 8
-                  ? 'repeat(auto-fill, minmax(320px, 1fr))'
-                  : 'repeat(auto-fill, minmax(380px, 1fr))',
-              gap: perA4 === 12 ? '14px' : perA4 === 8 ? '18px' : '24px',
+                  ? 'repeat(auto-fill, minmax(380px, 1fr))'
+                  : 'repeat(auto-fill, minmax(460px, 1fr))',
+              gap: perA4 === 12 ? '16px' : perA4 === 8 ? '20px' : '26px',
             }}
           >
             {sortedVoters.map((voter) => (
-              <div key={voter._id} className="slips-bulk-print-item" style={{ background: '#fff', borderRadius: perA4 === 12 ? '6px' : '10px' }}>
+              <div
+                key={voter._id}
+                className="slips-bulk-print-item"
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '12px',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.04)',
+                  border: '1px solid #e2e8f0',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  padding: '8px',
+                }}
+              >
                 <VoterSlipTemplate voter={voter} config={slipConfig} isInline={true} perA4={perA4} />
               </div>
             ))}
