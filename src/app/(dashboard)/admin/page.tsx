@@ -110,6 +110,8 @@ interface Tenant {
   district?: string;
   ulbPanchayatSamiti?: string;
   ulbWardGramPanchayat?: string;
+  adminEmail?: string;
+  initialPassword?: string;
 }
 
 interface AdminVoter {
@@ -235,16 +237,88 @@ export default function AdminPanel() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const copyCreatedClientCreds = () => {
-    if (!createdClientInfo) return;
-    const regionLine = [createdClientInfo.district, createdClientInfo.ulbPanchayatSamiti, createdClientInfo.ulbWardGramPanchayat].filter(Boolean).join(' • ');
-    const text = `🎯 विजयसेतु - नया क्लाइंट लॉगिन क्रेडेंशियल्स\n------------------------------\n🏢 संगठन / क्लाइंट: ${createdClientInfo.name}${regionLine ? `\n📍 क्षेत्र: ${regionLine}` : ''}\n📧 एडमिन ईमेल: ${createdClientInfo.email}\n🔑 शुरुआती पासवर्ड: ${createdClientInfo.password || '(सुरक्षित)'}\n🌐 लॉगिन यूआरएल: ${typeof window !== 'undefined' ? window.location.origin : ''}\n------------------------------`;
+  const [copiedTenantId, setCopiedTenantId] = useState<string | null>(null);
+  const [recentCreatedClient, setRecentCreatedClient] = useState<CreatedClientDetails | null>(null);
+
+  const formatClientShareMessage = (details: {
+    name: string;
+    email?: string;
+    password?: string;
+    district?: string;
+    ulbPanchayatSamiti?: string;
+    ulbWardGramPanchayat?: string;
+    whatsappCredits?: number;
+    wards?: string[];
+  }) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const regionParts = [details.district, details.ulbPanchayatSamiti, details.ulbWardGramPanchayat].filter(Boolean);
+    const regionLine = regionParts.length ? `\n📍 *क्षेत्र:* ${regionParts.join(' • ')}` : '';
+    const emailLine = details.email ? `\n📧 *लॉगिन ईमेल:* ${details.email}` : '';
+    const passLine = details.password ? `\n🔑 *पासवर्ड:* ${details.password}` : '\n🔑 *पासवर्ड:* (सुरक्षित / पूर्व सेट)';
+    const creditsLine = typeof details.whatsappCredits === 'number' ? `\n💬 *WhatsApp क्रेडिट:* ${details.whatsappCredits} संदेश` : '';
+    const wardsLine = details.wards && details.wards.length ? `\n🏘️ *अनुमत वार्ड:* ${details.wards.join(', ')}` : '';
+
+    return `🎯 *विजयसेतु - क्लाइंट लॉगिन विवरण*\n==============================\n🏢 *क्लाइंट / संगठन:* ${details.name}${regionLine}${emailLine}${passLine}\n🌐 *लॉगिन पोर्टल:* ${origin}${creditsLine}${wardsLine}\n==============================\n📌 *नोट:* कृपया लॉगिन करने के बाद पासवर्ड सुरक्षित रखें।\nजय विजय! 🇮🇳`;
+  };
+
+  const copyTenantDetails = (tenant: Tenant) => {
+    const text = formatClientShareMessage({
+      name: tenant.name,
+      email: tenant.adminEmail,
+      password: tenant.initialPassword,
+      district: tenant.district,
+      ulbPanchayatSamiti: tenant.ulbPanchayatSamiti,
+      ulbWardGramPanchayat: tenant.ulbWardGramPanchayat,
+      whatsappCredits: tenant.whatsappCredits,
+      wards: tenant.wards,
+    });
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+    }
+    setCopiedTenantId(tenant.id);
+    showToast('success', `'${tenant.name}' का लॉगिन विवरण व क्रेडेंशियल्स कॉपी कर लिए गए!`, 'विवरण कॉपी');
+    setTimeout(() => setCopiedTenantId(null), 3000);
+  };
+
+  const shareTenantWhatsApp = (tenant: Tenant) => {
+    const text = formatClientShareMessage({
+      name: tenant.name,
+      email: tenant.adminEmail,
+      password: tenant.initialPassword,
+      district: tenant.district,
+      ulbPanchayatSamiti: tenant.ulbPanchayatSamiti,
+      ulbWardGramPanchayat: tenant.ulbWardGramPanchayat,
+      whatsappCredits: tenant.whatsappCredits,
+      wards: tenant.wards,
+    });
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    if (typeof window !== 'undefined') {
+      window.open(url, '_blank');
+    }
+    showToast('success', `'${tenant.name}' का विवरण WhatsApp पर शेयर करने हेतु खोल दिया गया!`, 'WhatsApp शेयर');
+  };
+
+  const copyCreatedClientCreds = (detailsToCopy?: CreatedClientDetails) => {
+    const target = detailsToCopy || createdClientInfo || recentCreatedClient;
+    if (!target) return;
+    const text = formatClientShareMessage(target);
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(text);
     }
     setCopiedClientCreds(true);
-    showToast('success', 'लॉगिन क्रेडेंशियल्स क्लिपबोर्ड में कॉपी कर लिए गए!', 'क्रेडेंशियल्स कॉपी हुए');
+    showToast('success', `'${target.name}' का लॉगिन विवरण कॉपी कर लिया गया!`, 'क्रेडेंशियल्स कॉपी हुए');
     setTimeout(() => setCopiedClientCreds(false), 3000);
+  };
+
+  const shareCreatedClientWhatsApp = (detailsToShare?: CreatedClientDetails) => {
+    const target = detailsToShare || createdClientInfo || recentCreatedClient;
+    if (!target) return;
+    const text = formatClientShareMessage(target);
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    if (typeof window !== 'undefined') {
+      window.open(url, '_blank');
+    }
+    showToast('success', `'${target.name}' का विवरण WhatsApp पर शेयर करने हेतु खोल दिया गया!`, 'WhatsApp शेयर');
   };
   const [voters, setVoters] = useState<AdminVoter[]>([]);
   const [demoUsers, setDemoUsers] = useState<DemoUserRecord[]>([]);
@@ -1071,7 +1145,7 @@ export default function AdminPanel() {
       const successMsg = resData.message || `'${orgName}' क्लाइंट और उसका एडमिन अकाउंट बना दिया गया।`;
 
       // Trigger Celebration Modal Pop-up
-      setCreatedClientInfo({
+      const newClientRecord: CreatedClientDetails = {
         name: orgName,
         email: adminEmail,
         password: plainPassword,
@@ -1081,7 +1155,9 @@ export default function AdminPanel() {
         district: tenantDistrict.trim(),
         ulbPanchayatSamiti: tenantUlbPanchayat.trim(),
         ulbWardGramPanchayat: tenantUlbWardGram.trim(),
-      });
+      };
+      setCreatedClientInfo(newClientRecord);
+      setRecentCreatedClient(newClientRecord);
 
       // Trigger Floating Toast Pop-up
       showToast('success', successMsg, '🎉 नया क्लाइंट तैयार!');
@@ -1726,6 +1802,80 @@ export default function AdminPanel() {
                 <div className="empty-state"><LoaderCircle size={20} className="spin" /><p>क्लाइंट लोड हो रहे हैं…</p></div>
               ) : organizations.length ? (
                 <>
+                  {/* RECENTLY CREATED CLIENT QUICK SHARE STRIP */}
+                  {recentCreatedClient && (
+                    <div
+                      style={{
+                        margin: '0 12px 16px',
+                        padding: '12px 16px',
+                        background: '#f0fdf4',
+                        border: '1.5px solid #86efac',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '12px',
+                        boxShadow: '0 2px 8px rgba(22, 163, 74, 0.08)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div
+                          style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            background: '#dcfce7',
+                            color: '#16a34a',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Sparkles size={18} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#166534' }}>
+                            हाल ही में बना क्लाइंट: <span style={{ color: '#0f172a' }}>{recentCreatedClient.name}</span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#15803d', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span>ईमेल: <code style={{ background: '#dcfce7', padding: '1px 6px', borderRadius: '4px' }}>{recentCreatedClient.email}</code></span>
+                            {recentCreatedClient.password && (
+                              <span>पासवर्ड: <code style={{ background: '#fef3c7', padding: '1px 6px', borderRadius: '4px', color: '#92400e' }}>{recentCreatedClient.password}</code></span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          className="button-quiet"
+                          style={{ fontSize: '12px', padding: '6px 12px', background: '#ffffff', color: '#0f766e', borderColor: '#99f6e4', fontWeight: 700 }}
+                          onClick={() => copyCreatedClientCreds(recentCreatedClient)}
+                        >
+                          <Copy size={13} /> विवरण कॉपी करें
+                        </button>
+                        <button
+                          type="button"
+                          className="button-primary"
+                          style={{ fontSize: '12px', padding: '6px 14px', background: '#16a34a', borderColor: '#16a34a', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}
+                          onClick={() => shareCreatedClientWhatsApp(recentCreatedClient)}
+                        >
+                          <MessageCircle size={14} /> WhatsApp पर भेजें
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-button"
+                          style={{ width: '28px', height: '28px', color: '#64748b' }}
+                          onClick={() => setRecentCreatedClient(null)}
+                          title="हटाएं"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* MOBILE VIEW (< 768px): Responsive Clean Client Cards */}
                   <div className="mobile-card-view" style={{ padding: '10px' }}>
                     {organizations.map((tenant, idx) => (
@@ -1783,6 +1933,45 @@ export default function AdminPanel() {
                             )}
                           </div>
                         )}
+
+                        {/* Quick Copy & Direct WhatsApp Share Bar for Every Client */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px', padding: '8px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                          <button
+                            type="button"
+                            className="button-quiet"
+                            style={{
+                              fontSize: '12px',
+                              padding: '6px 8px',
+                              justifyContent: 'center',
+                              background: copiedTenantId === tenant.id ? '#dcfce7' : '#ffffff',
+                              color: copiedTenantId === tenant.id ? '#15803d' : '#0f766e',
+                              borderColor: copiedTenantId === tenant.id ? '#86efac' : '#cbd5e1',
+                              fontWeight: 700,
+                            }}
+                            onClick={() => copyTenantDetails(tenant)}
+                            title="लॉगिन ID, पासवर्ड व विवरण कॉपी करें"
+                          >
+                            {copiedTenantId === tenant.id ? <Check size={13} /> : <Copy size={13} />}
+                            {copiedTenantId === tenant.id ? 'कॉपी हुआ!' : 'विवरण कॉपी'}
+                          </button>
+                          <button
+                            type="button"
+                            className="button-quiet"
+                            style={{
+                              fontSize: '12px',
+                              padding: '6px 8px',
+                              justifyContent: 'center',
+                              background: '#f0fdf4',
+                              color: '#16a34a',
+                              borderColor: '#bbf7d0',
+                              fontWeight: 700,
+                            }}
+                            onClick={() => shareTenantWhatsApp(tenant)}
+                            title="क्लाइंट को सीधे WhatsApp पर भेजें"
+                          >
+                            <MessageCircle size={13} /> WhatsApp भेजें
+                          </button>
+                        </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
                           <button
@@ -1885,7 +2074,40 @@ export default function AdminPanel() {
                               </span>
                             </td>
                             <td style={{ whiteSpace: 'nowrap' }}>
-                              <div style={{ display: 'flex', gap: '6px' }}>
+                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                <button
+                                  className="button-quiet"
+                                  type="button"
+                                  style={{
+                                    padding: '4px 8px',
+                                    fontSize: '12px',
+                                    background: copiedTenantId === tenant.id ? '#dcfce7' : '#f0fdfa',
+                                    color: copiedTenantId === tenant.id ? '#15803d' : '#0f766e',
+                                    borderColor: copiedTenantId === tenant.id ? '#86efac' : '#99f6e4',
+                                    fontWeight: 600,
+                                  }}
+                                  onClick={() => copyTenantDetails(tenant)}
+                                  title="लॉगिन ID, पासवर्ड व विवरण क्लिपबोर्ड में कॉपी करें"
+                                >
+                                  {copiedTenantId === tenant.id ? <Check size={13} /> : <Copy size={13} />}
+                                  {copiedTenantId === tenant.id ? 'कॉपी हुआ' : 'कॉपी'}
+                                </button>
+                                <button
+                                  className="button-quiet"
+                                  type="button"
+                                  style={{
+                                    padding: '4px 8px',
+                                    fontSize: '12px',
+                                    color: '#15803d',
+                                    borderColor: '#bbf7d0',
+                                    background: '#f0fdf4',
+                                    fontWeight: 600,
+                                  }}
+                                  onClick={() => shareTenantWhatsApp(tenant)}
+                                  title="क्लाइंट को सीधे WhatsApp पर विवरण भेजें"
+                                >
+                                  <MessageCircle size={13} /> WhatsApp
+                                </button>
                                 <button
                                   className="button-secondary"
                                   type="button"
@@ -5438,33 +5660,55 @@ export default function AdminPanel() {
               </div>
 
               <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
-                <button
-                  type="button"
-                  className="button-primary"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    width: '100%',
-                    padding: '11px',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    borderRadius: '10px',
-                    background: copiedClientCreds ? '#15803d' : '#16a34a',
-                  }}
-                  onClick={copyCreatedClientCreds}
-                >
-                  {copiedClientCreds ? <Check size={16} /> : <Copy size={16} />}
-                  {copiedClientCreds ? 'क्रेडेंशियल्स कॉपी हो गए!' : 'लॉगिन क्रेडेंशियल्स कॉपी करें'}
-                </button>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <button
+                    type="button"
+                    className="button-primary"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '11px',
+                      fontSize: '13.5px',
+                      fontWeight: 700,
+                      borderRadius: '10px',
+                      background: copiedClientCreds ? '#15803d' : '#0f766e',
+                      borderColor: '#0f766e',
+                    }}
+                    onClick={() => copyCreatedClientCreds(createdClientInfo)}
+                  >
+                    {copiedClientCreds ? <Check size={16} /> : <Copy size={16} />}
+                    {copiedClientCreds ? 'कॉपी हो गया!' : 'विवरण कॉपी करें'}
+                  </button>
+                  <button
+                    type="button"
+                    className="button-primary"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '11px',
+                      fontSize: '13.5px',
+                      fontWeight: 700,
+                      borderRadius: '10px',
+                      background: '#16a34a',
+                      borderColor: '#16a34a',
+                    }}
+                    onClick={() => shareCreatedClientWhatsApp(createdClientInfo)}
+                  >
+                    <MessageCircle size={16} />
+                    WhatsApp पर भेजें
+                  </button>
+                </div>
                 <button
                   type="button"
                   className="button-secondary"
                   style={{ width: '100%', padding: '10px', borderRadius: '10px', fontWeight: 600 }}
                   onClick={() => setCreatedClientInfo(null)}
                 >
-                  ठीक है, धन्यवाद
+                  बंद करें (Close)
                 </button>
               </div>
             </section>
