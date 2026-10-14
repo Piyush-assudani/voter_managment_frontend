@@ -948,41 +948,27 @@ export default function VoterDirectoryPage() {
         <>
           {/* Family Filter Banner (ss5) */}
           {familyHouse && (
-            <div
-              style={{
-                background: '#0f172a',
-                borderRadius: '16px',
-                border: '1px solid #334155',
-                padding: '16px 20px',
-                marginBottom: '20px',
-                boxShadow: '0 8px 24px rgba(15, 23, 42, 0.35)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '14px',
-                fontFamily: "var(--font-anek-devanagari), 'Anek Devanagari', sans-serif",
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div className="smartbooth-family-banner">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                 <div
                   style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '12px',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
                     background: 'rgba(255, 255, 255, 0.1)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: '#ffffff',
                     border: '1px solid rgba(255, 255, 255, 0.15)',
+                    flexShrink: 0,
                   }}
                 >
-                  <UsersRound size={22} />
+                  <UsersRound size={20} />
                 </div>
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <h2 style={{ fontSize: '17px', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                    <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff', margin: 0, lineHeight: 1.25 }}>
                       परिवार फ़िल्टर दृश्य (Family Filter View)
                     </h2>
                     <span
@@ -991,14 +977,15 @@ export default function VoterDirectoryPage() {
                         fontWeight: 700,
                         background: '#2563eb',
                         color: '#ffffff',
-                        padding: '2px 9px',
+                        padding: '2px 8px',
                         borderRadius: '20px',
+                        whiteSpace: 'nowrap',
                       }}
                     >
                       {voters.filter((v) => v.houseNo === familyHouse).length || voters.length} सदस्य
                     </span>
                   </div>
-                  <div style={{ fontSize: '12.5px', color: '#94a3b8', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                     <span>🏡 वार्ड {familyWard || wardFilter || 'सभी'}</span>
                     <span>·</span>
                     <span>मकान #{familyHouse}</span>
@@ -1012,7 +999,7 @@ export default function VoterDirectoryPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <div className="smartbooth-family-actions">
                 <button
                   type="button"
                   className="button-primary"
@@ -1020,13 +1007,14 @@ export default function VoterDirectoryPage() {
                     background: '#2563eb',
                     borderColor: '#1d4ed8',
                     color: '#ffffff',
-                    padding: '7px 14px',
-                    fontSize: '12.5px',
+                    padding: '7px 12px',
+                    fontSize: '12px',
                     fontWeight: 700,
                     borderRadius: '8px',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px',
+                    gap: '5px',
+                    whiteSpace: 'nowrap',
                   }}
                   onClick={() => {
                     setSelectedIds(voters.map((v) => v._id));
@@ -1042,13 +1030,14 @@ export default function VoterDirectoryPage() {
                     background: 'rgba(255, 255, 255, 0.1)',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     color: '#f8fafc',
-                    padding: '7px 14px',
-                    fontSize: '12.5px',
+                    padding: '7px 12px',
+                    fontSize: '12px',
                     fontWeight: 600,
                     borderRadius: '8px',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px',
+                    gap: '5px',
+                    whiteSpace: 'nowrap',
                   }}
                   onClick={toggleFamilyFilter}
                 >
@@ -1238,24 +1227,11 @@ export default function VoterDirectoryPage() {
 
       {/* 5. Pagination Bar */}
       {!loading && totalRecords > pageSize && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '10px',
-            padding: '10px 16px',
-            marginTop: '16px',
-            flexWrap: 'wrap',
-            gap: '10px',
-          }}
-        >
-          <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
+        <div className="smartbooth-pagination-bar">
+          <div style={{ fontSize: '12.5px', color: '#64748b', fontWeight: 600 }}>
             {startRecord}–{endRecord} / कुल {totalRecords.toLocaleString('en-IN')} मतदाता
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="smartbooth-pagination-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               type="button"
               className="smartbooth-pill-btn"
@@ -1265,7 +1241,7 @@ export default function VoterDirectoryPage() {
             >
               <ChevronLeft size={14} /> पिछला
             </button>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', padding: '0 6px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', padding: '0 4px', whiteSpace: 'nowrap' }}>
               पृष्ठ {page} / {totalPages}
             </span>
             <button
@@ -1289,7 +1265,7 @@ export default function VoterDirectoryPage() {
       {selectedIds.length > 0 && (
         <div className="sb-floating-bottom-bar" role="toolbar" aria-label="चुने गए मतदाताओं के लिए क्रियाएं">
           <div className="sb-floating-count">
-            <span className="sb-floating-dot" /> {selectedIds.length} चुना गया
+            <span className="sb-floating-dot" /> {selectedIds.length}&nbsp;<span className="hidden sm:inline">चुना गया</span><span className="sm:hidden">चुना</span>
           </div>
 
           <button
@@ -1301,7 +1277,7 @@ export default function VoterDirectoryPage() {
             }}
             title="चुने गए मतदाता को संपादित करें"
           >
-            <Pencil size={13} /> एडिट
+            <Pencil size={13} /> <span className="hidden sm:inline">एडिट</span>
           </button>
 
           <button
@@ -1313,7 +1289,7 @@ export default function VoterDirectoryPage() {
             }}
             title="चुने गए मतदाता का परिवार देखें"
           >
-            <UsersRound size={14} /> परिवार
+            <UsersRound size={14} /> <span className="hidden sm:inline">परिवार</span>
           </button>
 
           <button
@@ -1338,11 +1314,19 @@ export default function VoterDirectoryPage() {
               <WhatsAppLogo size={14} color="#ffffff" />
             )}
             <span>
-              {isDownloading
-                ? 'ZIP बन रहा...'
-                : selectedIds.length > 1
-                ? `बल्क ZIP डाउनलोड (${selectedIds.length})`
-                : 'पर्ची देखें / भेजें'}
+              {isDownloading ? (
+                'ZIP बन रहा...'
+              ) : selectedIds.length > 1 ? (
+                <>
+                  <span className="hidden sm:inline">बल्क ZIP डाउनलोड ({selectedIds.length})</span>
+                  <span className="sm:hidden">ZIP ({selectedIds.length})</span>
+                </>
+              ) : (
+                <>
+                  <span className="hidden sm:inline">पर्ची देखें / भेजें</span>
+                  <span className="sm:hidden">पर्ची</span>
+                </>
+              )}
             </span>
           </button>
 
@@ -1353,7 +1337,7 @@ export default function VoterDirectoryPage() {
               onClick={() => void handleBulkDelete()}
               title="चुने गए रिकॉर्ड हटाएं"
             >
-              <Trash2 size={13} /> हटाएं
+              <Trash2 size={13} /> <span className="hidden sm:inline">हटाएं</span>
             </button>
           )}
 
@@ -1364,7 +1348,7 @@ export default function VoterDirectoryPage() {
             title="चयन हटाएं"
             aria-label="चयन हटाएं"
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
       )}
@@ -1837,6 +1821,7 @@ export default function VoterDirectoryPage() {
                         <button
                           key={item.key}
                           type="button"
+                          className="sb-sentiment-pill"
                           onClick={() => {
                             setTagFormData({
                               ...tagFormData,
@@ -1845,15 +1830,6 @@ export default function VoterDirectoryPage() {
                             });
                           }}
                           style={{
-                            padding: '9px 20px',
-                            borderRadius: '9999px',
-                            fontSize: '13.5px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            transition: 'all 0.15s ease',
                             background: isSelected ? '#334155' : '#ffffff',
                             color: isSelected ? '#ffffff' : '#1e293b',
                             border: isSelected ? '1.5px solid #1e293b' : '1.5px solid #cbd5e1',
@@ -2050,7 +2026,7 @@ export default function VoterDirectoryPage() {
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <div
                       style={{
                         background: '#ffffff',
@@ -2065,11 +2041,12 @@ export default function VoterDirectoryPage() {
                         fontWeight: 800,
                         color: '#166534',
                         userSelect: 'none',
+                        flexShrink: 0,
                       }}
                     >
                       🇮🇳 +91
                     </div>
-                    <div style={{ position: 'relative', flex: 1 }}>
+                    <div style={{ position: 'relative', flex: '1 1 180px', minWidth: 0 }}>
                       <input
                         id="edit-phone-input"
                         type="tel"
@@ -2129,7 +2106,7 @@ export default function VoterDirectoryPage() {
                     📋 पहचान व मतदान केंद्र विवरण (POLLING & IDENTITY)
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginBottom: '10px' }}>
+                  <div className="sb-modal-grid-polling" style={{ marginBottom: '10px' }}>
                     <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
                       EPIC (पहचान पत्र क्रमांक)
                       <input
@@ -2174,7 +2151,7 @@ export default function VoterDirectoryPage() {
                     </label>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div className="sb-modal-grid-2">
                     <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
                       मतदान केंद्र / बूथ (Booth Name)
                       <input
@@ -2202,7 +2179,7 @@ export default function VoterDirectoryPage() {
                     👤 व्यक्तिगत विवरण (PERSONAL DETAILS)
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                  <div className="sb-modal-grid-2" style={{ marginBottom: '10px' }}>
                     <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
                       नाम (हिंदी में)
                       <input
@@ -2223,7 +2200,7 @@ export default function VoterDirectoryPage() {
                     </label>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div className="sb-modal-grid-2">
                     <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
                       उम्र (Age)
                       <input
@@ -2257,7 +2234,7 @@ export default function VoterDirectoryPage() {
                     👨‍👩‍👧 संबंधी व परिवार विवरण (RELATION & FAMILY)
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1.2fr', gap: '10px', marginBottom: '10px' }}>
+                  <div className="sb-modal-grid-3" style={{ marginBottom: '10px' }}>
                     <label style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
                       संबंध प्रकार
                       <select
