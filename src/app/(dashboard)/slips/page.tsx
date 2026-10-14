@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
+import { WardPollingStationEditor } from '@/components/WardPollingStationEditor';
 import { ImageCropModal } from '@/components/ImageCropModal';
 import { downloadSlip, downloadBulkSlipsAsZip, generateSlipImage } from '@/lib/downloadSlip';
 import { shareVoterSlipToWhatsApp } from '@/lib/whatsappShare';
@@ -120,6 +121,7 @@ export default function SlipsPage() {
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [editingConfig, setEditingConfig] = useState<SlipConfig>(defaultSlipConfig);
   const [selectedTargetOrgId, setSelectedTargetOrgId] = useState<string>('');
+  const [previewWard, setPreviewWard] = useState<string>('');
   const [savingBranding, setSavingBranding] = useState(false);
   const [brandingSaveMsg, setBrandingSaveMsg] = useState('');
 
@@ -2225,7 +2227,7 @@ export default function SlipsPage() {
                   />
                 </label>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '12px' }}>
                   <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
                     फुटर अपील (Bottom Footer Appeal):
                     <input
@@ -2236,19 +2238,18 @@ export default function SlipsPage() {
                       style={{ marginTop: '4px' }}
                     />
                   </label>
-
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                    डिफ़ॉल्ट मतदान केंद्र (Polling Station):
-                    <input
-                      type="text"
-                      placeholder="569 - सामुदायिक भवन, जाटा बास, महामंदिर, जोधपुर"
-                      value={editingConfig.pollingStationFallback || ''}
-                      onChange={(e) => setEditingConfig({ ...editingConfig, pollingStationFallback: e.target.value })}
-                      style={{ marginTop: '4px' }}
-                    />
-                  </label>
                 </div>
 
+                {/* Ward-wise Polling Stations Management Component */}
+                <WardPollingStationEditor
+                  config={editingConfig}
+                  onChange={setEditingConfig}
+                  availableWards={availableWards}
+                  selectedPreviewWard={previewWard || selectedVoter?.wardNo || availableWards[0] || '82'}
+                  onPreviewWardChange={setPreviewWard}
+                  organizationName={clientsList.find((c) => c.id === selectedTargetOrgId)?.name || 'आपका संगठन'}
+                  isCompact={true}
+                />
               </div>
 
               {/* RIGHT COLUMN: Real-Time Live Preview */}
@@ -2285,7 +2286,23 @@ export default function SlipsPage() {
 
                 <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
                   <VoterSlipTemplate
-                    voter={selectedVoter || voters[0] || undefined}
+                    voter={{
+                      ...(selectedVoter || voters[0] || {
+                        epic: 'RLJ1213180',
+                        nameHi: 'जबरा राम',
+                        nameEn: 'Jabra Ram',
+                        relativeNameHi: 'नरिगा राम',
+                        relativeNameEn: 'Nariga Ram',
+                        relationType: 'पिता',
+                        age: 28,
+                        gender: 'पुरुष',
+                        houseNo: '279',
+                        partNo: '1',
+                        serialNo: 1,
+                      }),
+                      wardNo: previewWard || selectedVoter?.wardNo || availableWards[0] || '82',
+                      boothName: '', // Dynamically resolves to wardPollingStations[previewWard]!
+                    }}
                     config={editingConfig}
                     isInline={true}
                   />

@@ -14,6 +14,7 @@ export interface SlipConfig {
   subTitle?: string;
   footerAppeal?: string;
   pollingStationFallback?: string;
+  wardPollingStations?: Record<string, string>;
   useHeaderGraphic?: boolean;
   headerGraphicImage?: string;
 }
@@ -31,6 +32,7 @@ export const defaultSlipConfig: SlipConfig = {
   appealText: 'वार्ड नंबर 82 से भाजपा प्रत्याशी प्रसन्न चंद मेहता को अपना अमूल्य वोट देकर भारी मतों से विजय बनाएं।',
   footerAppeal: 'कमल का बटन दबाएं और भारी मतों से विजयी बनाएं',
   pollingStationFallback: '569 - सामुदायिक भवन, जाटा बास, महामंदिर, जोधपुर',
+  wardPollingStations: {},
   useHeaderGraphic: false,
   headerGraphicImage: '',
 };
@@ -261,13 +263,33 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
 
   const relativeName = formatName(voter.relativeNameEn, voter.relativeNameHi, 'नरिगा राम');
 
-  const ward = (voter.wardNo || '82').replace(/^(वार्ड|Ward)\s*/i, '');
-  const part = (voter.partNo || '1').replace(/^(भाग|Part)\s*/i, '');
+  const rawWard = (voter.wardNo || '82').toString().trim();
+  const ward = rawWard.replace(/^(वार्ड|Ward)\s*/i, '').trim();
+  const part = (voter.partNo || '1').toString().replace(/^(भाग|Part)\s*/i, '').trim();
   const serial = voter.serialNo ?? '1';
   const house = voter.houseNo || '279';
   const ageGender = `${voter.age || '28'} वर्ष | ${voter.gender || 'पुरुष'}`;
   const epic = voter.epic || 'RLJ1213180';
-  const pollingStation = voter.boothName || merged.pollingStationFallback || `${part} - सामुदायिक भवन, जाटा बास, महामंदिर, जोधपुर`;
+
+  // Helper to find ward polling station with resilient key normalization
+  const getMappedStation = () => {
+    if (!merged.wardPollingStations || typeof merged.wardPollingStations !== 'object') return null;
+    const map = merged.wardPollingStations;
+    if (map[ward] && map[ward].trim()) return map[ward].trim();
+    if (map[rawWard] && map[rawWard].trim()) return map[rawWard].trim();
+    if (map[`वार्ड ${ward}`] && map[`वार्ड ${ward}`].trim()) return map[`वार्ड ${ward}`].trim();
+    if (map[`Ward ${ward}`] && map[`Ward ${ward}`].trim()) return map[`Ward ${ward}`].trim();
+    const entry = Object.entries(map).find(
+      ([k, v]) => k.replace(/^(वार्ड|Ward)\s*/i, '').trim() === ward && typeof v === 'string' && v.trim()
+    );
+    return entry ? entry[1].trim() : null;
+  };
+
+  const wardStation = getMappedStation();
+  const pollingStation = wardStation 
+    || (voter.boothName && voter.boothName.trim()) 
+    || merged.pollingStationFallback 
+    || `${part} - सामुदायिक भवन, जाटा बास, महामंदिर, जोधपुर`;
 
 
 
@@ -1418,21 +1440,53 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             gap: '3px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ea580c', fontSize: '12.5px', fontWeight: 700 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
-            <span>मतदान केंद्र (Polling Station):</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ea580c', fontSize: '12.5px', fontWeight: 700 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              <span>मतदान केंद्र (Polling Station):</span>
+            </div>
+            {wardStation && (
+              <span
+                style={{
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  color: '#0369a1',
+                  background: '#e0f2fe',
+                  border: '1px solid #bae6fd',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                }}
+              >
+                वार्ड {ward} विशेष केंद्र
+              </span>
+            )}
           </div>
           <div style={{ paddingLeft: isEditable ? '0' : '20px' }}>
             <InlineText
-              value={merged.pollingStationFallback}
+              value={isEditable ? (wardStation || merged.pollingStationFallback) : pollingStation}
               fallback={pollingStation}
-              placeholder="डिफ़ॉल्ट मतदान केंद्र पता / नाम"
+              placeholder="मतदान केंद्र पता / नाम"
               isEditable={isEditable}
-              onChange={(v) => updateField('pollingStationFallback', v)}
-              title="मतदान केंद्र विवरण बदलें"
+              onChange={(v) => {
+                if (ward) {
+                  const updatedWardStations = {
+                    ...(merged.wardPollingStations || {}),
+                    [ward]: v,
+                  };
+                  if (onConfigChange) {
+                    onConfigChange({
+                      ...merged,
+                      wardPollingStations: updatedWardStations,
+                    });
+                  }
+                } else {
+                  updateField('pollingStationFallback', v);
+                }
+              }}
+              title={ward ? `वार्ड ${ward} का मतदान केंद्र बदलें` : 'मतदान केंद्र विवरण बदलें'}
               style={{
                 color: '#0f172a',
                 fontSize: '13.5px',

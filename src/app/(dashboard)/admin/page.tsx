@@ -11,6 +11,7 @@ import AccountsManager from '@/components/AccountsManager';
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
+import { WardPollingStationEditor } from '@/components/WardPollingStationEditor';
 import { ImageCropModal } from '@/components/ImageCropModal';
 import { SortButton, SortState } from '@/components/SortButton';
 
@@ -393,6 +394,8 @@ export default function AdminPanel() {
   const [savingBranding, setSavingBranding] = useState(false);
   const [studioMode, setStudioMode] = useState<'visual' | 'form'>('visual');
   const [isVisualEditing, setIsVisualEditing] = useState(true);
+  const [selectedPreviewWard, setSelectedPreviewWard] = useState<string>('');
+  const [clientWardsSummary, setClientWardsSummary] = useState<string[]>([]);
 
   // Meta-style Interactive Image Cropper for Admin Studio & Tenant Branding
   const [adminCropModalOpen, setAdminCropModalOpen] = useState(false);
@@ -470,7 +473,7 @@ export default function AdminPanel() {
     }
   };
 
-  const handleSelectBrandingOrg = (orgId: string) => {
+  const handleSelectBrandingOrg = async (orgId: string) => {
     setBrandingTargetOrgId(orgId);
     const found = organizations.find((o) => o.id === orgId);
     if (found) {
@@ -479,6 +482,23 @@ export default function AdminPanel() {
           ? { ...defaultSlipConfig, ...found.slipConfig }
           : { ...defaultSlipConfig }
       );
+      const initialWard = found.wards?.[0] || '82';
+      setSelectedPreviewWard(initialWard);
+    }
+    try {
+      const res = await apiFetch(`/voters/wards-summary?organizationId=${encodeURIComponent(orgId)}`, {
+        headers: { 'x-organization-id': orgId },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const wardList = (data.wards || []).map((w: { _id: string }) => String(w._id).trim()).filter(Boolean);
+        setClientWardsSummary(wardList);
+        if (wardList.length > 0 && !found?.wards?.length) {
+          setSelectedPreviewWard(wardList[0]);
+        }
+      }
+    } catch {
+      // ignore network errors
     }
   };
 
@@ -792,6 +812,7 @@ export default function AdminPanel() {
               ? { ...defaultSlipConfig, ...selectedOrg.slipConfig }
               : { ...defaultSlipConfig }
           );
+          setSelectedPreviewWard(selectedOrg.wards?.[0] || '82');
         }
         return selectedId;
       });
@@ -2977,6 +2998,22 @@ export default function AdminPanel() {
                     </span>
                   </div>
 
+                  {/* Ward-wise Polling Stations Management Dock */}
+                  <div style={{ width: '100%', maxWidth: '560px', marginBottom: '16px' }}>
+                    <WardPollingStationEditor
+                      config={targetSlipConfig}
+                      onChange={setTargetSlipConfig}
+                      availableWards={Array.from(new Set([
+                        ...(organizations.find((o) => o.id === brandingTargetOrgId)?.wards || []),
+                        ...clientWardsSummary,
+                      ]))}
+                      selectedPreviewWard={selectedPreviewWard || (organizations.find((o) => o.id === brandingTargetOrgId)?.wards?.[0] || '82')}
+                      onPreviewWardChange={setSelectedPreviewWard}
+                      organizationName={organizations.find((o) => o.id === brandingTargetOrgId)?.name || 'क्लाइंट'}
+                      isCompact={true}
+                    />
+                  </div>
+
                   {/* Responsive Parchi Template with Direct WYSIWYG Editing */}
                   <div style={{ width: '100%', maxWidth: '560px' }}>
                     <VoterSlipTemplate
@@ -2990,10 +3027,9 @@ export default function AdminPanel() {
                         age: 28,
                         gender: 'पुरुष',
                         houseNo: '279',
-                        wardNo: (organizations.find((o) => o.id === brandingTargetOrgId)?.wards?.[0] || '82'),
+                        wardNo: selectedPreviewWard || (organizations.find((o) => o.id === brandingTargetOrgId)?.wards?.[0] || '82'),
                         partNo: '1',
                         serialNo: 1,
-                        boothName: `${organizations.find((o) => o.id === brandingTargetOrgId)?.wards?.[0] || '1'} - राजकीय उच्च प्राथमिक विद्यालय, जोधपुर`,
                       }}
                       config={targetSlipConfig}
                       isInline={true}
@@ -3202,17 +3238,21 @@ export default function AdminPanel() {
                         />
                       </label>
 
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                        डिफ़ॉल्ट मतदान केंद्र (Polling Station Fallback)
-                        <input
-                          style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px' }}
-                          value={targetSlipConfig.pollingStationFallback || ''}
-                          onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, pollingStationFallback: e.target.value })}
-                          placeholder="उदा. सामुदायिक भवन, जाटा बास, महामंदिर, जोधपुर"
-                        />
-                      </label>
                     </div>
                   </div>
+
+                  {/* Card: Ward-wise Polling Stations Management */}
+                  <WardPollingStationEditor
+                    config={targetSlipConfig}
+                    onChange={setTargetSlipConfig}
+                    availableWards={Array.from(new Set([
+                      ...(organizations.find((o) => o.id === brandingTargetOrgId)?.wards || []),
+                      ...clientWardsSummary,
+                    ]))}
+                    selectedPreviewWard={selectedPreviewWard || (organizations.find((o) => o.id === brandingTargetOrgId)?.wards?.[0] || '82')}
+                    onPreviewWardChange={setSelectedPreviewWard}
+                    organizationName={organizations.find((o) => o.id === brandingTargetOrgId)?.name || 'क्लाइंट'}
+                  />
 
                   {/* Card 3: दोनों तरफ की फ़ोटो */}
                   <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px' }}>
@@ -3434,10 +3474,9 @@ export default function AdminPanel() {
                           age: 28,
                           gender: 'पुरुष',
                           houseNo: '279',
-                          wardNo: (organizations.find((o) => o.id === brandingTargetOrgId)?.wards?.[0] || '82'),
+                          wardNo: selectedPreviewWard || (organizations.find((o) => o.id === brandingTargetOrgId)?.wards?.[0] || '82'),
                           partNo: '1',
                           serialNo: 1,
-                          boothName: `${organizations.find((o) => o.id === brandingTargetOrgId)?.wards?.[0] || '1'} - राजकीय उच्च प्राथमिक विद्यालय, जोधपुर`,
                         }}
                         config={targetSlipConfig}
                         isInline={true}
