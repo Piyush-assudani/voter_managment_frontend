@@ -99,6 +99,7 @@ interface Tenant {
   id: string;
   name: string;
   modules: string[];
+  enabledModules?: string[];
   wards: string[];
   isActive: boolean;
   activeWorkers: number;
@@ -412,6 +413,22 @@ export default function AdminPanel() {
   const [clientWardsSummary, setClientWardsSummary] = useState<string[]>([]);
 
   // Admin Dashboard & System Toggles State
+  interface WardStatItem {
+    wardNo: string;
+    total: number;
+    male: number;
+    female: number;
+    voted: number;
+    turnout: number;
+  }
+  interface ActiveOrgDetails {
+    id: string;
+    name: string;
+    whatsappEnabled: boolean;
+    whatsappCredits: number;
+    enabledModules: string[];
+    settings?: { hidePartNo?: boolean };
+  }
   interface DashboardStats {
     totalVoters: number;
     totalOrgs: number;
@@ -425,12 +442,9 @@ export default function AdminPanel() {
     turnoutPercentage: number;
     settings: {
       hidePartNo: boolean;
-      hidePhoto: boolean;
-      requireEpic: boolean;
-      showQrOnSlip: boolean;
-      autoRollSync: boolean;
-      electionType: 'ward' | 'booth';
     };
+    activeOrg?: ActiveOrgDetails | null;
+    wardBreakdown?: WardStatItem[];
     engineStatus: {
       pythonExtractor: string;
       dictionaryGlyphs: string;
@@ -443,11 +457,6 @@ export default function AdminPanel() {
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [systemSettings, setSystemSettings] = useState({
     hidePartNo: true,
-    hidePhoto: false,
-    requireEpic: false,
-    showQrOnSlip: true,
-    autoRollSync: true,
-    electionType: 'ward' as 'ward' | 'booth',
   });
   const [savingSettings, setSavingSettings] = useState(false);
 
@@ -1195,7 +1204,7 @@ export default function AdminPanel() {
     try {
       const targetOrgId = organizationId && organizationId !== 'all' ? organizationId : organizations[0]?.id;
       if (targetOrgId) {
-        await apiFetch(`/api/admin/organizations/${targetOrgId}/settings`, {
+        await apiFetch(`/admin/organizations/${targetOrgId}/settings`, {
           method: 'PUT',
           body: JSON.stringify({ settings: nextSettings }),
         });
@@ -1205,6 +1214,66 @@ export default function AdminPanel() {
       }
     } catch (err) {
       showToast('error', 'सेटिंग्स सुरक्षित करने में त्रुटि आई।');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const toggleWhatsAppForOrg = async () => {
+    const targetOrgId = organizationId && organizationId !== 'all' ? organizationId : organizations[0]?.id;
+    if (!targetOrgId) {
+      showToast('error', 'कृपया पहले एक संगठन चुनें।');
+      return;
+    }
+    const targetOrg = organizations.find((o) => o.id === targetOrgId);
+    const currentEnabled = dashboardStats?.activeOrg?.whatsappEnabled !== undefined 
+      ? dashboardStats.activeOrg.whatsappEnabled 
+      : (targetOrg?.whatsappEnabled !== false);
+    const nextVal = !currentEnabled;
+    setSavingSettings(true);
+    try {
+      const res = await apiFetch(`/admin/organizations/${targetOrgId}/whatsapp-credits`, {
+        method: 'PUT',
+        body: JSON.stringify({ enabled: nextVal }),
+      });
+      if (res.ok) {
+        showToast('success', `WhatsApp सेवा ${nextVal ? 'सक्रिय' : 'निष्क्रिय'} कर दी गई।`, 'अपडेट सफल');
+        await Promise.all([loadDashboardStats(), loadOrganizations()]);
+      }
+    } catch {
+      showToast('error', 'WhatsApp स्थिति अपडेट नहीं हो सकी।');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const toggleModuleForOrg = async (moduleKey: string) => {
+    const targetOrgId = organizationId && organizationId !== 'all' ? organizationId : organizations[0]?.id;
+    const targetOrg = organizations.find((o) => o.id === targetOrgId);
+    if (!targetOrg) {
+      showToast('error', 'कृपया एक संगठन चुनें।');
+      return;
+    }
+    const currentModules: string[] = dashboardStats?.activeOrg?.enabledModules || targetOrg.modules || targetOrg.enabledModules || moduleOptions.map(([k]) => k);
+    const nextModules = currentModules.includes(moduleKey)
+      ? currentModules.filter((m: string) => m !== moduleKey)
+      : [...currentModules, moduleKey];
+
+    setSavingSettings(true);
+    try {
+      const res = await apiFetch(`/admin/organizations/${targetOrg.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: targetOrg.name,
+          enabledModules: nextModules,
+        }),
+      });
+      if (res.ok) {
+        showToast('success', 'मॉड्यूल अनुमति सफलतापूर्वक अपडेट की गई।');
+        await Promise.all([loadDashboardStats(), loadOrganizations()]);
+      }
+    } catch {
+      showToast('error', 'मॉड्यूल अपडेट विफल रहा।');
     } finally {
       setSavingSettings(false);
     }
@@ -1869,15 +1938,15 @@ export default function AdminPanel() {
               </article>
             </section>
 
-            {/* CRITICAL SYSTEM TOGGLES & ELECTION CONTROLS PANEL */}
+            {/* CRITICAL SYSTEM TOGGLES & REAL FEATURE CONTROLS */}
             <section className="records-panel" style={{ padding: '24px', marginBottom: '24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
                   <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1a2620', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                    <Sliders size={20} color="#059669" /> महत्वपूर्ण सिस्टम टॉगल्स एवं चुनाव कॉन्फ़िगरेशन
+                    <Sliders size={20} color="#059669" /> सिस्टम सेटिंग्स एवं मॉड्यूल नियंत्रण
                   </h2>
                   <p style={{ fontSize: '13.5px', color: '#64748b', margin: '4px 0 0' }}>
-                    यहाँ से पूरे सॉफ़्टवेयर में भाग संख्या (Part No), फ़ोटो, QR कोड और रोल सिंक को एक क्लिक में नियंत्रित करें।
+                    यहाँ से भाग संख्या (Part No) प्रदर्शन, WhatsApp सेवा, और क्लाइंट के सक्रिय मॉड्यूल्स को नियंत्रित करें।
                   </p>
                 </div>
                 {savingSettings && (
@@ -1887,8 +1956,8 @@ export default function AdminPanel() {
                 )}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
-                {/* TOGGLE 1: भाग संख्या (Part No) दिखाएं / छिपाएं */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px', marginBottom: '20px' }}>
+                {/* REAL TOGGLE 1: भाग संख्या (Part No) दिखाएं / छिपाएं */}
                 <div style={{
                   border: systemSettings.hidePartNo ? '2px solid #059669' : '1px solid #e2e8f0',
                   background: systemSettings.hidePartNo ? '#f0fdf4' : '#ffffff',
@@ -1917,7 +1986,7 @@ export default function AdminPanel() {
                       </span>
                     </div>
                     <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.55, margin: 0 }}>
-                      <strong>पंचायत व वार्ड चुनावों के लिए:</strong> इन चुनावों में <em>भाग संख्या नहीं होती</em>, केवल वार्ड और बूथ होता है। इसे चालू रखने पर वोटर लिस्ट, पोल-डेस्क और पर्ची में 'भाग संख्या' हट जाएगी और सिर्फ 'वार्ड व क्रमांक' दिखाई देंगे।
+                      <strong>पंचायत व वार्ड चुनावों के लिए:</strong> इन चुनावों में केवल <em>वार्ड संख्या</em> होती है। इसे चालू रखने पर वोटर लिस्ट, पोल-डेस्क और पर्ची में 'भाग संख्या' हट जाएगी और सिर्फ <strong>'वार्ड व क्रमांक'</strong> दिखाई देंगे।
                     </p>
                   </div>
                   <button
@@ -1940,224 +2009,194 @@ export default function AdminPanel() {
                     }}
                   >
                     {systemSettings.hidePartNo ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
-                    {systemSettings.hidePartNo ? 'भाग संख्या छिपी हुई है (क्लिक कर चालू करें)' : 'भाग संख्या दिखाएं (क्लिक कर छिपाएं)'}
+                    {systemSettings.hidePartNo ? 'भाग संख्या छिपी हुई है (क्लिक कर दिखाएं)' : 'भाग संख्या दिख रही है (क्लिक कर छिपाएं)'}
                   </button>
                 </div>
 
-                {/* TOGGLE 2: वोटर लिस्ट में फोटो प्रदर्शित करें */}
-                <div style={{
-                  border: !systemSettings.hidePhoto ? '2px solid #059669' : '1px solid #e2e8f0',
-                  background: !systemSettings.hidePhoto ? '#f0fdf4' : '#ffffff',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: '14px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
-                }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', margin: 0 }}>
-                        वोटर लिस्ट में फोटो प्रदर्शित करें
-                      </h3>
-                      <span style={{
-                        fontSize: '11.5px',
-                        fontWeight: 700,
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        background: !systemSettings.hidePhoto ? '#dcfce7' : '#f1f5f9',
-                        color: !systemSettings.hidePhoto ? '#15803d' : '#64748b'
-                      }}>
-                        {!systemSettings.hidePhoto ? '🖼️ फोटो ऑन' : '⚡ फ़ास्ट मोड'}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.55, margin: 0 }}>
-                      मतदाता सूची व कार्ड्स में फ़ोटो दिखाएं अथवा धीमे मोबाइल इंटरनेट पर तेज लोडिंग हेतु केवल टेक्स्ट व विवरण दिखाएं।
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleSystemSetting('hidePhoto')}
-                    style={{
+                {/* REAL TOGGLE 2: WhatsApp सेवा नियंत्रण */}
+                {(() => {
+                  const targetOrg = organizations.find((o) => o.id === (organizationId || organizations[0]?.id));
+                  const isWaActive = dashboardStats?.activeOrg?.whatsappEnabled !== undefined 
+                    ? dashboardStats.activeOrg.whatsappEnabled 
+                    : (targetOrg?.whatsappEnabled !== false);
+                  const credits = dashboardStats?.activeOrg?.whatsappCredits ?? targetOrg?.whatsappCredits ?? 0;
+                  return (
+                    <div style={{
+                      border: isWaActive ? '2px solid #059669' : '1px solid #e2e8f0',
+                      background: isWaActive ? '#f0fdf4' : '#ffffff',
+                      borderRadius: '12px',
+                      padding: '20px',
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      padding: '10px 14px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      fontWeight: 700,
-                      fontSize: '13.5px',
-                      cursor: 'pointer',
-                      background: !systemSettings.hidePhoto ? '#059669' : '#e2e8f0',
-                      color: !systemSettings.hidePhoto ? '#ffffff' : '#334155',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    {!systemSettings.hidePhoto ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
-                    {!systemSettings.hidePhoto ? 'फोटो ऑन है (क्लिक कर छिपाएं)' : 'फोटो छिपी हुई है (क्लिक कर दिखाएं)'}
-                  </button>
-                </div>
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '14px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                    }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+                            WhatsApp पर्ची एवं संदेश सेवा
+                          </h3>
+                          <span style={{
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            background: isWaActive ? '#dcfce7' : '#fee2e2',
+                            color: isWaActive ? '#15803d' : '#991b1b'
+                          }}>
+                            {isWaActive ? '✅ चालू (Active)' : '❌ बंद (Disabled)'}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.55, margin: 0 }}>
+                          चयनित संगठन (<strong>{targetOrg?.name || 'डिफ़ॉल्ट'}</strong>) के कार्यकर्ताओं के लिए WhatsApp से मतदाता पर्ची भेजने की सुविधा। शेष क्रेडिट्स: <strong>{credits.toLocaleString('hi-IN')}</strong>
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={toggleWhatsAppForOrg}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          fontWeight: 700,
+                          fontSize: '13.5px',
+                          cursor: 'pointer',
+                          background: isWaActive ? '#059669' : '#e2e8f0',
+                          color: isWaActive ? '#ffffff' : '#334155',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {isWaActive ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
+                        {isWaActive ? 'WhatsApp सेवा सक्रिय है (बंद करने हेतु क्लिक करें)' : 'WhatsApp सेवा बंद है (चालू करने हेतु क्लिक करें)'}
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
 
-                {/* TOGGLE 3: वोटर पर्ची पर डिजिटल QR कोड */}
-                <div style={{
-                  border: systemSettings.showQrOnSlip ? '2px solid #059669' : '1px solid #e2e8f0',
-                  background: systemSettings.showQrOnSlip ? '#f0fdf4' : '#ffffff',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: '14px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
-                }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', margin: 0 }}>
-                        वोटर पर्ची पर QR कोड
-                      </h3>
-                      <span style={{
-                        fontSize: '11.5px',
-                        fontWeight: 700,
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        background: systemSettings.showQrOnSlip ? '#dcfce7' : '#f1f5f9',
-                        color: systemSettings.showQrOnSlip ? '#15803d' : '#64748b'
-                      }}>
-                        {systemSettings.showQrOnSlip ? '✅ QR ऑन' : '❌ QR बंद'}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.55, margin: 0 }}>
-                      WhatsApp और मुद्रित वोटर पर्ची पर डिजिटल QR कोड जोड़ें जिससे पोलिंग डेस्क एजेंट स्कैनर से तुरंत वोटर पहचान सके।
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleSystemSetting('showQrOnSlip')}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      padding: '10px 14px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      fontWeight: 700,
-                      fontSize: '13.5px',
-                      cursor: 'pointer',
-                      background: systemSettings.showQrOnSlip ? '#059669' : '#e2e8f0',
-                      color: systemSettings.showQrOnSlip ? '#ffffff' : '#334155',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    {systemSettings.showQrOnSlip ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
-                    {systemSettings.showQrOnSlip ? 'QR कोड सक्रिय है' : 'QR कोड बंद है'}
-                  </button>
+              {/* REAL TOGGLE 3: उपलब्ध सिस्टम मॉड्यूल्स */}
+              <div style={{
+                border: '1px solid #e2e8f0',
+                background: '#f8fafc',
+                borderRadius: '12px',
+                padding: '20px'
+              }}>
+                <div style={{ marginBottom: '14px' }}>
+                  <h3 style={{ fontSize: '15.5px', fontWeight: 700, color: '#0f172a', margin: '0 0 4px 0' }}>
+                    इस संगठन के लिए सक्रिय मॉड्यूल्स (Feature Access)
+                  </h3>
+                  <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+                    कार्यकर्ताओं व एडमिन पैनल में कौन-से फीचर्स उपलब्ध रहेंगे, यहाँ क्लिक कर सीधे चालू या बंद करें:
+                  </p>
                 </div>
-
-                {/* TOGGLE 4: ऑटोमैटिक रोल सिंक (100% EC Verification Match) */}
-                <div style={{
-                  border: systemSettings.autoRollSync ? '2px solid #059669' : '1px solid #e2e8f0',
-                  background: systemSettings.autoRollSync ? '#f0fdf4' : '#ffffff',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: '14px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
-                }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', margin: 0 }}>
-                        ऑटोमैटिक रोल सिंक्रोनाइज़ेशन
-                      </h3>
-                      <span style={{
-                        fontSize: '11.5px',
-                        fontWeight: 700,
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        background: systemSettings.autoRollSync ? '#dcfce7' : '#f1f5f9',
-                        color: systemSettings.autoRollSync ? '#15803d' : '#64748b'
-                      }}>
-                        {systemSettings.autoRollSync ? '🛡️ 100% सटीक सिंक' : 'मैनुअल'}
-                      </span>
+                {(() => {
+                  const targetOrg = organizations.find((o) => o.id === (organizationId || organizations[0]?.id));
+                  const currentMods = dashboardStats?.activeOrg?.enabledModules || targetOrg?.modules || targetOrg?.enabledModules || moduleOptions.map(([k]) => k);
+                  return (
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+                      gap: '10px'
+                    }}>
+                      {moduleOptions.map(([key, label]) => {
+                        const isEnabled = currentMods.includes(key);
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => toggleModuleForOrg(key)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '10px 14px',
+                              borderRadius: '8px',
+                              border: isEnabled ? '1.5px solid #059669' : '1px solid #cbd5e1',
+                              background: isEnabled ? '#ffffff' : '#f1f5f9',
+                              color: isEnabled ? '#0f172a' : '#64748b',
+                              fontWeight: isEnabled ? 700 : 500,
+                              fontSize: '13px',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s'
+                            }}
+                          >
+                            <span>{label}</span>
+                            <span style={{
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              background: isEnabled ? '#dcfce7' : '#e2e8f0',
+                              color: isEnabled ? '#15803d' : '#64748b'
+                            }}>
+                              {isEnabled ? 'चालू' : 'बंद'}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
-                    <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.55, margin: 0 }}>
-                      नई PDF या Excel अपलोड होते ही डेटाबेस में पुराने स्टेल या विलोपित रिकॉर्ड्स को आयोग की समरी (I+II-III) अनुसार स्वतः साफ़ करें।
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleSystemSetting('autoRollSync')}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      padding: '10px 14px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      fontWeight: 700,
-                      fontSize: '13.5px',
-                      cursor: 'pointer',
-                      background: systemSettings.autoRollSync ? '#059669' : '#e2e8f0',
-                      color: systemSettings.autoRollSync ? '#ffffff' : '#334155',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    {systemSettings.autoRollSync ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
-                    {systemSettings.autoRollSync ? 'ऑटो-सिंक सक्रिय है' : 'ऑटो-सिंक बंद है'}
-                  </button>
-                </div>
+                  );
+                })()}
               </div>
             </section>
 
-            {/* AI ENGINE & SYSTEM VERIFICATION HEALTH */}
+            {/* WARD-WISE DETAILED BREAKDOWN TABLE (सब चीज़ों की डिटेल्स) */}
             <section className="records-panel" style={{ padding: '24px', marginBottom: '24px' }}>
-              <div style={{ marginBottom: '16px' }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1a2620', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                  <Activity size={20} color="#0284c7" /> सिस्टम इंजन एवं AI डिक्शनरी सत्यापन स्थिति
-                </h2>
-                <p style={{ fontSize: '13.5px', color: '#64748b', margin: '4px 0 0' }}>
-                  राजस्थान राज्य निर्वाचन आयोग (SEC) की सभी वोटर PDFs के लिए लाइव निष्कर्षण एवं सत्यापन स्थिति
-                </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1a2620', margin: 0 }}>
+                    वार्ड अनुसार विस्तृत मतदाता तालिका (Ward-wise Summary)
+                  </h2>
+                  <p style={{ fontSize: '13.5px', color: '#64748b', margin: '4px 0 0' }}>
+                    हर वार्ड में कुल मतदाता, पुरुष, महिला एवं मतदान प्रगति का वास्तविक विवरण
+                  </p>
+                </div>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#059669' }}>
+                  कुल वार्ड: {dashboardStats?.wardBreakdown?.length || dashboardStats?.totalWards || 0}
+                </span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>पायथन 7-पिलर इंजन</div>
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#059669', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <CheckCircle2 size={16} /> सक्रिय (PyMuPDF & PyPDF Native)
-                  </div>
-                  <p style={{ fontSize: '12px', color: '#64748b', margin: '6px 0 0' }}>बिना किसी सर्वर एरर के उच्च गति से निष्कर्षण</p>
+              {dashboardStats?.wardBreakdown && dashboardStats.wardBreakdown.length > 0 ? (
+                <div className="table-scroll" style={{ border: '1px solid #e2e8f0', borderRadius: '10px', overflowX: 'auto' }}>
+                  <table className="voter-table desk-table" style={{ margin: 0 }}>
+                    <thead>
+                      <tr>
+                        <th style={{ width: '100px' }}>वार्ड नं.</th>
+                        <th>कुल मतदाता</th>
+                        <th>पुरुष</th>
+                        <th>महिला</th>
+                        <th>मतदान दर्ज</th>
+                        <th>शेष</th>
+                        <th style={{ textAlign: 'right' }}>टर्नआउट</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dashboardStats.wardBreakdown.map((w) => (
+                        <tr key={w.wardNo}>
+                          <td style={{ fontWeight: 700, color: '#059669' }}>वार्ड {w.wardNo}</td>
+                          <td style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{w.total.toLocaleString('hi-IN')}</td>
+                          <td style={{ color: '#2563eb', fontVariantNumeric: 'tabular-nums' }}>{w.male.toLocaleString('hi-IN')}</td>
+                          <td style={{ color: '#db2777', fontVariantNumeric: 'tabular-nums' }}>{w.female.toLocaleString('hi-IN')}</td>
+                          <td style={{ color: '#059669', fontVariantNumeric: 'tabular-nums' }}>{w.voted.toLocaleString('hi-IN')}</td>
+                          <td style={{ color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>{(w.total - w.voted).toLocaleString('hi-IN')}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 700, color: w.turnout > 50 ? '#059669' : '#d97706', fontVariantNumeric: 'tabular-nums' }}>
+                            {w.turnout}%
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>मास्टर फ़ॉन्ट डिक्शनरी</div>
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#059669', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Cpu size={16} /> 13,000+ मास्टर ग्लिफ़्स लोडेड
-                  </div>
-                  <p style={{ fontSize: '12px', color: '#64748b', margin: '6px 0 0' }}>शत-प्रतिशत शुद्ध देवनागरी टेक्स्ट डिकोडिंग</p>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '30px', color: '#64748b', background: '#f8fafc', borderRadius: '10px' }}>
+                  <p style={{ margin: 0 }}>डेटा लोड हो रहा है या अभी तक कोई वोटर रिकॉर्ड अपलोड नहीं हुआ है।</p>
                 </div>
-
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>आयोग समरी मिलान</div>
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#059669', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <ShieldCheck size={16} /> 100.00% Exact Match
-                  </div>
-                  <p style={{ fontSize: '12px', color: '#64748b', margin: '6px 0 0' }}>I + II - III आधिकारिक गणना से शत-प्रतिशत मिलान</p>
-                </div>
-
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>डेटाबेस इंडेक्सिंग</div>
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#0284c7', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Database size={16} /> O(1) कम्पाउंड इंडेक्स ऑप्टिमाइज़्ड
-                  </div>
-                  <p style={{ fontSize: '12px', color: '#64748b', margin: '6px 0 0' }}>लाखों रिकॉर्ड्स पर भी इंस्टेंट फ़िल्टरिंग</p>
-                </div>
-              </div>
+              )}
             </section>
 
             {/* QUICK ACTIONS ROW */}
