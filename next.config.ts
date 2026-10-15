@@ -17,11 +17,13 @@ const nextConfig: NextConfig = {
     },
   },
   async rewrites() {
-    const liveDestination = 'https://vijaysetu.piyushassudani.in/api/:path*';
+    const defaultBackend = process.env.NODE_ENV === 'development'
+      ? 'http://127.0.0.1:5002/api/:path*'
+      : 'https://vijaysetu.piyushassudani.in/api/:path*';
     return [
       {
         source: '/api/:path*',
-        destination: process.env.BACKEND_API_URL || liveDestination,
+        destination: process.env.BACKEND_API_URL || defaultBackend,
       },
     ];
   }

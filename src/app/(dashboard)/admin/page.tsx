@@ -2,8 +2,8 @@
 
 import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  AlertCircle, AlertTriangle, Check, CheckCheck, CheckCircle2, ChevronDown, ChevronRight, Copy, Download, Eye, EyeOff, FileSpreadsheet,
-  FileText, Info, KeyRound, Layers, LoaderCircle, MapPin, MessageCircle, MessageSquareCode, Phone, Plus, RefreshCw, Send,
+  AlertCircle, AlertTriangle, Building2, Check, CheckCheck, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Copy, Database, Download, Eye, EyeOff, FileSpreadsheet,
+  FileText, Info, KeyRound, Layers, LoaderCircle, MapPin, MessageCircle, MessageSquareCode, Phone, Plus, RefreshCw, Search, Send,
   Settings2, Smartphone, Sparkles, Tag, Ticket, Trash2, Upload, User, UserPlus, UsersRound, X,
 } from 'lucide-react';
 import DashboardShell from '@/app/(dashboard)/DashboardShell';
@@ -120,6 +120,10 @@ interface AdminVoter {
   epic: string;
   nameEn: string;
   nameHi: string;
+  relativeNameHi?: string;
+  relativeNameEn?: string;
+  relationType?: string;
+  houseNo?: string;
   wardNo: string;
   partNo: string;
   serialNo: number;
@@ -777,6 +781,10 @@ export default function AdminPanel() {
   const [pdfBooth, setPdfBooth] = useState('');
   const [pdfDescription, setPdfDescription] = useState('');
 
+  // UI enhancement states for records & import
+  const [recordsSearchQuery, setRecordsSearchQuery] = useState('');
+  const [importMode, setImportMode] = useState<'pdf' | 'excel'>('pdf');
+
   useEffect(() => {
     const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
     if (token) {
@@ -1097,7 +1105,21 @@ export default function AdminPanel() {
     [voters],
   );
 
-  const filteredVoters = wardFilter ? voters.filter((voter) => voter.wardNo === wardFilter) : voters;
+  const filteredVoters = useMemo(() => {
+    let list = wardFilter ? voters.filter((voter) => voter.wardNo === wardFilter) : voters;
+    if (recordsSearchQuery.trim()) {
+      const q = recordsSearchQuery.trim().toLowerCase();
+      list = list.filter((v) => {
+        const nameH = (v.nameHi || '').toLowerCase();
+        const nameE = (v.nameEn || '').toLowerCase();
+        const epic = (v.epic || '').toLowerCase();
+        const house = String(v.houseNo || '').toLowerCase();
+        const part = String(v.partNo || '').toLowerCase();
+        return nameH.includes(q) || nameE.includes(q) || epic.includes(q) || house.includes(q) || part.includes(q);
+      });
+    }
+    return list;
+  }, [voters, wardFilter, recordsSearchQuery]);
 
   const visibleVoters = useMemo(() => {
     const list = [...filteredVoters];
@@ -4309,74 +4331,213 @@ export default function AdminPanel() {
 
         {activeView === 'records' && (
           <>
-            <section className="records-panel">
-              <div className="records-toolbar admin-records-toolbar">
-                <div><h2>वोटर मास्टर डेटा</h2><p>वोटर सूची डेटाबेस से; full export Excel workbook में उपलब्ध है।</p></div>
-                <label className="ward-select-label">क्लाइंट
-                  <select aria-label="वोटर डेटा क्लाइंट" value={organizationId} onChange={(event) => { setOrganizationId(event.target.value); setWardFilter(''); }}>
-                    <option value="">सभी क्लाइंट</option>{organizations.map((tenant, idx) => <option key={`${tenant.id}-${idx}`} value={tenant.id}>{tenant.name}</option>)}
+            <section className="records-panel" style={{ padding: '24px' }}>
+              {/* Header with Title, Icon and Scalability Badges */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#137333', boxShadow: '0 2px 6px rgba(19, 115, 51, 0.12)' }}>
+                    <Database size={22} />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a2620', margin: 0, letterSpacing: '-0.3px' }}>
+                      वोटर मास्टर डेटाबेस
+                    </h2>
+                    <p style={{ fontSize: '13px', color: '#5f6368', margin: '3px 0 0 0' }}>
+                      केंद्रीय डेटाबेस से सुरक्षित व सत्यापित मतदाता रिकॉर्ड्स (1 Lakh+ ऑप्टिमाइज़्ड)
+                    </p>
+                  </div>
+                </div>
+
+                {/* Capacity Badges */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#e6f4ea', color: '#137333', padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', border: '1px solid #ceead6' }}>
+                    <Sparkles size={14} /> 1 Lakh+ इंडेक्सिंग
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#f1f3f4', color: '#3c4043', padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
+                    कुल: {totalRecords.toLocaleString('hi-IN')} रिकॉर्ड्स
+                  </span>
+                </div>
+              </div>
+
+              {/* Modern Filters & Search Toolbar */}
+              <div style={{ background: '#f8faf9', border: '1px solid #e4eae5', borderRadius: '12px', padding: '16px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '14px', alignItems: 'center' }}>
+                {/* Search Bar */}
+                <div style={{ flex: '1 1 260px', position: 'relative' }}>
+                  <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9aa0a6' }} />
+                  <input
+                    type="text"
+                    placeholder="नाम, EPIC, मकान नं. या भाग द्वारा तुरंत खोजें..."
+                    value={recordsSearchQuery}
+                    onChange={(e) => setRecordsSearchQuery(e.target.value)}
+                    style={{ width: '100%', paddingLeft: '36px', height: '40px', fontSize: '13px', borderRadius: '8px', border: '1px solid #c0d3c5', background: '#ffffff', outline: 'none' }}
+                  />
+                  {recordsSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setRecordsSearchQuery('')}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9aa0a6', padding: 0 }}
+                      title="सर्च साफ़ करें"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Client Select */}
+                <div style={{ minWidth: '180px' }}>
+                  <select 
+                    aria-label="वोटर डेटा क्लाइंट" 
+                    value={organizationId} 
+                    onChange={(event) => { setOrganizationId(event.target.value); setWardFilter(''); }}
+                    style={{ height: '40px', fontSize: '13px', borderRadius: '8px', border: '1px solid #c0d3c5', background: '#ffffff', width: '100%' }}
+                  >
+                    <option value="">🏢 सभी क्लाइंट</option>
+                    {organizations.map((tenant, idx) => <option key={`${tenant.id}-${idx}`} value={tenant.id}>{tenant.name}</option>)}
                   </select>
-                </label>
-                <label className="ward-select-label">वार्ड
-                  <select aria-label="वोटर डेटा वार्ड" value={wardFilter} onChange={(event) => setWardFilter(event.target.value)}>
-                    <option value="">सभी वार्ड</option>{wards.map((ward) => <option value={ward} key={ward}>{ward}</option>)}
+                </div>
+
+                {/* Ward Select */}
+                <div style={{ minWidth: '140px' }}>
+                  <select 
+                    aria-label="वोटर डेटा वार्ड" 
+                    value={wardFilter} 
+                    onChange={(event) => setWardFilter(event.target.value)}
+                    style={{ height: '40px', fontSize: '13px', borderRadius: '8px', border: '1px solid #c0d3c5', background: '#ffffff', width: '100%' }}
+                  >
+                    <option value="">📍 सभी वार्ड</option>
+                    {wards.map((ward) => <option value={ward} key={ward}>वार्ड {ward}</option>)}
                   </select>
-                </label>
+                </div>
+
+                {/* Bulk Delete Button */}
                 <button 
                   type="button" 
                   className="button-secondary" 
-                  style={{ color: '#d93025', borderColor: '#d93025', marginLeft: 'auto' }}
+                  style={{ color: '#d93025', borderColor: '#f8d7da', background: '#fff8f7', height: '40px', padding: '0 14px', fontSize: '13px', marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   onClick={() => void bulkDeleteVoters()}
                   disabled={!organizationId || loading}
+                  title={!organizationId ? 'क्लाइंट चुनने पर ही डेटा डिलीट संभव है' : 'इस क्लाइंट का डेटा डिलीट करें'}
                 >
-                  <AlertCircle size={15} /> डेटा डिलीट करें
+                  <Trash2 size={15} /> डेटा डिलीट करें
                 </button>
               </div>
+
+              {/* Table / Empty State */}
               {loading ? (
-                <div className="empty-state"><LoaderCircle size={21} className="spin" /><p>मास्टर डेटा लोड हो रहा है…</p></div>
-              ) : voters.length ? (
-                <div className="table-scroll">
-                  <table className="voter-table desk-table">
-                    <thead>
+                <div className="empty-state" style={{ padding: '60px 20px' }}>
+                  <LoaderCircle size={28} className="spin" style={{ color: '#00875a' }} />
+                  <p style={{ marginTop: '12px', fontSize: '14px', color: '#5f6368' }}>मास्टर डेटाबेस से मतदाता लोड हो रहे हैं…</p>
+                </div>
+              ) : visibleVoters.length ? (
+                <div className="table-scroll" style={{ border: '1px solid #e4eae5', borderRadius: '10px', overflow: 'hidden' }}>
+                  <table className="voter-table desk-table" style={{ margin: 0 }}>
+                    <thead style={{ background: '#f8faf9' }}>
                       <tr>
-                        <th>
+                        <th style={{ padding: '12px 16px' }}>
                           <SortButton label="मतदाता" field="name" type="alpha" currentSort={recordsSort} onSort={handleRecordsSort} />
                         </th>
-                        <th>EPIC</th>
-                        <th>क्लाइंट</th>
-                        <th>
+                        <th style={{ padding: '12px 16px' }}>पहचान पत्र (EPIC)</th>
+                        <th style={{ padding: '12px 16px' }}>क्लाइंट / संगठन</th>
+                        <th style={{ padding: '12px 16px' }}>
                           <SortButton label="वार्ड" field="wardNo" type="numeric" currentSort={recordsSort} onSort={handleRecordsSort} />
                         </th>
-                        <th>
-                          <SortButton label="भाग" field="partNo" type="numeric" currentSort={recordsSort} onSort={handleRecordsSort} />
+                        <th style={{ padding: '12px 16px' }}>
+                          <SortButton label="भाग / बूथ" field="partNo" type="numeric" currentSort={recordsSort} onSort={handleRecordsSort} />
                         </th>
-                        <th>
+                        <th style={{ padding: '12px 16px' }}>
                           <SortButton label="क्रमांक" field="serialNo" type="numeric" currentSort={recordsSort} onSort={handleRecordsSort} />
                         </th>
-                        <th>फ़ोन</th>
+                        <th style={{ padding: '12px 16px' }}>मकान नं.</th>
+                        <th style={{ padding: '12px 16px' }}>मोबाइल</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {visibleVoters.map((voter) => <tr key={`${voter.organizationId}-${voter._id}`}><td><strong className="voter-name">{voter.nameHi || voter.nameEn || '—'}</strong></td><td className="voter-code">{voter.epic || '—'}</td><td>{organizations.find((tenant) => tenant.id === voter.organizationId)?.name ?? voter.organizationId}</td><td>{voter.wardNo || '—'}</td><td>{voter.partNo || '—'}</td><td>{voter.serialNo || '—'}</td><td>{voter.phone || '—'}</td></tr>)}
+                      {visibleVoters.map((voter) => (
+                        <tr key={`${voter.organizationId}-${voter._id}`} style={{ transition: 'background-color 0.15s ease' }}>
+                          <td style={{ padding: '12px 16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#f0f4f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', color: '#00875a', flexShrink: 0 }}>
+                                {(voter.nameHi || voter.nameEn || '?').charAt(0)}
+                              </div>
+                              <div>
+                                <strong className="voter-name" style={{ fontSize: '14px', color: '#1a2620', display: 'block' }}>
+                                  {voter.nameHi || voter.nameEn || '—'}
+                                </strong>
+                                {voter.relativeNameHi && (
+                                  <span style={{ fontSize: '11px', color: '#7d8981' }}>
+                                    {voter.relationType || 'संबंधी'}: {voter.relativeNameHi}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{ fontFamily: 'monospace', fontWeight: '600', color: '#1a365d', background: '#edf2f7', padding: '3px 8px', borderRadius: '4px', fontSize: '12px' }}>
+                              {voter.epic || '—'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 16px', fontSize: '13px', color: '#4a5568' }}>
+                            {organizations.find((tenant) => tenant.id === voter.organizationId)?.name ?? voter.organizationId}
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '12px', background: '#e8f0fe', color: '#1967d2', fontSize: '12px', fontWeight: '600' }}>
+                              वार्ड {voter.wardNo || '—'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '12px', background: '#fef7e0', color: '#b06000', fontSize: '12px', fontWeight: '600' }}>
+                              भाग {voter.partNo || '—'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 16px', fontWeight: '600', color: '#4a5568', textAlign: 'center' }}>
+                            #{voter.serialNo || '—'}
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#4a5568', fontSize: '13px' }}>
+                            {voter.houseNo || '—'}
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#4a5568', fontSize: '13px' }}>
+                            {voter.phone || '—'}
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
-              ) : <div className="empty-state"><strong>रिकॉर्ड उपलब्ध नहीं</strong><p>{error || 'डेटाबेस में मतदाता रिकॉर्ड आने पर वे यहाँ दिखेंगे।'}</p></div>}
-              <div className="records-footnote" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>कुल {totalRecords} रिकॉर्ड्स में से पेज {currentPage} ({visibleVoters.length} दिख रहे हैं)</div>
-                <div style={{ display: 'flex', gap: '8px' }}>
+              ) : (
+                <div className="empty-state" style={{ padding: '48px 20px', border: '1px dashed #c0d3c5', borderRadius: '10px' }}>
+                  <Database size={32} style={{ color: '#9aa0a6', marginBottom: '8px' }} />
+                  <strong style={{ fontSize: '15px', color: '#1a2620' }}>कोई रिकॉर्ड नहीं मिले</strong>
+                  <p style={{ fontSize: '13px', color: '#7d8981', maxWidth: '400px', margin: '4px auto 0 auto' }}>
+                    {recordsSearchQuery ? `"${recordsSearchQuery}" से मेल खाने वाला कोई मतदाता नहीं मिला। खोज बदलकर देखें।` : 'डेटाबेस में मतदाता रिकॉर्ड आने पर वे यहाँ दिखेंगे।'}
+                  </p>
+                </div>
+              )}
+
+              {/* Modern Pagination Bar */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', paddingTop: '16px', borderTop: '1px solid #e4eae5', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ fontSize: '13px', color: '#5f6368' }}>
+                  कुल <strong>{totalRecords.toLocaleString('hi-IN')}</strong> रिकॉर्ड्स | पेज <strong>{currentPage}</strong> / {totalPages || 1} ({visibleVoters.length} दिख रहे हैं)
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <button 
                     className="button-secondary" 
                     disabled={currentPage === 1 || loading} 
                     onClick={() => void loadVoters(currentPage - 1)}
-                    style={{ padding: '4px 12px', fontSize: '12px' }}
-                  > पिछला </button>
+                    style={{ padding: '6px 14px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '5px', borderRadius: '8px' }}
+                  >
+                    <ChevronLeft size={15} /> पिछला
+                  </button>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#1a2620', padding: '0 8px' }}>
+                    {currentPage}
+                  </span>
                   <button 
                     className="button-secondary" 
                     disabled={currentPage === totalPages || totalPages === 0 || loading} 
                     onClick={() => void loadVoters(currentPage + 1)}
-                    style={{ padding: '4px 12px', fontSize: '12px' }}
-                  > अगला </button>
+                    style={{ padding: '6px 14px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '5px', borderRadius: '8px' }}
+                  >
+                    अगला <ChevronRight size={15} />
+                  </button>
                 </div>
               </div>
             </section>
@@ -4384,487 +4545,707 @@ export default function AdminPanel() {
         )}
 
         {activeView === 'users' && (
-          <section className="records-panel">
-            <div className="records-toolbar"><div><h2>सभी टीम अकाउंट</h2><p>Worker accounts, tenant और access सेटिंग देखने/बदलने के लिए अकाउंट प्रबंधन खोलें।</p></div><a className="button-secondary" href="/accounts"><UsersRound size={15} /> अकाउंट प्रबंधन</a></div>
-            {loading ? <div className="empty-state"><LoaderCircle size={20} className="spin" /><p>क्लाइंट खाते लोड हो रहे हैं…</p></div> : <div className="table-scroll"><table className="voter-table desk-table"><thead><tr><th>क्लाइंट</th><th>सक्रिय कार्यकर्ता</th><th>मतदाता</th><th>अवस्था</th></tr></thead><tbody>
-              {organizations.map((tenant, idx) => (
-                <Fragment key={`${tenant.id}-${idx}`}>
-                  <tr style={{ cursor: 'pointer', transition: 'background-color 0.2s' }} onClick={() => setExpandedOrgId(expandedOrgId === tenant.id ? null : tenant.id)}>
-                    <td style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {expandedOrgId === tenant.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                      <strong className="voter-name">{tenant.name}</strong>
-                    </td>
-                    <td>{tenant.activeWorkers} / 10</td>
-                    <td>{tenant.voterCount.toLocaleString('hi-IN')}</td>
-                    <td><span className={`record-status ${tenant.isActive ? 'status-voted' : 'status-pending'}`}>{tenant.isActive ? 'सक्रिय' : 'बंद'}</span></td>
-                  </tr>
-                  {expandedOrgId === tenant.id && (
-                    <tr style={{ background: '#fcfcfc' }}>
-                      <td colSpan={4} style={{ padding: '0', borderBottom: '2px solid #e4eae5' }}>
-                        <div style={{ padding: '16px 24px', borderLeft: '3px solid #00875a' }}>
-                          <AccountsManager embeddedOrganizationId={tenant.id} />
-                        </div>
-                      </td>
+          <section className="records-panel" style={{ padding: '24px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#e8f0fe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1967d2', boxShadow: '0 2px 6px rgba(25, 103, 210, 0.12)' }}>
+                  <UsersRound size={22} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a2620', margin: 0 }}>सभी टीम व क्लाइंट अकाउंट</h2>
+                  <p style={{ fontSize: '13px', color: '#5f6368', margin: '3px 0 0 0' }}>
+                    क्लाइंट संगठन, कार्यकर्ता कोटा और उनकी एक्सेस सेटिंग्स का एकीकृत डैशबोर्ड
+                  </p>
+                </div>
+              </div>
+              <a className="button-secondary" href="/accounts" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', height: '38px', padding: '0 16px', borderRadius: '8px', fontSize: '13px' }}>
+                <UsersRound size={15} /> अकाउंट प्रबंधन खोलें
+              </a>
+            </div>
+
+            {/* KPI Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '24px' }}>
+              <div style={{ background: '#f8faf9', border: '1px solid #e4eae5', borderRadius: '10px', padding: '14px 18px' }}>
+                <span style={{ fontSize: '12px', color: '#5f6368', fontWeight: '500' }}>कुल क्लाइंट संगठन</span>
+                <div style={{ fontSize: '22px', fontWeight: '700', color: '#1a2620', marginTop: '4px' }}>{organizations.length}</div>
+              </div>
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '14px 18px' }}>
+                <span style={{ fontSize: '12px', color: '#166534', fontWeight: '500' }}>सक्रिय कार्यकर्ता (All Orgs)</span>
+                <div style={{ fontSize: '22px', fontWeight: '700', color: '#166534', marginTop: '4px' }}>
+                  {organizations.reduce((sum, t) => sum + (t.activeWorkers || 0), 0)}
+                </div>
+              </div>
+              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '14px 18px' }}>
+                <span style={{ fontSize: '12px', color: '#1e40af', fontWeight: '500' }}>कुल मतदाता डेटाबेस</span>
+                <div style={{ fontSize: '22px', fontWeight: '700', color: '#1e40af', marginTop: '4px' }}>
+                  {organizations.reduce((sum, t) => sum + (t.voterCount || 0), 0).toLocaleString('hi-IN')}
+                </div>
+              </div>
+            </div>
+
+            {/* Organizations Table */}
+            {loading ? (
+              <div className="empty-state" style={{ padding: '60px 20px' }}>
+                <LoaderCircle size={24} className="spin" style={{ color: '#00875a' }} />
+                <p style={{ marginTop: '10px', fontSize: '14px', color: '#5f6368' }}>क्लाइंट खाते लोड हो रहे हैं…</p>
+              </div>
+            ) : (
+              <div className="table-scroll" style={{ border: '1px solid #e4eae5', borderRadius: '10px', overflow: 'hidden' }}>
+                <table className="voter-table desk-table" style={{ margin: 0 }}>
+                  <thead style={{ background: '#f8faf9' }}>
+                    <tr>
+                      <th style={{ padding: '12px 18px' }}>क्लाइंट / संगठन</th>
+                      <th style={{ padding: '12px 18px' }}>सक्रिय कार्यकर्ता (कोटा)</th>
+                      <th style={{ padding: '12px 18px' }}>मतदाता संख्या</th>
+                      <th style={{ padding: '12px 18px' }}>अवस्था</th>
+                      <th style={{ padding: '12px 18px', textAlign: 'right' }}>विवरण व क्रेडेंशियल</th>
                     </tr>
-                  )}
-                </Fragment>
-              ))}
-            </tbody></table></div>}
+                  </thead>
+                  <tbody>
+                    {organizations.map((tenant, idx) => {
+                      const isExpanded = expandedOrgId === tenant.id;
+                      const workerPct = Math.min(100, Math.round(((tenant.activeWorkers || 0) / 10) * 100));
+                      return (
+                        <Fragment key={`${tenant.id}-${idx}`}>
+                          <tr 
+                            style={{ cursor: 'pointer', transition: 'background-color 0.15s ease', background: isExpanded ? '#f0fdf4' : undefined }} 
+                            onClick={() => setExpandedOrgId(isExpanded ? null : tenant.id)}
+                          >
+                            <td style={{ padding: '14px 18px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#e6f4ea', color: '#137333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px' }}>
+                                  {tenant.name.charAt(0)}
+                                </div>
+                                <div>
+                                  <strong className="voter-name" style={{ fontSize: '14px', color: '#1a2620' }}>{tenant.name}</strong>
+                                  <span style={{ fontSize: '11px', color: '#7d8981', display: 'block' }}>ID: {tenant.id}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{ padding: '14px 18px' }}>
+                              <div style={{ minWidth: '130px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>
+                                  <span>{tenant.activeWorkers || 0} / 10</span>
+                                  <span style={{ color: workerPct >= 100 ? '#dc2626' : '#059669' }}>{workerPct}%</span>
+                                </div>
+                                <div style={{ width: '100%', height: '6px', background: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
+                                  <div style={{ width: `${workerPct}%`, height: '100%', background: workerPct >= 100 ? '#ef4444' : '#10b981', borderRadius: '3px' }} />
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{ padding: '14px 18px', fontWeight: '600', color: '#1a2620' }}>
+                              {tenant.voterCount.toLocaleString('hi-IN')}
+                            </td>
+                            <td style={{ padding: '14px 18px' }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', background: tenant.isActive ? '#e6f4ea' : '#fee2e2', color: tenant.isActive ? '#137333' : '#b91c1c' }}>
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: tenant.isActive ? '#10b981' : '#ef4444' }} />
+                                {tenant.isActive ? 'सक्रिय' : 'बंद'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '14px 18px', textAlign: 'right' }}>
+                              <button
+                                type="button"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: isExpanded ? '#00875a' : '#5f6368', background: isExpanded ? '#e6f4ea' : '#f1f3f4', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}
+                              >
+                                {isExpanded ? 'छुपाएं' : 'कार्यकर्ता देखें'} {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                              </button>
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr style={{ background: '#fafbfa' }}>
+                              <td colSpan={5} style={{ padding: '0', borderBottom: '2px solid #cce8d7' }}>
+                                <div style={{ padding: '20px 24px', borderLeft: '4px solid #00875a', background: '#ffffff' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1a2620' }}>
+                                      {tenant.name} — कार्यकर्ता और क्रेडेंशियल प्रबंधन
+                                    </h4>
+                                    <span style={{ fontSize: '12px', color: '#7d8981' }}>अधिकतम 10 कार्यकर्ता प्रति संगठन</span>
+                                  </div>
+                                  <AccountsManager embeddedOrganizationId={tenant.id} />
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         )}
 
         {activeView === 'import' && (
           <>
-            <section className="records-panel" style={{ padding: '24px', marginBottom: '24px' }}>
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <FileSpreadsheet size={20} style={{ color: '#00875a' }} />
-                  <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', margin: 0 }}>मतदाता सूची Excel इम्पोर्ट</h2>
-                </div>
-                <p style={{ fontSize: '14px', color: '#7d8981', margin: 0 }}>EPIC के आधार पर उसी क्लाइंट के रिकॉर्ड सुरक्षित रूप से अपडेट या जोड़े जाएंगे। वार्ड, बूथ और विवरण टैग करें।</p>
-              </div>
+            {/* Top Import Mode Switcher */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+              <button
+                type="button"
+                onClick={() => setImportMode('pdf')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  border: importMode === 'pdf' ? '1.5px solid #00875a' : '1px solid #e4eae5',
+                  background: importMode === 'pdf' ? '#e6f4ea' : '#ffffff',
+                  color: importMode === 'pdf' ? '#137333' : '#5f6368',
+                  boxShadow: importMode === 'pdf' ? '0 2px 6px rgba(0, 135, 90, 0.12)' : 'none'
+                }}
+              >
+                <FileText size={16} /> ⚡ PDF ऑटो-कन्वर्टर (100% Native Devanagari Engine)
+              </button>
+              <button
+                type="button"
+                onClick={() => setImportMode('excel')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  border: importMode === 'excel' ? '1.5px solid #00875a' : '1px solid #e4eae5',
+                  background: importMode === 'excel' ? '#e6f4ea' : '#ffffff',
+                  color: importMode === 'excel' ? '#137333' : '#5f6368',
+                  boxShadow: importMode === 'excel' ? '0 2px 6px rgba(0, 135, 90, 0.12)' : 'none'
+                }}
+              >
+                <FileSpreadsheet size={16} /> 📊 Excel सीधा इम्पोर्ट (.xlsx)
+              </button>
+            </div>
 
-              <form className="modal-form" onSubmit={importWorkbook}>
-                {/* Balanced 2x2 Grid for Metadata */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-                  <label>क्लाइंट (संगठन) <span style={{ color: '#d93025' }}>*</span>
-                    <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
-                      <option value="">क्लाइंट चुनें</option>
-                      {organizations.map((tenant, idx) => <option key={`${tenant.id}-${idx}`} value={tenant.id}>{tenant.name}</option>)}
-                    </select>
-                  </label>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '13px', fontWeight: '500', color: '#1a2620' }}>
-                      वार्ड (Ward) <span style={{ fontSize: '11px', color: '#7d8981' }}>(चुनें या नया बनाएं)</span>
-                    </label>
-                    {!excelIsNewWard ? (
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <select
-                          value={excelWard}
-                          onChange={(e) => {
-                            if (e.target.value === '__NEW__') {
-                              setExcelIsNewWard(true);
-                              setExcelWard('');
-                            } else {
-                              setExcelWard(e.target.value);
-                            }
-                          }}
-                          style={{ flex: 1 }}
-                        >
-                          <option value="">वार्ड चुनें (वैकल्पिक)</option>
-                          {availableWards.map((w) => (
-                            <option key={w} value={w}>वार्ड {w}</option>
-                          ))}
-                          <option value="__NEW__">+ नया वार्ड बनाएं...</option>
-                        </select>
-                        <button
-                          type="button"
-                          className="button-secondary"
-                          style={{ padding: '0 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
-                          onClick={() => {
-                            setExcelIsNewWard(true);
-                            setExcelWard('');
-                          }}
-                          title="नया वार्ड जोड़ें"
-                        >
-                          <Plus size={14} /> नया
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <input
-                          type="text"
-                          placeholder="नया वार्ड दर्ज करें (उदा. 14 या वार्ड 14)"
-                          value={excelCustomWard}
-                          onChange={(e) => setExcelCustomWard(e.target.value)}
-                          autoFocus
-                          style={{ flex: 1 }}
-                        />
-                        <button
-                          type="button"
-                          className="button-secondary"
-                          style={{ padding: '0 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
-                          onClick={() => {
-                            setExcelIsNewWard(false);
-                            setExcelCustomWard('');
-                          }}
-                        >
-                          सूची से
-                        </button>
-                      </div>
-                    )}
+            {/* PDF Import Section */}
+            {importMode === 'pdf' && (
+              <section className="records-panel" style={{ padding: '24px', marginBottom: '24px' }}>
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#fce8e6', color: '#c5221f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <FileText size={20} />
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#1a2620', margin: 0 }}>
+                        PDF मतदाता सूची ऑटो-कन्वर्टर व डेटाबेस इम्पोर्ट
+                      </h2>
+                      <p style={{ fontSize: '13px', color: '#7d8981', margin: '2px 0 0 0' }}>
+                        निर्वाचन आयोग (SEC / ECI) की आधिकारिक पीडीएफ से सीधे 100% शुद्ध हिंदी Excel तालिका जनरेट करें और डेटाबेस में सेव करें।
+                      </p>
+                    </div>
                   </div>
-
-                  <label>बूथ / भाग संख्या <span style={{ fontSize: '11px', color: '#7d8981' }}>(वैकल्पिक)</span>
-                    <input
-                      type="text"
-                      placeholder="उदा. बूथ 42 या भाग 10"
-                      value={excelBooth}
-                      onChange={(e) => setExcelBooth(e.target.value)}
-                    />
-                  </label>
-
-                  <label>सूची का शीर्षक / विवरण <span style={{ fontSize: '11px', color: '#7d8981' }}>(पहचान के लिए)</span>
-                    <input
-                      type="text"
-                      placeholder="उदा. वार्ड 14 अंतिम वोटर सूची 2024"
-                      value={excelDescription}
-                      onChange={(e) => setExcelDescription(e.target.value)}
-                    />
-                  </label>
                 </div>
 
-                {/* Full-width file dropzone */}
-                <div style={{ background: '#f8faf9', border: '1.5px dashed #c0d3c5', borderRadius: '10px', padding: '16px 20px', marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#1a2620' }}>
-                      Excel फाइल (.xlsx) <span style={{ color: '#d93025' }}>*</span>
-                    </span>
-                    <span style={{ fontSize: '11px', color: '#00875a', background: '#e3f7ed', padding: '2px 8px', borderRadius: '4px', fontWeight: '500' }}>
-                      अधिकतम 100MB
-                    </span>
+                {/* Highlight Banner: 100% Native Engine (Zero OCR / AI) */}
+                <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: '10px', padding: '14px 18px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#166534', fontWeight: '700', fontSize: '13px' }}>
+                    <Sparkles size={16} style={{ color: '#059669' }} /> ⚡ 100% नेटिव देवनागरी ग्लिफ़ इंजन (OCR व AI Fallbacks डिसेबल)
                   </div>
-                  <input 
-                    type="file" 
-                    accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
-                    required 
-                    style={{ width: '100%', fontSize: '13px' }}
-                  />
-                  <p style={{ fontSize: '12px', color: '#7d8981', margin: '6px 0 0 0' }}>मानक टेम्पलेट फॉर्मेट में तैयार की गई Excel वर्कबुक चुनें।</p>
+                  <div style={{ fontSize: '12px', color: '#276749', marginTop: '4px', lineHeight: '1.5' }}>
+                    यह प्रणाली राजस्थान SEC व ECI के वास्तविक फ़ॉन्ट ग्लिफ़्स को सीधे पार्स करती है। सभी विशिष्ट नाम (कंवर, जितेन्द्र, महेन्द्र, स्वरूप, हिम्मत आदि) बिना किसी गलत स्पेलिंग या विरूपण के शुद्ध देवनागरी में एक्सेल में कन्वर्ट होकर डेटाबेस में सेव होते हैं।
+                  </div>
                 </div>
 
-                <div className="admin-form-actions" style={{ marginTop: '16px' }}>
-                  <button className="button-secondary" type="button" onClick={() => void downloadExcel('/admin/import-template.xlsx', 'टेम्पलेट डाउनलोड नहीं हुआ।', 'voter-import-template.xlsx')} disabled={saving}><Download size={15} /> Template डाउनलोड</button>
-                  <button className="button-primary" type="submit" disabled={importing || !organizationId}>{importing ? <LoaderCircle size={15} className="spin" /> : <Upload size={15} />} Excel इम्पोर्ट करें</button>
-                </div>
-              </form>
-            </section>
-
-            <section className="records-panel" style={{ padding: '24px' }}>
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <FileText size={20} style={{ color: '#c5221f' }} />
-                  <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', margin: 0 }}>PDF मतदाता सूची अपलोड</h2>
-                </div>
-                <p style={{ fontSize: '14px', color: '#7d8981', margin: 0 }}>मतदाता सूची की PDF अपलोड करें। Voter IDs (EPIC) और हिंदी नाम एक्सट्रेक्ट कर के डेटाबेस में सेव किये जाएंगे। सुरक्षा के लिए PDF सर्वर से 2 घंटे में आटोमेटिक डिलीट हो जाएगी।</p>
-              </div>
-
-              <form className="modal-form" onSubmit={uploadPdf}>
-                {/* Balanced 2x2 Grid for Metadata */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-                  <label>क्लाइंट (संगठन) <span style={{ color: '#d93025' }}>*</span>
-                    <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
-                      <option value="">क्लाइंट चुनें</option>
-                      {organizations.map((tenant, idx) => <option key={`${tenant.id}-${idx}`} value={tenant.id}>{tenant.name}</option>)}
-                    </select>
-                  </label>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '13px', fontWeight: '500', color: '#1a2620' }}>
-                      वार्ड (Ward) <span style={{ fontSize: '11px', color: '#7d8981' }}>(चुनें या नया बनाएं)</span>
+                <form className="modal-form" onSubmit={uploadPdf}>
+                  {/* Balanced Grid for Metadata */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                    <label>क्लाइंट (संगठन) <span style={{ color: '#d93025' }}>*</span>
+                      <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
+                        <option value="">क्लाइंट चुनें</option>
+                        {organizations.map((tenant, idx) => <option key={`${tenant.id}-${idx}`} value={tenant.id}>{tenant.name}</option>)}
+                      </select>
                     </label>
-                    {!pdfIsNewWard ? (
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <select
-                          value={pdfWard}
-                          onChange={(e) => {
-                            if (e.target.value === '__NEW__') {
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '13px', fontWeight: '500', color: '#1a2620' }}>
+                        वार्ड (Ward) <span style={{ fontSize: '11px', color: '#7d8981' }}>(चुनें या नया बनाएं)</span>
+                      </label>
+                      {!pdfIsNewWard ? (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <select
+                            value={pdfWard}
+                            onChange={(e) => {
+                              if (e.target.value === '__NEW__') {
+                                setPdfIsNewWard(true);
+                                setPdfWard('');
+                              } else {
+                                setPdfWard(e.target.value);
+                              }
+                            }}
+                            style={{ flex: 1 }}
+                          >
+                            <option value="">वार्ड चुनें (वैकल्पिक)</option>
+                            {availableWards.map((w) => (
+                              <option key={w} value={w}>वार्ड {w}</option>
+                            ))}
+                            <option value="__NEW__">+ नया वार्ड बनाएं...</option>
+                          </select>
+                          <button
+                            type="button"
+                            className="button-secondary"
+                            style={{ padding: '0 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                            onClick={() => {
                               setPdfIsNewWard(true);
                               setPdfWard('');
-                            } else {
-                              setPdfWard(e.target.value);
-                            }
-                          }}
-                          style={{ flex: 1 }}
-                        >
-                          <option value="">वार्ड चुनें (वैकल्पिक)</option>
-                          {availableWards.map((w) => (
-                            <option key={w} value={w}>वार्ड {w}</option>
-                          ))}
-                          <option value="__NEW__">+ नया वार्ड बनाएं...</option>
-                        </select>
-                        <button
-                          type="button"
-                          className="button-secondary"
-                          style={{ padding: '0 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
-                          onClick={() => {
-                            setPdfIsNewWard(true);
-                            setPdfWard('');
-                          }}
-                          title="नया वार्ड जोड़ें"
-                        >
-                          <Plus size={14} /> नया
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <input
-                          type="text"
-                          placeholder="नया वार्ड दर्ज करें (उदा. 14 या वार्ड 14)"
-                          value={pdfCustomWard}
-                          onChange={(e) => setPdfCustomWard(e.target.value)}
-                          autoFocus
-                          style={{ flex: 1 }}
-                        />
-                        <button
-                          type="button"
-                          className="button-secondary"
-                          style={{ padding: '0 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
-                          onClick={() => {
-                            setPdfIsNewWard(false);
-                            setPdfCustomWard('');
-                          }}
-                        >
-                          सूची से
-                        </button>
-                      </div>
-                    )}
+                            }}
+                            title="नया वार्ड जोड़ें"
+                          >
+                            <Plus size={14} /> नया
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input
+                            type="text"
+                            placeholder="नया वार्ड दर्ज करें (उदा. 14 या वार्ड 14)"
+                            value={pdfCustomWard}
+                            onChange={(e) => setPdfCustomWard(e.target.value)}
+                            autoFocus
+                            style={{ flex: 1 }}
+                          />
+                          <button
+                            type="button"
+                            className="button-secondary"
+                            style={{ padding: '0 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                            onClick={() => {
+                              setPdfIsNewWard(false);
+                              setPdfCustomWard('');
+                            }}
+                          >
+                            सूची से
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <label>बूथ / भाग संख्या <span style={{ fontSize: '11px', color: '#7d8981' }}>(वैकल्पिक)</span>
+                      <input
+                        type="text"
+                        placeholder="उदा. बूथ 42 या भाग 10"
+                        value={pdfBooth}
+                        onChange={(e) => setPdfBooth(e.target.value)}
+                      />
+                    </label>
+
+                    <label>सूची का शीर्षक / विवरण <span style={{ fontSize: '11px', color: '#7d8981' }}>(पहचान के लिए)</span>
+                      <input
+                        type="text"
+                        placeholder="उदा. वार्ड 14 अंतिम वोटर सूची 2024"
+                        value={pdfDescription}
+                        onChange={(e) => setPdfDescription(e.target.value)}
+                      />
+                    </label>
                   </div>
 
-                  <label>बूथ / भाग संख्या <span style={{ fontSize: '11px', color: '#7d8981' }}>(वैकल्पिक)</span>
-                    <input
-                      type="text"
-                      placeholder="उदा. बूथ 42 या भाग 10"
-                      value={pdfBooth}
-                      onChange={(e) => setPdfBooth(e.target.value)}
-                    />
-                  </label>
-
-                  <label>सूची का शीर्षक / विवरण <span style={{ fontSize: '11px', color: '#7d8981' }}>(पहचान के लिए)</span>
-                    <input
-                      type="text"
-                      placeholder="उदा. वार्ड 14 अंतिम वोटर सूची 2024"
-                      value={pdfDescription}
-                      onChange={(e) => setPdfDescription(e.target.value)}
-                    />
-                  </label>
-                </div>
-
-                {/* Full-width file dropzone */}
-                <div style={{ background: '#f8faf9', border: '1.5px dashed #c0d3c5', borderRadius: '10px', padding: '16px 20px', marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#1a2620' }}>
+                  {/* Dropzone */}
+                  <div style={{ background: '#f8faf9', border: '1.5px dashed #c0d3c5', borderRadius: '12px', padding: '20px', marginBottom: '20px', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                      <FileText size={32} style={{ color: '#c5221f' }} />
+                    </div>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#1a2620', display: 'block' }}>
                       PDF मतदाता सूची (.pdf) <span style={{ color: '#d93025' }}>*</span>
                     </span>
-                    <span style={{ fontSize: '11px', color: '#c5221f', background: '#fce8e6', padding: '2px 8px', borderRadius: '4px', fontWeight: '500' }}>
-                      अधिकतम 100MB
-                    </span>
+                    <p style={{ fontSize: '12px', color: '#7d8981', margin: '4px 0 12px 0' }}>
+                      निर्वाचन आयोग (ECI/राज्य निर्वाचन आयोग) की आधिकारिक डिजिटल पीडीएफ फाइल चुनें (अधिकतम 100MB)
+                    </p>
+                    <input 
+                      type="file" 
+                      accept=".pdf,application/pdf" 
+                      required 
+                      style={{ maxWidth: '420px', margin: '0 auto', fontSize: '13px' }}
+                    />
                   </div>
-                  <input 
-                    type="file" 
-                    accept=".pdf,application/pdf" 
-                    required 
-                    style={{ width: '100%', fontSize: '13px' }}
-                  />
-                  <p style={{ fontSize: '12px', color: '#7d8981', margin: '6px 0 0 0' }}>निर्वाचन आयोग (ECI/राज्य निर्वाचन आयोग) की आधिकारिक पीडीएफ फाइल चुनें।</p>
-                </div>
 
-                {/* High Precision OCR Mode Card */}
-                <div style={{ background: '#f0f9f4', border: '1px solid #b8e2cd', borderRadius: '10px', padding: '14px 18px', marginBottom: '20px' }}>
-                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', margin: 0 }}>
-                    <input type="checkbox" name="useOcr" defaultChecked style={{ marginTop: '3px', accentColor: '#00875a', width: '16px', height: '16px' }} />
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#006644' }}>
-                        स्मार्ट OCR इंजन (Smart Visual OCR - सभी भारतीय व ECI फॉन्ट के लिए अनुशंसित)
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#2d5743', marginTop: '2px', lineHeight: '1.4' }}>
-                        यह राजस्थान/ECI जैसी पीडीएफ में करप्टेड/अनसपोर्टेड फॉन्ट (KrutiDev, DevLys, Subset Arial) को सीधे इमेज से 100% सही हिंदी में पढ़ता है।
-                      </div>
-                    </div>
-                  </label>
-                </div>
-
-                <div className="admin-form-actions">
-                  <button className="button-primary" type="submit" disabled={uploadingPdf || !organizationId}>
-                    {uploadingPdf ? <LoaderCircle size={15} className="spin" /> : <Upload size={15} />} PDF अपलोड करें
-                  </button>
-                </div>
-              </form>
-
-              {pdfJobs.length > 0 && (
-                <div style={{ marginTop: '36px', borderTop: '1px solid #e4eae5', paddingTop: '24px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-                    <div>
-                      <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1a2620', margin: 0 }}>हाल ही में अपलोड की गई सूचियां (Recent Uploads & Extraction)</h3>
-                      <p style={{ fontSize: '13px', color: '#7d8981', margin: '4px 0 0 0' }}>वार्ड, बूथ, प्रभारी यूजर और एक्सट्रैक्शन स्टेटस की लाइव जानकारी</p>
-                    </div>
-                    <button 
-                      type="button" 
-                      onClick={() => void loadPdfJobs()} 
-                      className="button-secondary"
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
-                    >
-                      <RefreshCw size={13} /> रिफ्रेश करें
+                  <div className="admin-form-actions">
+                    <button className="button-primary" type="submit" disabled={uploadingPdf || !organizationId} style={{ height: '42px', padding: '0 24px', fontSize: '14px', fontWeight: '600' }}>
+                      {uploadingPdf ? <LoaderCircle size={16} className="spin" /> : <Upload size={16} />} ⚡ PDF से Excel कन्वर्ट व इम्पोर्ट करें
                     </button>
                   </div>
+                </form>
+              </section>
+            )}
 
-                  <div style={{ display: 'grid', gap: '12px' }}>
-                    {pdfJobs.map((job) => (
-                      <div 
-                        key={job.id} 
-                        style={{ 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          gap: '12px', 
-                          background: '#ffffff', 
-                          padding: '16px 20px', 
-                          borderRadius: '10px', 
-                          border: '1px solid #e4eae5',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-                        }}
-                      >
-                        {/* Header row */}
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                            {/* Type Badge */}
-                            <span 
-                              style={{
-                                fontSize: '11px',
-                                fontWeight: '700',
-                                padding: '4px 8px',
-                                borderRadius: '6px',
-                                letterSpacing: '0.5px',
-                                background: job.fileType === 'excel' ? '#e6f4ea' : '#fce8e6',
-                                color: job.fileType === 'excel' ? '#137333' : '#c5221f'
-                              }}
-                            >
-                              {job.fileType === 'excel' ? 'EXCEL' : 'PDF'}
-                            </span>
-
-                            <div>
-                              <div style={{ fontSize: '15px', fontWeight: '600', color: '#1a2620' }}>
-                                {job.listDescription ? job.listDescription : job.filename}
-                              </div>
-                              {job.listDescription && (
-                                <div style={{ fontSize: '12px', color: '#7d8981', marginTop: '2px' }}>
-                                  फ़ाइल: {job.filename}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Status indicator */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            {job.status === 'processing' && (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: '#00875a', background: '#e6f4ea', padding: '4px 10px', borderRadius: '20px' }}>
-                                <LoaderCircle size={14} className="spin" />
-                                {job.progress ? `${job.progress}%` : 'प्रोसेसिंग चालू है...'}
-                              </span>
-                            )}
-                            {job.status === 'completed' && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: '#137333', background: '#e6f4ea', padding: '4px 10px', borderRadius: '20px' }}>
-                                  <Check size={14} /> पूर्ण ({job.extractedCount.toLocaleString('hi-IN')} रिकॉर्ड्स)
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => void downloadExcel(`/admin/pdf/download-excel/${job.id}`, 'Excel फ़ाइल डाउनलोड नहीं हो सकी।', job.excelFilename || 'voters.xlsx')}
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '5px',
-                                    fontSize: '12px',
-                                    fontWeight: '600',
-                                    color: '#00875a',
-                                    background: '#f0fdf4',
-                                    border: '1px solid #bbf7d0',
-                                    padding: '4px 10px',
-                                    borderRadius: '6px',
-                                    textDecoration: 'none',
-                                    cursor: 'pointer'
-                                  }}
-                                  title="कन्वर्ट की गई Excel फाइल (.xlsx) डाउनलोड करें"
-                                >
-                                  <Download size={13} /> Excel डाउनलोड
-                                </button>
-                              </div>
-                            )}
-                            {job.status === 'failed' && (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: '#c5221f', background: '#fce8e6', padding: '4px 10px', borderRadius: '20px' }}>
-                                <AlertCircle size={14} /> {job.errorMessage ? job.errorMessage : 'त्रुटि (Error)'}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Dynamic Real-Time Stage Indicator & Progress bar */}
-                        {job.status === 'processing' && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#f4fbf7', border: '1px solid #cce8d7', borderRadius: '8px', padding: '10px 14px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px', fontWeight: '600', color: '#166534' }}>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                                <LoaderCircle size={14} className="spin" style={{ color: '#00875a' }} />
-                                {job.stageMessage || 'प्रोसेसिंग जारी है...'}
-                              </span>
-                              <span style={{ fontSize: '12px', color: '#059669', fontVariantNumeric: 'tabular-nums' }}>
-                                {job.progress || 0}%
-                              </span>
-                            </div>
-                            <div style={{ width: '100%', height: '6px', backgroundColor: '#d1e7dd', borderRadius: '4px', overflow: 'hidden' }}>
-                              <div style={{ width: `${job.progress || 0}%`, height: '100%', backgroundColor: '#00875a', transition: 'width 0.4s ease' }} />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Meta chips row */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', paddingTop: '8px', borderTop: '1px solid #f0f3f1', fontSize: '12px', color: '#4a5568' }}>
-                          {job.wardNo ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#e8f0fe', color: '#1967d2', padding: '3px 8px', borderRadius: '5px', fontWeight: '500' }}>
-                              वार्ड: <strong>{job.wardNo}</strong>
-                            </span>
-                          ) : (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f1f3f4', color: '#5f6368', padding: '3px 8px', borderRadius: '5px' }}>
-                              वार्ड: सामान्य / सभी
-                            </span>
-                          )}
-
-                          {job.boothNo && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fef7e0', color: '#b06000', padding: '3px 8px', borderRadius: '5px', fontWeight: '500' }}>
-                              बूथ/भाग: <strong>{job.boothNo}</strong>
-                            </span>
-                          )}
-
-                          {job.uploadedBy && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f3e8fd', color: '#7627bb', padding: '3px 8px', borderRadius: '5px', fontWeight: '500' }}>
-                              प्रभारी: <strong>{job.uploadedBy}</strong>
-                            </span>
-                          )}
-
-                          <span style={{ marginLeft: 'auto', color: '#9aa0a6', fontSize: '11px' }}>
-                            {new Date(job.uploadedAt).toLocaleString('hi-IN', { dateStyle: 'short', timeStyle: 'short' })}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+            {/* Excel Import Section */}
+            {importMode === 'excel' && (
+              <section className="records-panel" style={{ padding: '24px', marginBottom: '24px' }}>
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#e6f4ea', color: '#137333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <FileSpreadsheet size={20} />
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#1a2620', margin: 0 }}>
+                        मतदाता सूची Excel वर्कबुक सीधा इम्पोर्ट
+                      </h2>
+                      <p style={{ fontSize: '13px', color: '#7d8981', margin: '2px 0 0 0' }}>
+                        मानक 18-कॉलम टेम्पलेट फॉर्मेट में तैयार की गई Excel वर्कबुक चुनें। EPIC के आधार पर रिकॉर्ड्स अपडेट या जोड़े जाएंगे।
+                      </p>
+                    </div>
                   </div>
                 </div>
-              )}
-            </section>
+
+                <form className="modal-form" onSubmit={importWorkbook}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                    <label>क्लाइंट (संगठन) <span style={{ color: '#d93025' }}>*</span>
+                      <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
+                        <option value="">क्लाइंट चुनें</option>
+                        {organizations.map((tenant, idx) => <option key={`${tenant.id}-${idx}`} value={tenant.id}>{tenant.name}</option>)}
+                      </select>
+                    </label>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '13px', fontWeight: '500', color: '#1a2620' }}>
+                        वार्ड (Ward) <span style={{ fontSize: '11px', color: '#7d8981' }}>(चुनें या नया बनाएं)</span>
+                      </label>
+                      {!excelIsNewWard ? (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <select
+                            value={excelWard}
+                            onChange={(e) => {
+                              if (e.target.value === '__NEW__') {
+                                setExcelIsNewWard(true);
+                                setExcelWard('');
+                              } else {
+                                setExcelWard(e.target.value);
+                              }
+                            }}
+                            style={{ flex: 1 }}
+                          >
+                            <option value="">वार्ड चुनें (वैकल्पिक)</option>
+                            {availableWards.map((w) => (
+                              <option key={w} value={w}>वार्ड {w}</option>
+                            ))}
+                            <option value="__NEW__">+ नया वार्ड बनाएं...</option>
+                          </select>
+                          <button
+                            type="button"
+                            className="button-secondary"
+                            style={{ padding: '0 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                            onClick={() => {
+                              setExcelIsNewWard(true);
+                              setExcelWard('');
+                            }}
+                            title="नया वार्ड जोड़ें"
+                          >
+                            <Plus size={14} /> नया
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input
+                            type="text"
+                            placeholder="नया वार्ड दर्ज करें (उदा. 14 या वार्ड 14)"
+                            value={excelCustomWard}
+                            onChange={(e) => setExcelCustomWard(e.target.value)}
+                            autoFocus
+                            style={{ flex: 1 }}
+                          />
+                          <button
+                            type="button"
+                            className="button-secondary"
+                            style={{ padding: '0 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                            onClick={() => {
+                              setExcelIsNewWard(false);
+                              setExcelCustomWard('');
+                            }}
+                          >
+                            सूची से
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <label>बूथ / भाग संख्या <span style={{ fontSize: '11px', color: '#7d8981' }}>(वैकल्पिक)</span>
+                      <input
+                        type="text"
+                        placeholder="उदा. बूथ 42 या भाग 10"
+                        value={excelBooth}
+                        onChange={(e) => setExcelBooth(e.target.value)}
+                      />
+                    </label>
+
+                    <label>सूची का शीर्षक / विवरण <span style={{ fontSize: '11px', color: '#7d8981' }}>(पहचान के लिए)</span>
+                      <input
+                        type="text"
+                        placeholder="उदा. वार्ड 14 अंतिम वोटर सूची 2024"
+                        value={excelDescription}
+                        onChange={(e) => setExcelDescription(e.target.value)}
+                      />
+                    </label>
+                  </div>
+
+                  <div style={{ background: '#f8faf9', border: '1.5px dashed #c0d3c5', borderRadius: '12px', padding: '20px', marginBottom: '20px', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                      <FileSpreadsheet size={32} style={{ color: '#00875a' }} />
+                    </div>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#1a2620', display: 'block' }}>
+                      Excel फाइल (.xlsx) <span style={{ color: '#d93025' }}>*</span>
+                    </span>
+                    <p style={{ fontSize: '12px', color: '#7d8981', margin: '4px 0 12px 0' }}>
+                      मानक टेम्पलेट फॉर्मेट में तैयार की गई Excel वर्कबुक चुनें (अधिकतम 100MB)
+                    </p>
+                    <input 
+                      type="file" 
+                      accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+                      required 
+                      style={{ maxWidth: '420px', margin: '0 auto', fontSize: '13px' }}
+                    />
+                  </div>
+
+                  <div className="admin-form-actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <button className="button-secondary" type="button" onClick={() => void downloadExcel('/admin/import-template.xlsx', 'टेम्पलेट डाउनलोड नहीं हुआ।', 'voter-import-template.xlsx')} disabled={saving}>
+                      <Download size={15} /> मानक Template डाउनलोड करें
+                    </button>
+                    <button className="button-primary" type="submit" disabled={importing || !organizationId} style={{ height: '42px', padding: '0 24px', fontSize: '14px', fontWeight: '600' }}>
+                      {importing ? <LoaderCircle size={16} className="spin" /> : <Upload size={16} />} Excel इम्पोर्ट करें
+                    </button>
+                  </div>
+                </form>
+              </section>
+            )}
+
+            {/* Recent Uploads & Live Jobs Section */}
+            {pdfJobs.length > 0 && (
+              <section className="records-panel" style={{ padding: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                  <div>
+                    <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a2620', margin: 0 }}>
+                      हाल ही में अपलोड की गई सूचियां (Recent Uploads & Extraction History)
+                    </h3>
+                    <p style={{ fontSize: '13px', color: '#7d8981', margin: '4px 0 0 0' }}>
+                      वार्ड, बूथ, प्रभारी यूजर और लाइव एक्सट्रैक्शन स्टेटस
+                    </p>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => void loadPdfJobs()} 
+                    className="button-secondary"
+                    style={{ padding: '6px 14px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                  >
+                    <RefreshCw size={13} /> रिफ्रेश करें
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {pdfJobs.map((job) => (
+                    <div 
+                      key={job.id} 
+                      style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        gap: '12px', 
+                        background: '#ffffff', 
+                        padding: '16px 20px', 
+                        borderRadius: '10px', 
+                        border: '1px solid #e4eae5',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                          <span 
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: '700',
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              letterSpacing: '0.5px',
+                              background: job.fileType === 'excel' ? '#e6f4ea' : '#fce8e6',
+                              color: job.fileType === 'excel' ? '#137333' : '#c5221f'
+                            }}
+                          >
+                            {job.fileType === 'excel' ? 'EXCEL' : 'PDF'}
+                          </span>
+
+                          <div>
+                            <div style={{ fontSize: '15px', fontWeight: '600', color: '#1a2620' }}>
+                              {job.listDescription ? job.listDescription : job.filename}
+                            </div>
+                            {job.listDescription && (
+                              <div style={{ fontSize: '12px', color: '#7d8981', marginTop: '2px' }}>
+                                फ़ाइल: {job.filename}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {job.status === 'processing' && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: '#00875a', background: '#e6f4ea', padding: '4px 10px', borderRadius: '20px' }}>
+                              <LoaderCircle size={14} className="spin" />
+                              {job.progress ? `${job.progress}%` : 'प्रोसेसिंग चालू है...'}
+                            </span>
+                          )}
+                          {job.status === 'completed' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: '#137333', background: '#e6f4ea', padding: '4px 10px', borderRadius: '20px' }}>
+                                <Check size={14} /> पूर्ण ({job.extractedCount.toLocaleString('hi-IN')} रिकॉर्ड्स)
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => void downloadExcel(`/admin/pdf/download-excel/${job.id}`, 'Excel फ़ाइल डाउनलोड नहीं हो सकी।', job.excelFilename || 'voters.xlsx')}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  fontSize: '12px',
+                                  fontWeight: '600',
+                                  color: '#00875a',
+                                  background: '#f0fdf4',
+                                  border: '1px solid #bbf7d0',
+                                  padding: '5px 12px',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer'
+                                }}
+                                title="कन्वर्ट की गई शुद्ध हिंदी Excel फाइल (.xlsx) डाउनलोड करें"
+                              >
+                                <Download size={13} /> Excel डाउनलोड
+                              </button>
+                            </div>
+                          )}
+                          {job.status === 'failed' && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: '#c5221f', background: '#fce8e6', padding: '4px 10px', borderRadius: '20px' }}>
+                              <AlertCircle size={14} /> {job.errorMessage ? job.errorMessage : 'त्रुटि (Error)'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {job.status === 'processing' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#f4fbf7', border: '1px solid #cce8d7', borderRadius: '8px', padding: '10px 14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px', fontWeight: '600', color: '#166534' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                              <LoaderCircle size={14} className="spin" style={{ color: '#00875a' }} />
+                              {job.stageMessage || 'प्रोसेसिंग जारी है...'}
+                            </span>
+                            <span style={{ fontSize: '12px', color: '#059669', fontVariantNumeric: 'tabular-nums' }}>
+                              {job.progress || 0}%
+                            </span>
+                          </div>
+                          <div style={{ width: '100%', height: '6px', backgroundColor: '#d1e7dd', borderRadius: '4px', overflow: 'hidden' }}>
+                            <div style={{ width: `${job.progress || 0}%`, height: '100%', backgroundColor: '#00875a', transition: 'width 0.4s ease' }} />
+                          </div>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', paddingTop: '8px', borderTop: '1px solid #f0f3f1', fontSize: '12px', color: '#4a5568' }}>
+                        {job.wardNo ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#e8f0fe', color: '#1967d2', padding: '3px 8px', borderRadius: '5px', fontWeight: '500' }}>
+                            वार्ड: <strong>{job.wardNo}</strong>
+                          </span>
+                        ) : (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f1f3f4', color: '#5f6368', padding: '3px 8px', borderRadius: '5px' }}>
+                            वार्ड: सामान्य / सभी
+                          </span>
+                        )}
+
+                        {job.boothNo && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fef7e0', color: '#b06000', padding: '3px 8px', borderRadius: '5px', fontWeight: '500' }}>
+                            बूथ/भाग: <strong>{job.boothNo}</strong>
+                          </span>
+                        )}
+
+                        {job.uploadedBy && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f3e8fd', color: '#7627bb', padding: '3px 8px', borderRadius: '5px', fontWeight: '500' }}>
+                            प्रभारी: <strong>{job.uploadedBy}</strong>
+                          </span>
+                        )}
+
+                        <span style={{ marginLeft: 'auto', color: '#9aa0a6', fontSize: '11px' }}>
+                          {new Date(job.uploadedAt).toLocaleString('hi-IN', { dateStyle: 'short', timeStyle: 'short' })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
           </>
         )}
 
         {activeView === 'export' && (
           <section className="records-panel" style={{ padding: '24px' }}>
-            <div style={{ marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a2620', marginBottom: '4px' }}>मतदाता सूची डेटा एक्सपोर्ट</h2>
-              <p style={{ fontSize: '14px', color: '#7d8981' }}>किसी भी क्लाइंट (Organization) का मतदाता डेटा Excel फॉर्मेट में डाउनलोड करें।</p>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#137333', boxShadow: '0 2px 6px rgba(19, 115, 51, 0.12)' }}>
+                <Download size={22} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a2620', margin: 0 }}>
+                  मतदाता सूची डेटा एक्सपोर्ट सेंटर
+                </h2>
+                <p style={{ fontSize: '13px', color: '#5f6368', margin: '3px 0 0 0' }}>
+                  किसी भी क्लाइंट संगठन या संपूर्ण सिस्टम का मतदाता डेटा मानक Excel फॉर्मेट में डाउनलोड करें।
+                </p>
+              </div>
             </div>
-            <div className="feature-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', maxWidth: '400px' }}>
-              <label>क्लाइंट
-                <select required value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
-                  <option value="">सभी क्लाइंट (All Data)</option>
-                  {organizations.map((tenant, idx) => <option key={`${tenant.id}-${idx}`} value={tenant.id}>{tenant.name}</option>)}
-                </select>
+
+            {/* Feature Highlights Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+              <div style={{ background: '#f8faf9', border: '1px solid #e4eae5', borderRadius: '12px', padding: '18px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1a2620', fontWeight: '700', fontSize: '14px', marginBottom: '6px' }}>
+                  <FileSpreadsheet size={18} style={{ color: '#00875a' }} /> मानक 18-कॉलम ECI फॉर्मेट
+                </div>
+                <p style={{ fontSize: '12px', color: '#5f6368', margin: 0, lineHeight: '1.5' }}>
+                  शुद्ध देवनागरी नाम, संबंधी नाम, संबंध प्रकार, मकान संख्या, वार्ड, बूथ, आयु, लिंग, मोबाइल, जाति और परिवार आईडी सहित पूर्ण रूप से संरचित वर्कबुक।
+                </p>
+              </div>
+
+              <div style={{ background: '#f8faf9', border: '1px solid #e4eae5', borderRadius: '12px', padding: '18px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1a2620', fontWeight: '700', fontSize: '14px', marginBottom: '6px' }}>
+                  <Sparkles size={18} style={{ color: '#1967d2' }} /> 1 Lakh+ उच्च-गति स्ट्रीमिंग
+                </div>
+                <p style={{ fontSize: '12px', color: '#5f6368', margin: 0, lineHeight: '1.5' }}>
+                  डेटाबेस से सीधे मेमोरी-ऑप्टिमाइज़्ड गति से स्ट्रीम होता है। हजारों या लाखों मतदाताओं का डेटा भी बिना किसी रुकावट के तुरंत तैयार होता है।
+                </p>
+              </div>
+            </div>
+
+            {/* Selection Card */}
+            <div style={{ background: '#ffffff', border: '1px solid #e4eae5', borderRadius: '12px', padding: '20px', maxWidth: '520px', marginBottom: '20px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#1a2620', display: 'block', marginBottom: '8px' }}>
+                क्लाइंट (संगठन) का चयन करें
               </label>
-            </div>
-            <div className="admin-form-actions" style={{ marginTop: '20px', justifyContent: 'flex-start', display: 'flex' }}>
+              <select 
+                value={organizationId} 
+                onChange={(event) => setOrganizationId(event.target.value)}
+                style={{ width: '100%', height: '42px', fontSize: '14px', borderRadius: '8px', border: '1px solid #c0d3c5', background: '#ffffff', padding: '0 12px', marginBottom: '14px' }}
+              >
+                <option value="">🏢 संपूर्ण सिस्टम (All Organizations - {organizations.reduce((sum, t) => sum + (t.voterCount || 0), 0).toLocaleString('hi-IN')} रिकॉर्ड्स)</option>
+                {organizations.map((tenant, idx) => (
+                  <option key={`${tenant.id}-${idx}`} value={tenant.id}>
+                    {tenant.name} ({tenant.voterCount.toLocaleString('hi-IN')} मतदाता)
+                  </option>
+                ))}
+              </select>
+
+              {/* Format Badges */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '18px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 8px', borderRadius: '4px', background: '#e6f4ea', color: '#137333' }}>
+                  .XLSX EXCEL
+                </span>
+                <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 8px', borderRadius: '4px', background: '#e8f0fe', color: '#1967d2' }}>
+                  UTF-8 DEVANAGARI
+                </span>
+                <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 8px', borderRadius: '4px', background: '#fef7e0', color: '#b06000' }}>
+                  18 COLUMNS STANDARD
+                </span>
+              </div>
+
               <button 
                 className="button-primary" 
                 type="button" 
-                onClick={() => void downloadExcel(`/admin/export-voters${organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : ''}`, 'Excel export नहीं हुआ।', 'platform-data.xlsx')} 
+                onClick={() => void downloadExcel(`/admin/export-voters${organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : ''}`, 'Excel export नहीं हुआ।', `${organizationId ? (organizations.find(o => o.id === organizationId)?.name || 'client') : 'platform'}-voters.xlsx`)} 
                 disabled={saving}
+                style={{ width: '100%', height: '44px', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
-                {saving ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />} Excel डेटा डाउनलोड करें
+                {saving ? <LoaderCircle size={16} className="spin" /> : <Download size={16} />} पूर्ण मतदाता सूची Excel डाउनलोड करें
               </button>
             </div>
           </section>
