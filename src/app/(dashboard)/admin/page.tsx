@@ -350,6 +350,7 @@ export default function AdminPanel() {
     showToast('success', `'${target.name}' का विवरण WhatsApp पर शेयर करने हेतु खोल दिया गया!`, 'WhatsApp शेयर');
   };
   const [voters, setVoters] = useState<AdminVoter[]>([]);
+  const [masterDataWards, setMasterDataWards] = useState<string[]>([]);
   const [demoUsers, setDemoUsers] = useState<DemoUserRecord[]>([]);
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoGenerating, setDemoGenerating] = useState(false);
@@ -831,22 +832,31 @@ export default function AdminPanel() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
 
-  const loadVoters = useCallback(async (page = 1) => {
+  const loadVoters = useCallback(async (page = 1, wardOverride?: string) => {
     setLoading(true);
     setError('');
     try {
+      const activeWard = wardOverride !== undefined ? wardOverride : wardFilter;
       const queryParams = new URLSearchParams();
       if (organizationId) queryParams.set('organizationId', organizationId);
+      if (activeWard) queryParams.set('ward', activeWard);
       queryParams.set('page', page.toString());
       queryParams.set('limit', '500'); // 500 per page
       
       const response = await apiFetch(`/admin/master-data?${queryParams.toString()}`, { cache: 'no-store' });
       if (!response.ok) throw new Error(await getApiError(response, 'मास्टर रिकॉर्ड लोड नहीं हुए।'));
-      const result = await response.json() as { voters: AdminVoter[], pagination: { total: number, page: number, pages: number } };
+      const result = await response.json() as {
+        voters: AdminVoter[];
+        wards?: string[];
+        pagination: { total: number; page: number; pages: number };
+      };
       
       if (!result.voters) throw new Error('सर्वर से रिकॉर्ड का सही उत्तर नहीं मिला।');
       
       setVoters(result.voters);
+      if (Array.isArray(result.wards) && result.wards.length > 0) {
+        setMasterDataWards(result.wards);
+      }
       setCurrentPage(result.pagination.page);
       setTotalPages(result.pagination.pages);
       setTotalRecords(result.pagination.total);
@@ -856,7 +866,7 @@ export default function AdminPanel() {
     } finally {
       setLoading(false);
     }
-  }, [organizationId]);
+  }, [organizationId, wardFilter]);
 
 
   const loadPdfJobs = useCallback(async () => {
@@ -1090,20 +1100,45 @@ export default function AdminPanel() {
     [organizations, organizationId],
   );
 
+  // Auto-fetch complete wards summary whenever organizationId changes
+  useEffect(() => {
+    if (organizationId) {
+      apiFetch(`/voters/wards-summary?organizationId=${encodeURIComponent(organizationId)}`, {
+        headers: { 'x-organization-id': organizationId },
+        cache: 'no-store',
+      })
+        .then(async (res) => {
+          if (res.ok) {
+            const data = await res.json();
+            const wList = (data.wards || []).map((w: { _id: string }) => String(w._id).trim()).filter(Boolean);
+            if (wList.length > 0) {
+              setClientWardsSummary(wList);
+            }
+          }
+        })
+        .catch(() => {});
+    } else {
+      setClientWardsSummary([]);
+    }
+  }, [organizationId]);
+
   const availableWards = useMemo(() => {
     const orgWards = selectedTenant?.wards || [];
-    const voterWards = voters
+    const set = new Set<string>([...orgWards, ...masterDataWards, ...clientWardsSummary]);
+    voters
       .filter((voter) => !organizationId || voter.organizationId === organizationId)
-      .map((voter) => voter.wardNo)
-      .filter(Boolean);
-    const set = new Set([...orgWards, ...voterWards]);
+      .forEach((v) => v.wardNo && set.add(String(v.wardNo).trim()));
     return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-  }, [selectedTenant, voters, organizationId]);
+  }, [selectedTenant, masterDataWards, clientWardsSummary, voters, organizationId]);
 
-  const wards = useMemo(
-    () => [...new Set(voters.map((voter) => voter.wardNo).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
-    [voters],
-  );
+  const wards = useMemo(() => {
+    const set = new Set<string>();
+    (selectedTenant?.wards || []).forEach((w) => w && set.add(String(w).trim()));
+    masterDataWards.forEach((w) => w && set.add(String(w).trim()));
+    clientWardsSummary.forEach((w) => w && set.add(String(w).trim()));
+    voters.forEach((v) => v.wardNo && set.add(String(v.wardNo).trim()));
+    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [selectedTenant, masterDataWards, clientWardsSummary, voters]);
 
   const filteredVoters = useMemo(() => {
     let list = wardFilter ? voters.filter((voter) => voter.wardNo === wardFilter) : voters;
@@ -4536,7 +4571,11 @@ export default function AdminPanel() {
                   <select 
                     aria-label="वोटर डेटा वार्ड" 
                     value={wardFilter} 
-                    onChange={(event) => setWardFilter(event.target.value)}
+                    onChange={(event) => {
+                      const newWard = event.target.value;
+                      setWardFilter(newWard);
+                      void loadVoters(1, newWard);
+                    }}
                     style={{ height: '40px', fontSize: '13px', borderRadius: '8px', border: '1px solid #c0d3c5', background: '#ffffff', width: '100%' }}
                   >
                     <option value="">📍 सभी वार्ड</option>
