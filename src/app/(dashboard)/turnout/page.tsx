@@ -57,6 +57,7 @@ interface PaginationData {
 export default function TurnoutPage() {
   const [summary, setSummary] = useState<TurnoutSummaryData | null>(null);
   const [pendingVoters, setPendingVoters] = useState<Voter[]>([]);
+  const [allVotersCache, setAllVotersCache] = useState<Voter[]>([]);
   const [pagination, setPagination] = useState<PaginationData>({
     page: 1,
     limit: 50,
@@ -87,20 +88,23 @@ export default function TurnoutPage() {
     }
   }, []);
 
+  // Try high-performance aggregation summary endpoint; if 404, signal fallback
   const loadSummary = useCallback(async () => {
     try {
       const response = await apiFetch('/voters/turnout-summary', { cache: 'no-store' });
-      if (!response.ok) throw new Error(await getApiError(response, 'मतदान सारांश लोड नहीं हुआ।'));
-      const data = (await response.json()) as TurnoutSummaryData;
-      setSummary(data);
-      setUpdatedAt(new Date(data.updatedAt || Date.now()));
-      return data;
-    } catch (err) {
-      console.error('Turnout summary error:', err);
-      throw err;
+      if (response.ok) {
+        const data = (await response.json()) as TurnoutSummaryData;
+        setSummary(data);
+        setUpdatedAt(new Date(data.updatedAt || Date.now()));
+        return { data, isAggregated: true };
+      }
+      return { data: null, isAggregated: false };
+    } catch {
+      return { data: null, isAggregated: false };
     }
   }, []);
 
+  // Try server-paginated pending voters endpoint; if 404, signal fallback
   const loadPendingVoters = useCallback(async (page: number, ward: string) => {
     setPendingLoading(true);
     try {
@@ -111,32 +115,104 @@ export default function TurnoutPage() {
       if (ward) params.set('ward', ward);
 
       const response = await apiFetch(`/voters/turnout-pending?${params.toString()}`, { cache: 'no-store' });
-      if (!response.ok) throw new Error(await getApiError(response, 'बाकी मतदाता सूची लोड नहीं हुई।'));
-      const data = (await response.json()) as { voters: Voter[]; pagination: PaginationData };
-      setPendingVoters(data.voters || []);
-      setPagination(
-        data.pagination || {
-          page,
-          limit: 50,
-          total: data.voters?.length || 0,
-          totalPages: 1,
-          hasPrev: false,
-          hasNext: false,
-        }
-      );
-    } catch (err) {
-      console.error('Pending voters error:', err);
-      throw err;
+      if (response.ok) {
+        const data = (await response.json()) as { voters: Voter[]; pagination: PaginationData };
+        setPendingVoters(data.voters || []);
+        setPagination(
+          data.pagination || {
+            page,
+            limit: 50,
+            total: data.voters?.length || 0,
+            totalPages: 1,
+            hasPrev: false,
+            hasNext: false,
+          }
+        );
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
     } finally {
       setPendingLoading(false);
     }
   }, []);
 
+  // Universal master loader with automatic graceful fallback
   const loadAll = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      await Promise.all([loadSummary(), loadPendingVoters(currentPage, pendingWard)]);
+      const summaryResult = await loadSummary();
+      let pendingSuccess = false;
+
+      if (summaryResult.isAggregated) {
+        pendingSuccess = await loadPendingVoters(currentPage, pendingWard);
+      }
+
+      // If either server endpoint is unavailable (e.g. remote server pending redeploy), fallback to /voters/all seamlessly
+      if (!summaryResult.isAggregated || !pendingSuccess) {
+        const fallbackRes = await apiFetch('/voters/all', { cache: 'no-store' });
+        if (!fallbackRes.ok) throw new Error(await getApiError(fallbackRes, 'मतदान आँकड़े लोड नहीं हुए।'));
+        const raw = (await fallbackRes.json()) as Voter[];
+        if (!Array.isArray(raw)) throw new Error('सर्वर से आँकड़ों का सही उत्तर नहीं मिला।');
+
+        setAllVotersCache(raw);
+        setUpdatedAt(new Date());
+
+        // Fast in-memory summary computation
+        const totalVoters = raw.length;
+        const votedVoters = raw.filter((v) => v.voted);
+        const totalVoted = votedVoters.length;
+        const remaining = totalVoters - totalVoted;
+        const turnout = totalVoters ? Math.round((totalVoted / totalVoters) * 100) : 0;
+        const maleVoted = votedVoters.filter((v) => ['पुरुष', 'Male', 'M'].includes(v.gender)).length;
+        const femaleVoted = votedVoters.filter((v) => ['स्त्री', 'महिला', 'Female', 'F'].includes(v.gender)).length;
+
+        const wardMap = new Map<string, WardSummary>();
+        raw.forEach((v) => {
+          const wName = v.wardNo || 'अन्य';
+          const cur = wardMap.get(wName) ?? { name: wName, total: 0, voted: 0 };
+          cur.total += 1;
+          if (v.voted) cur.voted += 1;
+          wardMap.set(wName, cur);
+        });
+
+        const wardSummaries = [...wardMap.values()].sort((a, b) => {
+          const numA = parseInt(a.name.match(/\d+/)?.[0] || '0', 10);
+          const numB = parseInt(b.name.match(/\d+/)?.[0] || '0', 10);
+          return numA - numB;
+        });
+
+        setSummary({
+          totalVoters,
+          totalVoted,
+          remaining,
+          turnout,
+          maleVoted,
+          femaleVoted,
+          wardSummaries,
+          updatedAt: new Date().toISOString(),
+        });
+
+        // Paginate pending voters with 50 per page
+        const filteredPending = raw.filter((v) => !v.voted && (!pendingWard || v.wardNo === pendingWard));
+        const total = filteredPending.length;
+        const pageSize = 50;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const safePage = Math.min(currentPage, totalPages);
+        const start = (safePage - 1) * pageSize;
+
+        setPendingVoters(filteredPending.slice(start, start + pageSize));
+        setPagination({
+          page: safePage,
+          limit: pageSize,
+          total,
+          totalPages,
+          hasPrev: safePage > 1,
+          hasNext: safePage < totalPages,
+        });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'मतदान आँकड़े लोड नहीं हुए।');
     } finally {
@@ -160,13 +236,42 @@ export default function TurnoutPage() {
   const handleWardChange = (ward: string) => {
     setPendingWard(ward);
     setCurrentPage(1);
-    void loadPendingVoters(1, ward);
+    if (allVotersCache.length > 0) {
+      const filtered = allVotersCache.filter((v) => !v.voted && (!ward || v.wardNo === ward));
+      const pageSize = 50;
+      const total = filtered.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      setPendingVoters(filtered.slice(0, pageSize));
+      setPagination({
+        page: 1,
+        limit: pageSize,
+        total,
+        totalPages,
+        hasPrev: false,
+        hasNext: totalPages > 1,
+      });
+    } else {
+      void loadPendingVoters(1, ward);
+    }
   };
 
   const handlePageChange = (newPage: number) => {
     if (newPage < 1 || newPage > pagination.totalPages || newPage === currentPage) return;
     setCurrentPage(newPage);
-    void loadPendingVoters(newPage, pendingWard);
+    if (allVotersCache.length > 0) {
+      const filtered = allVotersCache.filter((v) => !v.voted && (!pendingWard || v.wardNo === pendingWard));
+      const pageSize = 50;
+      const start = (newPage - 1) * pageSize;
+      setPendingVoters(filtered.slice(start, start + pageSize));
+      setPagination((prev) => ({
+        ...prev,
+        page: newPage,
+        hasPrev: newPage > 1,
+        hasNext: newPage < prev.totalPages,
+      }));
+    } else {
+      void loadPendingVoters(newPage, pendingWard);
+    }
   };
 
   const markVoted = async (voter: Voter) => {
@@ -179,6 +284,11 @@ export default function TurnoutPage() {
         body: JSON.stringify({ voted: true }),
       });
       if (!response.ok) throw new Error(await getApiError(response, 'मतदान स्थिति अपडेट नहीं हुई।'));
+
+      // If in fallback cache mode, update in-memory raw array
+      if (allVotersCache.length > 0) {
+        setAllVotersCache((cur) => cur.map((item) => (item._id === voter._id ? { ...item, voted: true } : item)));
+      }
 
       // Optimistic update for immediate responsiveness
       setPendingVoters((current) => current.filter((item) => item._id !== voter._id));
@@ -211,7 +321,7 @@ export default function TurnoutPage() {
         };
       });
 
-      // Background re-fetch to synchronize state
+      // Background re-fetch to synchronize state if aggregated
       void loadSummary();
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : 'मतदान स्थिति अपडेट नहीं हुई।');
