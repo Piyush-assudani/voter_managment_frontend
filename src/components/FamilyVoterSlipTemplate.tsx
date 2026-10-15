@@ -229,7 +229,9 @@ export const FamilyVoterSlipTemplate: React.FC<FamilyVoterSlipProps> = ({
           style={{
             border: '1px solid #cbd5e1',
             borderRadius: '10px',
-            overflow: 'hidden',
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            maxWidth: '100%',
           }}
         >
           <table

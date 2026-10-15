@@ -1062,7 +1062,7 @@ export default function CommunityPage() {
               </button>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', minHeight: '200px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', WebkitOverflowScrolling: 'touch', minHeight: '200px' }}>
               {familyLoading ? (
                 <div style={{ padding: '40px 20px', textAlign: 'center' }}>
                   <LoaderCircle size={24} className="spin" style={{ margin: '0 auto 10px', color: '#047857' }} />

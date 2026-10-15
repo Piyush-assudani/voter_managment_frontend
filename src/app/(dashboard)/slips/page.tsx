@@ -744,6 +744,9 @@ export default function SlipsPage() {
             box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
             padding: 16px;
             box-sizing: border-box;
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
           }
           .a4-sheet-header {
             display: flex;

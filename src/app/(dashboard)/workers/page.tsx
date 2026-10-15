@@ -708,7 +708,7 @@ export default function WorkersPage() {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
                   gap: '16px',
                 }}
               >
@@ -730,7 +730,7 @@ export default function WorkersPage() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
             gap: '16px',
           }}
         >
@@ -947,6 +947,8 @@ export default function WorkersPage() {
               style={{
                 flex: 1,
                 overflowY: 'auto',
+                overflowX: 'auto',
+                WebkitOverflowScrolling: 'touch',
                 minHeight: '260px',
                 maxHeight: '52vh',
                 border: '1px solid #e2e8f0',

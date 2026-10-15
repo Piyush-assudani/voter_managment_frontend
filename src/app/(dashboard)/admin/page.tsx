@@ -6231,9 +6231,11 @@ export default function AdminPanel() {
               style={{
                 maxWidth: '480px',
                 width: '95%',
+                maxHeight: '90vh',
+                overflowY: 'auto',
                 borderRadius: '16px',
                 boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-                padding: '24px',
+                padding: '20px 18px',
               }}
             >
               <div className="modal-heading" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
