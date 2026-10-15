@@ -203,9 +203,10 @@ export default function DashboardHomePage() {
   }, []);
 
   return (
-    <div style={{ maxWidth: '1680px', margin: '0 auto', padding: '20px 16px 60px', width: '100%' }}>
+    <div className="dashboard-home-container" style={{ maxWidth: '1680px', margin: '0 auto', padding: '20px 16px 60px', width: '100%' }}>
       {/* Top Banner / Heading: VijaySetu Brand & Context */}
       <div
+        className="dashboard-top-banner"
         style={{
           background: 'linear-gradient(135deg, #064e3b 0%, #047857 60%, #0f766e 100%)',
           borderRadius: '16px',
@@ -302,6 +303,7 @@ export default function DashboardHomePage() {
 
       {/* Quick Summary / Status Strip (Fills wide screen nicely, stacks on mobile) */}
       <div
+        className="dashboard-summary-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
@@ -310,6 +312,7 @@ export default function DashboardHomePage() {
         }}
       >
         <div
+          className="dashboard-summary-card"
           style={{
             background: '#ffffff',
             borderRadius: '12px',
@@ -333,6 +336,7 @@ export default function DashboardHomePage() {
         </div>
 
         <div
+          className="dashboard-summary-card"
           style={{
             background: '#ffffff',
             borderRadius: '12px',
@@ -354,6 +358,7 @@ export default function DashboardHomePage() {
         </div>
 
         <div
+          className="dashboard-summary-card"
           style={{
             background: '#ffffff',
             borderRadius: '12px',
@@ -375,6 +380,7 @@ export default function DashboardHomePage() {
         </div>
 
         <div
+          className="dashboard-summary-card"
           style={{
             background: '#ffffff',
             borderRadius: '12px',
@@ -398,6 +404,7 @@ export default function DashboardHomePage() {
 
       {/* Main Open Cards Grid ("खुले-खुले बटन") */}
       <div
+        className="dashboard-modules-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))',
@@ -410,6 +417,7 @@ export default function DashboardHomePage() {
             <Link
               key={item.id}
               href={item.href}
+              className="dashboard-module-card"
               style={{
                 textDecoration: 'none',
                 color: 'inherit',

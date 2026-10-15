@@ -6,6 +6,12 @@ import {
   Building2,
   ChevronLeft,
   LogOut,
+  Home,
+  Ticket,
+  CheckSquare,
+  ContactRound,
+  TrendingUp,
+  Database,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { apiFetch, decodeJwtPayload } from '@/lib/api';
@@ -222,100 +228,60 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         }}
       >
         {/* Left: Back Button, Brand Identity & Subpage Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+        <div className="topbar-left-cluster">
           {/* Prominent Back Button (Always visible on any subpage, Mobile & Desktop) */}
           {pathname !== '/' && (
             <Link
               href="/"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: isMobile ? '3px' : '5px',
-                height: '34px',
-                padding: isMobile ? '0 9px' : '0 12px',
-                borderRadius: '8px',
-                background: '#047857',
-                color: '#ffffff',
-                fontSize: isMobile ? '12px' : '12.5px',
-                fontWeight: 700,
-                textDecoration: 'none',
-                boxShadow: '0 2px 5px rgba(4, 120, 87, 0.25)',
-                cursor: 'pointer',
-                flexShrink: 0,
-                whiteSpace: 'nowrap',
-                transition: 'all 0.15s ease',
-              }}
+              className="topbar-back-btn"
               title="मुख्य मेन्यू (डैशबोर्ड) पर वापस जाएं"
             >
-              <ChevronLeft size={isMobile ? 17 : 16} strokeWidth={2.5} />
-              <span>{isMobile ? 'मेन्यू' : 'मुख्य मेन्यू'}</span>
+              <ChevronLeft size={16} strokeWidth={2.5} />
+              <span className="hidden sm:inline">मुख्य मेन्यू</span>
+              <span className="sm:hidden">मेन्यू</span>
             </Link>
           )}
 
           {/* Brand Identity */}
           <Link
             href="/"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              textDecoration: 'none',
-              flexShrink: 0,
-            }}
+            className="topbar-brand-link"
           >
-            <div
-              style={{
-                width: '34px',
-                height: '34px',
-                borderRadius: '8px',
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'hidden',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                flexShrink: 0,
-              }}
-            >
+            <div className="topbar-logo-box">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.png" alt="VijaySetu Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
 
-            {/* Brand text: Only show if on desktop or on homepage */}
-            {(!isMobile || pathname === '/') && (
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <span style={{ fontSize: '16.5px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
-                    VijaySetu
-                  </span>
-                  <span
-                    style={{
-                      fontSize: '9.5px',
-                      fontWeight: 700,
-                      color: '#047857',
-                      background: '#ecfdf5',
-                      border: '1px solid #a7f3d0',
-                      padding: '1px 5px',
-                      borderRadius: '8px',
-                    }}
-                  >
-                    विजयसेतु
-                  </span>
-                </div>
-                <span className="hidden md:inline-block" style={{ fontSize: '10px', color: '#64748b', fontWeight: 600 }}>
-                  चुनाव प्रबंधन प्रणाली
+            {/* Brand text: Always visible on homepage, or on md+ screens */}
+            <div className={`topbar-brand-text ${pathname !== '/' ? 'hidden md:flex' : 'flex'}`}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <span style={{ fontSize: '16.5px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
+                  VijaySetu
+                </span>
+                <span
+                  style={{
+                    fontSize: '9.5px',
+                    fontWeight: 700,
+                    color: '#047857',
+                    background: '#ecfdf5',
+                    border: '1px solid #a7f3d0',
+                    padding: '1px 5px',
+                    borderRadius: '8px',
+                  }}
+                >
+                  विजयसेतु
                 </span>
               </div>
-            )}
+              <span className="hidden md:inline-block" style={{ fontSize: '10px', color: '#64748b', fontWeight: 600 }}>
+                चुनाव प्रबंधन प्रणाली
+              </span>
+            </div>
           </Link>
 
           {/* Subpage Title (Visible on larger screens) */}
           {pathname !== '/' && (
-            <div className="hidden lg:block" style={{ marginLeft: '4px', borderLeft: '1px solid #cbd5e1', paddingLeft: '10px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' }}>
-                {activePage}
-              </span>
+            <div className="topbar-subpage-title hidden lg:block">
+              <span>{activePage}</span>
             </div>
           )}
         </div>
@@ -325,7 +291,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           {userInfo.role === 'admin' ? (
             <div className="topbar-client-selector-box" title="सक्रिय क्लाइंट चुनें (डेटा केवल इस क्लाइंट का दिखेगा)">
               <Building2 size={14} className="text-emerald-700 shrink-0" />
-              <span className="client-select-label">क्लाइंट:</span>
+              <span className="client-select-label hidden sm:inline">क्लाइंट:</span>
               <select
                 value={selectedClientId}
                 onChange={(e) => handleClientSwitch(e.target.value)}
@@ -354,7 +320,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           ) : (
             <div className="topbar-client-fixed-badge" title="आप केवल अपने अधिकृत क्लाइंट का डेटा देख सकते हैं">
               <Building2 size={13} className="text-emerald-600 shrink-0" />
-              <span className="fixed-client-name" style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span className="fixed-client-name">
                 {userInfo.organizationName || 'आपका चुनावी क्षेत्र'}
               </span>
               <span className="fixed-client-tag hidden sm:inline-block">क्लाइंट डेटा</span>
@@ -363,46 +329,23 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         </div>
 
         {/* Right: Live Status + User Profile + Logout */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-          <span className={`connection-pill ${health}`} style={{ padding: '6px 10px', fontSize: '11px' }}>
+        <div className="topbar-right-cluster">
+          <span className={`connection-pill ${health}`} title={`सर्वर स्थिति: ${health === 'connected' ? 'लाइव कनेक्टेड' : health}`}>
             <span className={`status-dot status-${health}`} />
             <span className="hidden sm:inline">
               {health === 'connected' ? 'Live data' : health === 'offline' ? 'Offline' : 'Checking'}
             </span>
           </span>
 
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              paddingLeft: '6px',
-              borderLeft: '1px solid #e2e8f0',
-            }}
-          >
-            <span
-              style={{
-                width: '30px',
-                height: '30px',
-                borderRadius: '50%',
-                background: '#ecfdf5',
-                color: '#047857',
-                border: '1.5px solid #a7f3d0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 800,
-                fontSize: '12px',
-                flexShrink: 0,
-              }}
-            >
+          <div className="topbar-user-badge">
+            <span className="topbar-user-avatar">
               {userInfo.name ? userInfo.name.charAt(0).toUpperCase() : 'U'}
             </span>
             <div className="hidden md:flex" style={{ flexDirection: 'column' }}>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span className="topbar-user-name">
                 {userInfo.name || userInfo.email || 'User'}
               </span>
-              <span style={{ fontSize: '10px', color: '#64748b' }}>
+              <span className="topbar-user-role">
                 {userInfo.role === 'admin' ? 'Super Admin' : 'Operations Desk'}
               </span>
             </div>
@@ -410,20 +353,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
           <button
             onClick={signOut}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '6px 10px',
-              borderRadius: '7px',
-              background: '#fef2f2',
-              border: '1px solid #fecaca',
-              color: '#dc2626',
-              fontSize: '11.5px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              marginLeft: '2px',
-            }}
+            className="topbar-logout-btn"
             title="लॉगआउट"
           >
             <LogOut size={13} />
@@ -441,6 +371,65 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       <footer className="app-footer" style={{ justifyContent: 'center', textAlign: 'center', flexWrap: 'wrap', gap: '6px' }}>
         <span>&copy; 2026 VijaySetu &bull; Roots Reach Media. All Rights Reserved. &bull; <a href="https://vijaysetu-website.vercel.app" target="_blank" rel="noopener noreferrer" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>वेबसाइट</a> &bull; <a href="/privacy" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Privacy Policy</a> &bull; <a href="/terms" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Terms of Service</a> &bull; 📞 7231077770</span>
       </footer>
+
+      {/* Mobile Sticky Bottom Navigation Bar (Visible only on mobile/tablet < 768px) */}
+      <nav className="mobile-bottom-nav" aria-label="मोबाइल नेविगेशन बार">
+        <Link
+          href="/"
+          className={`mobile-bottom-nav-item ${pathname === '/' ? 'is-active' : ''}`}
+          title="मुख्य डैशबोर्ड"
+        >
+          <Home size={19} strokeWidth={pathname === '/' ? 2.5 : 2} />
+          <span>होम</span>
+        </Link>
+
+        <Link
+          href="/voters"
+          className={`mobile-bottom-nav-item ${pathname === '/voters' ? 'is-active' : ''}`}
+          title="मतदाता खोज व पर्ची"
+        >
+          <Ticket size={19} strokeWidth={pathname === '/voters' ? 2.5 : 2} />
+          <span>वोटर</span>
+        </Link>
+
+        <Link
+          href="/poll-desk"
+          className={`mobile-bottom-nav-item ${pathname === '/poll-desk' ? 'is-active' : ''}`}
+          title="मतदान दिवस डेस्क"
+        >
+          <CheckSquare size={19} strokeWidth={pathname === '/poll-desk' ? 2.5 : 2} />
+          <span>पोल-डेस्क</span>
+        </Link>
+
+        <Link
+          href="/workers"
+          className={`mobile-bottom-nav-item ${pathname === '/workers' ? 'is-active' : ''}`}
+          title="कार्यकर्ता प्रबंधन"
+        >
+          <ContactRound size={19} strokeWidth={pathname === '/workers' ? 2.5 : 2} />
+          <span>कार्यकर्ता</span>
+        </Link>
+
+        {userInfo.role === 'admin' ? (
+          <Link
+            href="/admin"
+            className={`mobile-bottom-nav-item ${pathname.startsWith('/admin') ? 'is-active' : ''}`}
+            title="सुपर एडमिन कंसोल"
+          >
+            <Database size={19} strokeWidth={pathname.startsWith('/admin') ? 2.5 : 2} />
+            <span>एडमिन</span>
+          </Link>
+        ) : (
+          <Link
+            href="/warroom"
+            className={`mobile-bottom-nav-item ${pathname === '/warroom' ? 'is-active' : ''}`}
+            title="राजनीतिक वॉर-रूम"
+          >
+            <TrendingUp size={19} strokeWidth={pathname === '/warroom' ? 2.5 : 2} />
+            <span>वॉर-रूम</span>
+          </Link>
+        )}
+      </nav>
 
       {/* FULL-SCREEN SUSPENSION LOCKOUT MODAL */}
       {isSuspended && (

@@ -457,7 +457,7 @@ export default function WorkersPage() {
             <span>क्लाइंट फ़िल्टर:</span>
           </div>
 
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', flex: 1 }}>
+          <div className="worker-client-filter-scroll" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', flex: 1 }}>
             <button
               type="button"
               onClick={() => handleClientSwitch('all')}
@@ -764,7 +764,7 @@ export default function WorkersPage() {
           }}
         >
           <section
-            className="form-modal"
+            className="form-modal worker-modal-container"
             onClick={(e) => e.stopPropagation()}
             style={{
               maxWidth: '920px',
