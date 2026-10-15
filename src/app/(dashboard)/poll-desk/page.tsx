@@ -77,6 +77,13 @@ export default function PollDeskPage() {
   const [savingId, setSavingId] = useState('');
   const [error, setError] = useState('');
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
+  const [hidePartNo] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const val = localStorage.getItem('sys_hide_part_no');
+      if (val !== null) return val === 'true';
+    }
+    return true;
+  });
 
   useEffect(() => {
     const initialWards = getWardsFromToken();
@@ -236,16 +243,20 @@ export default function PollDeskPage() {
         <select id="ward-select" value={selectedWard} onChange={(event) => { setSelectedWard(event.target.value); setSelectedPart(''); }}>
           {wards.map((ward) => <option key={ward} value={ward}>वार्ड {ward}</option>)}
         </select>
-        <label className="work-select-label" htmlFor="part-select">भाग / बूथ</label>
-        <select id="part-select" value={selectedPart} onChange={(event) => setSelectedPart(event.target.value)}>
-          <option value="">सभी भाग</option>{parts.map((part) => <option key={part} value={part}>{part}</option>)}
-        </select>
+        {!hidePartNo && parts.length > 1 && (
+          <>
+            <label className="work-select-label" htmlFor="part-select">भाग / बूथ</label>
+            <select id="part-select" value={selectedPart} onChange={(event) => setSelectedPart(event.target.value)}>
+              <option value="">सभी भाग</option>{parts.map((part) => <option key={part} value={part}>{part}</option>)}
+            </select>
+          </>
+        )}
         <span className="work-toolbar-divider" />
         <span className="toolbar-caption">{updatedAt ? `डेटा अपडेट: ${updatedAt.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit' })}` : 'डेटा की प्रतीक्षा में'}</span>
       </section>
 
       <section className="metric-grid">
-        <article className="metric-card"><span>मतदाता</span><strong>{loading ? '—' : partVoters.length}</strong><small>चुना गया वार्ड / भाग</small></article>
+        <article className="metric-card"><span>मतदाता</span><strong>{loading ? '—' : partVoters.length}</strong><small>{hidePartNo ? 'चुना गया वार्ड' : 'चुना गया वार्ड / भाग'}</small></article>
         <article className="metric-card metric-card-green"><span>मतदान दर्ज</span><strong>{loading ? '—' : votedCount}</strong><small>सर्वर पर सेव</small></article>
         <article className="metric-card"><span>अभी शेष</span><strong>{loading ? '—' : pendingCount}</strong><small>मतदान दर्ज होना बाकी</small></article>
         <article className="metric-card"><span>वार्ड प्रगति</span><strong>{loading ? '—' : `${turnout}%`}</strong><small>दर्ज मतदाता / कुल</small></article>

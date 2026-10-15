@@ -168,6 +168,13 @@ export default function VoterDirectoryPage() {
 
   const [slipConfig, setSlipConfig] = useState<SlipConfig>(defaultSlipConfig);
   const [organizationName, setOrganizationName] = useState<string>('');
+  const [hidePartNo, setHidePartNo] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const val = localStorage.getItem('sys_hide_part_no');
+      if (val !== null) return val === 'true';
+    }
+    return true; // Default to true in ward/panchayat elections
+  });
 
   // Load organization details
   const loadOrgDetails = useCallback(async () => {
@@ -177,14 +184,15 @@ export default function VoterDirectoryPage() {
       if (res.ok) {
         const clients = await res.json();
         if (Array.isArray(clients) && clients.length > 0) {
-          if (selectedOrgId && selectedOrgId !== 'all') {
-            const matched = clients.find((c: { id: string; name: string }) => c.id === selectedOrgId);
-            if (matched) {
-              setOrganizationName(matched.name);
-              return;
+          const matched = selectedOrgId && selectedOrgId !== 'all'
+            ? clients.find((c: any) => c.id === selectedOrgId)
+            : clients[0];
+          if (matched) {
+            setOrganizationName(matched.name);
+            if (matched.settings?.hidePartNo !== undefined) {
+              setHidePartNo(matched.settings.hidePartNo);
+              if (typeof window !== 'undefined') localStorage.setItem('sys_hide_part_no', String(matched.settings.hidePartNo));
             }
-          } else if (clients.length === 1) {
-            setOrganizationName(clients[0].name);
             return;
           } else if (!selectedOrgId || selectedOrgId === 'all') {
             setOrganizationName('ग्राम पंचायत जेलातरा');
@@ -1261,7 +1269,7 @@ export default function VoterDirectoryPage() {
                         />
                         <span className="sb-badge-ward">वार्ड {voter.wardNo || '—'}</span>
                         <span className="sb-badge-part">
-                          भाग {voter.partNo || '—'} • क्र. {voter.serialNo || '—'}
+                          {hidePartNo ? `क्र. ${voter.serialNo || '—'}` : `भाग ${voter.partNo || '—'} • क्र. ${voter.serialNo || '—'}`}
                         </span>
                       </div>
                       <div className="sb-card-meta">
