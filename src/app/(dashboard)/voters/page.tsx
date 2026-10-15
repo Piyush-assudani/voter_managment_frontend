@@ -291,8 +291,12 @@ export default function VoterDirectoryPage() {
 
     const activeWard = selectedWard !== undefined ? selectedWard : filtersRef.current.ward;
 
+    const familyParams = new URLSearchParams();
+    if (activeWard) familyParams.set('ward', activeWard);
+    if (householdPart) familyParams.set('part', householdPart);
+
     const path = house
-      ? `/voters/family/${encodeURIComponent(house)}?${new URLSearchParams({ ward: activeWard, part: householdPart })}`
+      ? `/voters/family/${encodeURIComponent(house)}${familyParams.toString() ? `?${familyParams.toString()}` : ''}`
       : `/voters?${new URLSearchParams({
           ...(search ? { search } : {}),
           ...(relative ? { relative } : {}),
