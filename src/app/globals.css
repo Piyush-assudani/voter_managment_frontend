@@ -1623,43 +1623,78 @@ h4,
 .admin-tabs {
   display: flex;
   gap: 6px;
-  margin: 0 0 17px;
-  padding: 5px;
+  margin: 0 0 18px;
+  padding: 6px;
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  background: #ecefeb;
-  border-radius: 8px;
+  background: #f1f4f1;
+  border: 1px solid #e1e7e2;
+  border-radius: 12px;
+}
+
+.admin-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .admin-tab {
   display: inline-flex;
-  min-height: 34px;
+  min-height: 38px;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  padding: 0 11px;
-  color: #718078;
+  gap: 8px;
+  padding: 0 14px;
+  color: #5c6c63;
   font-size: 13px;
+  font-weight: 500;
   white-space: nowrap;
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.admin-tab:hover:not(.is-active) {
+  color: #1a2620;
+  background: rgba(255, 255, 255, 0.7);
 }
 
 .admin-tab.is-active {
-  color: #315c43;
-  background: #fff;
-  box-shadow: 0 1px 3px rgb(18 31 23 / 7%);
+  color: #137333;
+  font-weight: 700;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(18, 31, 23, 0.1), 0 1px 2px rgba(18, 31, 23, 0.06);
+}
+
+/* Responsive Table vs Card View Switcher */
+.mobile-card-view {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.desktop-table-view {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .mobile-card-view {
+    display: flex !important;
+  }
+  .desktop-table-view {
+    display: none !important;
+  }
 }
 
 .admin-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .admin-summary>div {
@@ -2702,7 +2737,8 @@ h4,
   }
 
   .admin-summary {
-    gap: 7px;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
   }
 
   .admin-summary>div {
@@ -2712,6 +2748,15 @@ h4,
 
   .admin-summary>div>strong {
     font-size: 20px;
+  }
+
+  .feature-metrics {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+  }
+
+  .records-panel {
+    padding: 18px 16px !important;
   }
 
   .admin-records-toolbar {

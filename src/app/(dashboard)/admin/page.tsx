@@ -4201,123 +4201,258 @@ export default function AdminPanel() {
                   <p>लीड्स लोड हो रही हैं…</p>
                 </div>
               ) : leads.length ? (
-                <div className="table-scroll">
-                  <table className="voter-table desk-table">
-                    <thead>
-                      <tr>
-                        <th>तारीख व समय</th>
-                        <th>प्रत्याशी / नाम</th>
-                        <th>मोबाइल (WhatsApp)</th>
-                        <th>विधानसभा / वार्ड</th>
-                        <th>चुनाव प्रकार</th>
-                        <th>स्थिति (Status)</th>
-                        <th>एक्शन (Contact & Manage)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {leads.map((lead) => {
-                        const cleanPhone = lead.phone.replace(/\D/g, '');
-                        const waLink = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(
-                          `नमस्ते ${lead.name} जी,\n\nविजयसेतु (VijaySetu) चुनाव वॉर-रूम और वोटर सॉफ्टवेयर के डेमो के लिए आपका अनुरोध प्राप्त हुआ था।\n\nक्षेत्र: ${lead.constituency}\nचुनाव स्तर: ${lead.electionType}\n\nक्या अभी बात करने का सही समय है?`
-                        )}`;
+                <>
+                  {/* MOBILE VIEW (< 768px): Responsive Lead Cards */}
+                  <div className="mobile-card-view" style={{ padding: '4px 0' }}>
+                    {leads.map((lead) => {
+                      const cleanPhone = lead.phone.replace(/\D/g, '');
+                      const waLink = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(
+                        `नमस्ते ${lead.name} जी,\n\nविजयसेतु (VijaySetu) चुनाव वॉर-रूम और वोटर सॉफ्टवेयर के डेमो के लिए आपका अनुरोध प्राप्त हुआ था।\n\nक्षेत्र: ${lead.constituency}\nचुनाव स्तर: ${lead.electionType}\n\nक्या अभी बात करने का सही समय है?`
+                      )}`;
 
-                        return (
-                          <tr key={lead._id}>
-                            <td style={{ fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap' }}>
-                              {new Date(lead.createdAt).toLocaleDateString('hi-IN', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </td>
-                            <td>
-                              <strong className="voter-name" style={{ fontSize: '14px', color: '#0f172a' }}>{lead.name}</strong>
-                              <div className="voter-subline">{lead._id}</div>
-                            </td>
-                            <td>
-                              <a
-                                href={`tel:${lead.phone}`}
-                                style={{ color: '#059669', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                              >
-                                <Phone size={13} /> {lead.phone}
-                              </a>
-                            </td>
-                            <td>
-                              <span style={{ fontWeight: 600, color: '#334155' }}>{lead.constituency || '—'}</span>
-                            </td>
-                            <td>
-                              <span style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 500 }}>
+                      return (
+                        <div
+                          key={`mobile-${lead._id}`}
+                          style={{
+                            background: '#ffffff',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '12px',
+                            padding: '16px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '10px',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                            <div>
+                              <strong style={{ fontSize: '15px', color: '#0f172a' }}>{lead.name}</strong>
+                              <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                {new Date(lead.createdAt).toLocaleDateString('hi-IN', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </div>
+                            </div>
+                            <select
+                              aria-label="लीड स्थिति"
+                              value={lead.status}
+                              onChange={(e) => void updateLeadStatus(lead._id, e.target.value)}
+                              style={{
+                                fontSize: '12px',
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid #cbd5e1',
+                                background:
+                                  lead.status === 'new' ? '#dcfce7' :
+                                  lead.status === 'contacted' ? '#e0f2fe' :
+                                  lead.status === 'converted' ? '#f3e8ff' : '#f1f5f9',
+                                fontWeight: 700,
+                                color:
+                                  lead.status === 'new' ? '#15803d' :
+                                  lead.status === 'contacted' ? '#0369a1' :
+                                  lead.status === 'converted' ? '#7e22ce' : '#475569',
+                              }}
+                            >
+                              <option value="new">नया (New)</option>
+                              <option value="contacted">बातचीत हुई</option>
+                              <option value="converted">फाइनल / एक्टिव</option>
+                              <option value="closed">बंद</option>
+                            </select>
+                          </div>
+
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            <a
+                              href={`tel:${lead.phone}`}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                color: '#059669',
+                                background: '#ecfdf5',
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                border: '1px solid #a7f3d0',
+                                textDecoration: 'none',
+                              }}
+                            >
+                              <Phone size={12} /> {lead.phone}
+                            </a>
+                            {lead.constituency && (
+                              <span style={{ fontSize: '12px', background: '#f1f5f9', color: '#334155', padding: '4px 10px', borderRadius: '6px', fontWeight: 600 }}>
+                                📍 {lead.constituency}
+                              </span>
+                            )}
+                            {lead.electionType && (
+                              <span style={{ fontSize: '12px', background: '#f8fafc', color: '#64748b', padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                                 {lead.electionType}
                               </span>
-                            </td>
-                            <td>
-                              <select
-                                aria-label="लीड स्थिति"
-                                value={lead.status}
-                                onChange={(e) => void updateLeadStatus(lead._id, e.target.value)}
-                                style={{
-                                  fontSize: '12px',
-                                  padding: '4px 8px',
-                                  borderRadius: '6px',
-                                  border: '1px solid #cbd5e1',
-                                  background:
-                                    lead.status === 'new' ? '#dcfce7' :
-                                    lead.status === 'contacted' ? '#e0f2fe' :
-                                    lead.status === 'converted' ? '#f3e8ff' : '#f1f5f9',
-                                  fontWeight: 600,
-                                  color:
-                                    lead.status === 'new' ? '#15803d' :
-                                    lead.status === 'contacted' ? '#0369a1' :
-                                    lead.status === 'converted' ? '#7e22ce' : '#475569'
-                                }}
-                              >
-                                <option value="new">नया (New)</option>
-                                <option value="contacted">बातचीत हुई (Contacted)</option>
-                                <option value="converted">फाइनल / एक्टिव (Converted)</option>
-                                <option value="closed">बंद (Closed)</option>
-                              </select>
-                            </td>
-                            <td>
-                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            )}
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
+                            <a
+                              href={waLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="button-secondary"
+                              style={{
+                                background: '#25d366',
+                                color: '#ffffff',
+                                borderColor: '#25d366',
+                                padding: '7px 12px',
+                                fontSize: '13px',
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                textDecoration: 'none',
+                                borderRadius: '8px',
+                              }}
+                              title="WhatsApp पर चैट करें"
+                            >
+                              <MessageCircle size={15} /> WhatsApp चैट
+                            </a>
+                            <button
+                              type="button"
+                              className="button-quiet"
+                              style={{ color: '#b91c1c', padding: '7px 10px', borderRadius: '8px', border: '1px solid #fecaca', background: '#fff5f5' }}
+                              onClick={() => void deleteLead(lead._id, lead.name)}
+                              title="लीड हटाएं"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* DESKTOP VIEW (>= 769px): Full Sortable Table */}
+                  <div className="table-scroll desktop-table-view">
+                    <table className="voter-table desk-table">
+                      <thead>
+                        <tr>
+                          <th>तारीख व समय</th>
+                          <th>प्रत्याशी / नाम</th>
+                          <th>मोबाइल (WhatsApp)</th>
+                          <th>विधानसभा / वार्ड</th>
+                          <th>चुनाव प्रकार</th>
+                          <th>स्थिति (Status)</th>
+                          <th>एक्शन (Contact & Manage)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {leads.map((lead) => {
+                          const cleanPhone = lead.phone.replace(/\D/g, '');
+                          const waLink = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(
+                            `नमस्ते ${lead.name} जी,\n\nविजयसेतु (VijaySetu) चुनाव वॉर-रूम और वोटर सॉफ्टवेयर के डेमो के लिए आपका अनुरोध प्राप्त हुआ था।\n\nक्षेत्र: ${lead.constituency}\nचुनाव स्तर: ${lead.electionType}\n\nक्या अभी बात करने का सही समय है?`
+                          )}`;
+
+                          return (
+                            <tr key={lead._id}>
+                              <td style={{ fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap' }}>
+                                {new Date(lead.createdAt).toLocaleDateString('hi-IN', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </td>
+                              <td>
+                                <strong className="voter-name" style={{ fontSize: '14px', color: '#0f172a' }}>{lead.name}</strong>
+                                <div className="voter-subline">{lead._id}</div>
+                              </td>
+                              <td>
                                 <a
-                                  href={waLink}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="button-secondary"
-                                  style={{
-                                    background: '#25d366',
-                                    color: '#ffffff',
-                                    borderColor: '#25d366',
-                                    padding: '5px 10px',
-                                    fontSize: '12px',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                    textDecoration: 'none'
-                                  }}
-                                  title="WhatsApp पर चैट करें"
+                                  href={`tel:${lead.phone}`}
+                                  style={{ color: '#059669', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                                 >
-                                  <MessageCircle size={14} /> WhatsApp
+                                  <Phone size={13} /> {lead.phone}
                                 </a>
-                                <button
-                                  type="button"
-                                  className="button-quiet"
-                                  style={{ color: '#b91c1c', padding: '5px' }}
-                                  onClick={() => void deleteLead(lead._id, lead.name)}
-                                  title="लीड हटाएं"
+                              </td>
+                              <td>
+                                <span style={{ fontWeight: 600, color: '#334155' }}>{lead.constituency || '—'}</span>
+                              </td>
+                              <td>
+                                <span style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 500 }}>
+                                  {lead.electionType}
+                                </span>
+                              </td>
+                              <td>
+                                <select
+                                  aria-label="लीड स्थिति"
+                                  value={lead.status}
+                                  onChange={(e) => void updateLeadStatus(lead._id, e.target.value)}
+                                  style={{
+                                    fontSize: '12px',
+                                    padding: '4px 8px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #cbd5e1',
+                                    background:
+                                      lead.status === 'new' ? '#dcfce7' :
+                                      lead.status === 'contacted' ? '#e0f2fe' :
+                                      lead.status === 'converted' ? '#f3e8ff' : '#f1f5f9',
+                                    fontWeight: 600,
+                                    color:
+                                      lead.status === 'new' ? '#15803d' :
+                                      lead.status === 'contacted' ? '#0369a1' :
+                                      lead.status === 'converted' ? '#7e22ce' : '#475569'
+                                  }}
                                 >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                                  <option value="new">नया (New)</option>
+                                  <option value="contacted">बातचीत हुई (Contacted)</option>
+                                  <option value="converted">फाइनल / एक्टिव (Converted)</option>
+                                  <option value="closed">बंद (Closed)</option>
+                                </select>
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                  <a
+                                    href={waLink}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="button-secondary"
+                                    style={{
+                                      background: '#25d366',
+                                      color: '#ffffff',
+                                      borderColor: '#25d366',
+                                      padding: '5px 10px',
+                                      fontSize: '12px',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      textDecoration: 'none'
+                                    }}
+                                    title="WhatsApp पर चैट करें"
+                                  >
+                                    <MessageCircle size={14} /> WhatsApp
+                                  </a>
+                                  <button
+                                    type="button"
+                                    className="button-quiet"
+                                    style={{ color: '#b91c1c', padding: '5px' }}
+                                    onClick={() => void deleteLead(lead._id, lead.name)}
+                                    title="लीड हटाएं"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               ) : (
                 <div className="empty-state">
                   <MessageCircle size={24} style={{ color: '#94a3b8' }} />
@@ -4384,7 +4519,7 @@ export default function AdminPanel() {
                 </div>
 
                 {/* Client Select */}
-                <div style={{ minWidth: '180px' }}>
+                <div style={{ flex: '1 1 180px' }}>
                   <select 
                     aria-label="वोटर डेटा क्लाइंट" 
                     value={organizationId} 
@@ -4397,7 +4532,7 @@ export default function AdminPanel() {
                 </div>
 
                 {/* Ward Select */}
-                <div style={{ minWidth: '140px' }}>
+                <div style={{ flex: '1 1 130px' }}>
                   <select 
                     aria-label="वोटर डेटा वार्ड" 
                     value={wardFilter} 
@@ -4413,7 +4548,7 @@ export default function AdminPanel() {
                 <button 
                   type="button" 
                   className="button-secondary" 
-                  style={{ color: '#d93025', borderColor: '#f8d7da', background: '#fff8f7', height: '40px', padding: '0 14px', fontSize: '13px', marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  style={{ color: '#d93025', borderColor: '#f8d7da', background: '#fff8f7', height: '40px', padding: '0 14px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   onClick={() => void bulkDeleteVoters()}
                   disabled={!organizationId || loading}
                   title={!organizationId ? 'क्लाइंट चुनने पर ही डेटा डिलीट संभव है' : 'इस क्लाइंट का डेटा डिलीट करें'}
@@ -4429,7 +4564,7 @@ export default function AdminPanel() {
                   <p style={{ marginTop: '12px', fontSize: '14px', color: '#5f6368' }}>मास्टर डेटाबेस से मतदाता लोड हो रहे हैं…</p>
                 </div>
               ) : visibleVoters.length ? (
-                <div className="table-scroll" style={{ border: '1px solid #e4eae5', borderRadius: '10px', overflow: 'hidden' }}>
+                <div className="table-scroll" style={{ border: '1px solid #e4eae5', borderRadius: '10px', overflowX: 'auto' }}>
                   <table className="voter-table desk-table" style={{ margin: 0 }}>
                     <thead style={{ background: '#f8faf9' }}>
                       <tr>
@@ -4591,7 +4726,7 @@ export default function AdminPanel() {
                 <p style={{ marginTop: '10px', fontSize: '14px', color: '#5f6368' }}>क्लाइंट खाते लोड हो रहे हैं…</p>
               </div>
             ) : (
-              <div className="table-scroll" style={{ border: '1px solid #e4eae5', borderRadius: '10px', overflow: 'hidden' }}>
+              <div className="table-scroll" style={{ border: '1px solid #e4eae5', borderRadius: '10px', overflowX: 'auto' }}>
                 <table className="voter-table desk-table" style={{ margin: 0 }}>
                   <thead style={{ background: '#f8faf9' }}>
                     <tr>
@@ -4680,13 +4815,15 @@ export default function AdminPanel() {
         {activeView === 'import' && (
           <>
             {/* Top Import Mode Switcher */}
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
               <button
                 type="button"
                 onClick={() => setImportMode('pdf')}
                 style={{
+                  flex: '1 1 240px',
                   display: 'inline-flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: '8px',
                   padding: '10px 18px',
                   borderRadius: '10px',
@@ -4705,8 +4842,10 @@ export default function AdminPanel() {
                 type="button"
                 onClick={() => setImportMode('excel')}
                 style={{
+                  flex: '1 1 240px',
                   display: 'inline-flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: '8px',
                   padding: '10px 18px',
                   borderRadius: '10px',
