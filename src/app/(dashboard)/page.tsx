@@ -171,8 +171,10 @@ export default function DashboardHomePage() {
   const [stats, setStats] = useState<{ totalVoters: number }>({ totalVoters: 0 });
 
   // Filter modules based on user permissions & admin role
+  const isWorker = userInfo.role === 'worker';
   const visibleModules = launcherModules.filter((mod) => {
     if (mod.adminOnly && !isAdmin) return false;
+    if (isWorker && (mod.module === 'accounts' || mod.module === 'admin')) return false;
     if (allowedModules && !allowedModules.includes(mod.module) && !isAdmin) {
       return false;
     }

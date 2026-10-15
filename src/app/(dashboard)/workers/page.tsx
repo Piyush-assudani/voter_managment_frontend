@@ -96,6 +96,7 @@ export default function WorkersPage() {
   const [error, setError] = useState('');
   const [currentOrgId, setCurrentOrgId] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState('');
   const [userOrgName, setUserOrgName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -111,6 +112,7 @@ export default function WorkersPage() {
         }>(token);
         const adminRole = payload?.user?.role === 'admin';
         setIsAdmin(adminRole);
+        setUserRole(payload?.user?.role || 'worker');
         if (payload?.user?.organizationName) {
           setUserOrgName(payload.user.organizationName);
         }
@@ -333,6 +335,8 @@ export default function WorkersPage() {
     return found ? found.name : workers[0]?.organizationName || 'चुना गया क्लाइंट';
   }, [clients, currentOrgId, workers]);
 
+  const canManageWorkers = isAdmin || userRole === 'tenant_admin';
+
   return (
     <div className="work-page" style={{ maxWidth: '1280px', margin: '0 auto', paddingBottom: '40px' }}>
       {/* PAGE HEADER */}
@@ -373,13 +377,15 @@ export default function WorkersPage() {
           <button className="button-secondary" type="button" onClick={() => void load()} disabled={loading}>
             {loading ? <LoaderCircle size={15} className="spin" /> : <RefreshCw size={15} />} रिफ्रेश
           </button>
-          <Link
-            className="button-primary"
-            href="/accounts"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-          >
-            <UserPlus size={15} /> नया कार्यकर्ता / खाता
-          </Link>
+          {canManageWorkers && (
+            <Link
+              className="button-primary"
+              href="/accounts"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <UserPlus size={15} /> नया कार्यकर्ता / खाता
+            </Link>
+          )}
         </div>
       </div>
 
@@ -627,13 +633,15 @@ export default function WorkersPage() {
               ? `"${searchQuery}" से मेल खाता कोई कार्यकर्ता नहीं मिला। फ़िल्टर साफ़ करके पुनः प्रयास करें।`
               : `${activeClientName} के तहत अभी तक कोई फील्ड कार्यकर्ता खाता नहीं बनाया गया है।`}
           </p>
-          <Link
-            className="button-primary"
-            href="/accounts"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-          >
-            <UserPlus size={15} /> नया कार्यकर्ता बनाएं
-          </Link>
+          {canManageWorkers && (
+            <Link
+              className="button-primary"
+              href="/accounts"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <UserPlus size={15} /> नया कार्यकर्ता बनाएं
+            </Link>
+          )}
         </div>
       ) : (!currentOrgId || currentOrgId === 'all') && workersByClient.length > 1 ? (
         /* MULTI-CLIENT GROUPED VIEW (WHEN ALL CLIENTS IS ACTIVE) */
@@ -710,6 +718,7 @@ export default function WorkersPage() {
                     worker={worker}
                     loadingWorkerId={loadingWorkerId}
                     showAssigned={showAssigned}
+                    canManageWorkers={canManageWorkers}
                   />
                 ))}
               </div>
@@ -731,6 +740,7 @@ export default function WorkersPage() {
               worker={worker}
               loadingWorkerId={loadingWorkerId}
               showAssigned={showAssigned}
+              canManageWorkers={canManageWorkers}
             />
           ))}
         </div>
@@ -1039,10 +1049,12 @@ function WorkerCard({
   worker,
   loadingWorkerId,
   showAssigned,
+  canManageWorkers,
 }: {
   worker: Worker;
   loadingWorkerId: number | string | null;
   showAssigned: (worker: Worker) => void;
+  canManageWorkers: boolean;
 }) {
   const cleanPhone = (worker.phone || '').replace(/\D/g, '');
   const hasValidPhone = cleanPhone.length >= 10 && cleanPhone !== '0000000000';
@@ -1307,7 +1319,7 @@ function WorkerCard({
               <span>चैट</span>
             </a>
           </div>
-        ) : (
+        ) : canManageWorkers ? (
           <Link
             href="/accounts"
             title="फ़ोन नंबर जोड़ने के लिए खाता संपादित करें"
@@ -1321,6 +1333,17 @@ function WorkerCard({
           >
             + फोन जोड़ें
           </Link>
+        ) : (
+          <span
+            style={{
+              fontSize: '11px',
+              color: '#94a3b8',
+              padding: '6px 8px',
+              flexShrink: 0,
+            }}
+          >
+            फ़ोन नहीं
+          </span>
         )}
       </div>
     </article>

@@ -165,12 +165,16 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   };
 
   useEffect(() => {
+    if (userInfo.role === 'worker' && (pathname === '/accounts' || pathname.startsWith('/admin'))) {
+      router.replace('/');
+      return;
+    }
     if (!allowedModules) return;
     const requiredModule = pageModules.get(pathname);
     if (requiredModule && requiredModule !== 'home' && !allowedModules.includes(requiredModule)) {
       router.replace('/');
     }
-  }, [allowedModules, pathname, router]);
+  }, [allowedModules, userInfo.role, pathname, router]);
 
   useEffect(() => {
     let active = true;

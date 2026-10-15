@@ -74,6 +74,8 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
     embeddedOrganizationId || (typeof window !== 'undefined' ? window.localStorage.getItem('selectedClientOrgId') || '' : '')
   );
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  const [userRole, setUserRole] = useState<string>('');
+  const [clientAllowedModules, setClientAllowedModules] = useState<string[]>([]);
   const [editing, setEditing] = useState<Account | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'create' | 'edit' | 'permissions' | 'password' | null>(null);
@@ -90,6 +92,12 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
     : accounts;
 
   const load = useCallback(async () => {
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
+    const payload = decodeJwtPayload<{ user?: { role?: string } }>(token);
+    if (payload?.user?.role === 'worker') {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -122,10 +130,19 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
     void Promise.resolve().then(async () => {
       try {
         const token = window.localStorage.getItem('token');
-        const payload = decodeJwtPayload<{ user?: { role?: string } }>(token);
-        const platformAdmin = payload?.user?.role === 'admin';
+        const payload = decodeJwtPayload<{ user?: { role?: string; modules?: string[] } }>(token);
+        const role = payload?.user?.role || '';
+        setUserRole(role);
+        const platformAdmin = role === 'admin';
         setIsPlatformAdmin(platformAdmin);
-        if (!platformAdmin) return;
+        if (!platformAdmin) {
+          if (Array.isArray(payload?.user?.modules)) {
+            setClientAllowedModules(
+              payload.user.modules.filter((m): m is string => typeof m === 'string' && m !== 'accounts')
+            );
+          }
+          return;
+        }
         const response = await apiFetch('/admin/organizations', { cache: 'no-store' });
         if (!response.ok) throw new Error(await getApiError(response, 'क्लाइंट खाते लोड नहीं हुए।'));
         const rawTenants = await response.json() as Organization[];
@@ -141,7 +158,14 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
 
   const startCreate = () => {
     setEditing(null);
-    setForm(newForm());
+    const available = isPlatformAdmin
+      ? (organizations.find((t) => t.id === organizationId)?.modules || ['voters', 'poll-desk'])
+      : clientAllowedModules;
+    const initialMods = ['voters', 'poll-desk'].filter((m) => available.includes(m));
+    setForm({
+      ...newForm(),
+      modules: initialMods.length > 0 ? initialMods : available.slice(0, 2),
+    });
     setFormOpen(true);
     setDialogMode('create');
     setError('');
@@ -199,7 +223,7 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
             scopeValue: form.scopeValue,
             modules: isPlatformAdmin
               ? form.modules.filter((module) => organizations.find((tenant) => tenant.id === organizationId)?.modules.includes(module))
-              : form.modules,
+              : form.modules.filter((module) => clientAllowedModules.includes(module)),
             ...(isPlatformAdmin ? { organizationId } : {}),
           }
         : dialogMode === 'password'
@@ -211,7 +235,7 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
                 scopeValue: form.scopeValue,
                 modules: isPlatformAdmin
                   ? form.modules.filter((module) => organizations.find((tenant) => tenant.id === organizationId)?.modules.includes(module))
-                  : form.modules,
+                  : form.modules.filter((module) => clientAllowedModules.includes(module)),
               }
             : {
                 name: form.name,
@@ -221,7 +245,7 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
                 scopeValue: form.scopeValue,
                 modules: isPlatformAdmin
                   ? form.modules.filter((module) => organizations.find((tenant) => tenant.id === organizationId)?.modules.includes(module))
-                  : form.modules,
+                  : form.modules.filter((module) => clientAllowedModules.includes(module)),
                 ...(form.password ? { password: form.password } : {}),
               };
       const response = await apiFetch(path, {
@@ -263,6 +287,56 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
       setError(disableError instanceof Error ? disableError.message : 'खाता बंद नहीं हुआ।');
     }
   };
+
+  if (userRole === 'worker') {
+    return (
+      <div className="work-page" style={{ padding: '60px 20px', maxWidth: '640px', margin: '0 auto', textAlign: 'center' }}>
+        <div style={{
+          background: '#ffffff',
+          borderRadius: '20px',
+          border: '1px solid #fee2e2',
+          padding: '40px 32px',
+          boxShadow: '0 10px 25px -5px rgba(239, 68, 68, 0.08), 0 8px 10px -6px rgba(239, 68, 68, 0.04)',
+        }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            background: '#fef2f2',
+            color: '#dc2626',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '18px',
+          }}>
+            <ShieldCheck size={34} />
+          </div>
+          <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: '0 0 10px' }}>
+            पहुंच सीमित (Access Restricted)
+          </h2>
+          <p style={{ fontSize: '14.5px', color: '#64748b', lineHeight: '1.6', margin: '0 0 24px' }}>
+            केवल सुपर एडमिन और अधिकृत क्लाइंट (अभ्यर्थी) ही टीम व कार्यकर्ता खाते बना या प्रबंधित कर सकते हैं। आप अपने सौंपे गए दायित्व और मॉड्यूल के अनुसार कार्य कर सकते हैं।
+          </p>
+          <a
+            href="/"
+            className="button-primary"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '11px 24px',
+              borderRadius: '10px',
+              textDecoration: 'none',
+              fontWeight: 700,
+              fontSize: '14px',
+            }}
+          >
+            ← मुख्य मेन्यू (Dashboard) पर वापस जाएं
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={embeddedOrganizationId ? "embedded-manager" : "work-page"}>
@@ -472,7 +546,17 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
         <div className="feature-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setFormOpen(false); }}>
           <section className="feature-modal" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
             <div className="feature-modal-heading"><div><span className="eyebrow-label"><ShieldCheck size={13} /> ACCESS SETUP</span><h2 id="account-modal-title">{dialogMode === 'permissions' ? 'मॉड्यूल अनुमतियाँ' : dialogMode === 'password' ? 'पासवर्ड बदलें' : editing ? 'खाता संपादित करें' : 'नया खाता'}</h2></div><button className="icon-button" type="button" aria-label="बंद करें" onClick={() => { setFormOpen(false); setDialogMode(null); }}><X size={18} /></button></div>
-            <AccountForm form={form} setForm={setForm} mode={dialogMode || 'create'} onSubmit={save} onCancel={() => { setFormOpen(false); setDialogMode(null); }} saving={saving} error={error} toggleModule={toggleModule} allowedModules={isPlatformAdmin ? organizations.find((tenant) => tenant.id === organizationId)?.modules || [] : undefined} />
+            <AccountForm
+              form={form}
+              setForm={setForm}
+              mode={dialogMode || 'create'}
+              onSubmit={save}
+              onCancel={() => { setFormOpen(false); setDialogMode(null); }}
+              saving={saving}
+              error={error}
+              toggleModule={toggleModule}
+              allowedModules={isPlatformAdmin ? (organizations.find((tenant) => tenant.id === organizationId)?.modules || []) : clientAllowedModules}
+            />
           </section>
         </div>
       )}
@@ -551,10 +635,37 @@ function AccountForm({
             modules: preset.modules.filter((module) => !allowedModules || allowedModules.includes(module)),
           }))}>{preset.label}</button>)}
         </div>}
-        <fieldset className="feature-module-fieldset"><legend>अनुमत मॉड्यूल</legend><div className="feature-module-grid">{accessModules.map(([module, label]) => {
-          const enabledForOrganization = !allowedModules || allowedModules.includes(module);
-          return <label key={module}><input type="checkbox" checked={enabledForOrganization && form.modules.includes(module)} disabled={!enabledForOrganization} onChange={() => toggleModule(module)} /> {label}</label>;
-        })}</div></fieldset>
+        <fieldset className="feature-module-fieldset">
+          <legend>अनुमत मॉड्यूल {allowedModules && allowedModules.length > 0 ? `(${allowedModules.length} अधिकृत)` : ''}</legend>
+          <div className="feature-module-grid">
+            {accessModules.map(([module, label]) => {
+              const enabledForOrganization = !allowedModules || allowedModules.length === 0 || allowedModules.includes(module);
+              return (
+                <label
+                  key={module}
+                  style={{
+                    opacity: enabledForOrganization ? 1 : 0.45,
+                    cursor: enabledForOrganization ? 'pointer' : 'not-allowed',
+                  }}
+                  title={!enabledForOrganization ? 'यह मॉड्यूल इस क्लाइंट के लिए सक्रिय नहीं है' : ''}
+                >
+                  <input
+                    type="checkbox"
+                    checked={enabledForOrganization && form.modules.includes(module)}
+                    disabled={!enabledForOrganization}
+                    onChange={() => toggleModule(module)}
+                  />
+                  <span>{label}</span>
+                  {!enabledForOrganization && (
+                    <small style={{ fontSize: '10.5px', color: '#dc2626', fontWeight: 600, marginLeft: '4px' }}>
+                      (अनुमति नहीं)
+                    </small>
+                  )}
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
       </>}
       {error && <div className="inline-notice error-notice" role="alert">{error}</div>}
       <div className="feature-modal-actions"><button className="button-quiet" type="button" onClick={onCancel}>रद्द करें</button><button className="button-primary" type="submit" disabled={saving}>{saving ? <LoaderCircle size={15} className="spin" /> : null}{mode === 'permissions' ? 'अनुमतियाँ सेव करें' : mode === 'password' ? 'पासवर्ड अपडेट करें' : mode === 'edit' ? 'बदलाव सेव करें' : 'खाता बनाएँ'}</button></div>
