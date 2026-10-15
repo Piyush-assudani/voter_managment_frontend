@@ -2,7 +2,7 @@
 
 import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  AlertCircle, AlertTriangle, Building2, Check, CheckCheck, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Copy, Database, Download, Eye, EyeOff, FileSpreadsheet,
+  AlertCircle, AlertTriangle, Building2, Check, CheckCheck, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Copy, Database, Download, Edit3, Eye, EyeOff, FileSpreadsheet,
   FileText, Info, KeyRound, Layers, LoaderCircle, MapPin, MessageCircle, MessageSquareCode, Phone, Plus, RefreshCw, Search, Send,
   Settings2, Smartphone, Sparkles, Tag, Ticket, Trash2, Upload, User, UserPlus, UsersRound, X,
 } from 'lucide-react';
@@ -793,6 +793,12 @@ export default function AdminPanel() {
   const [pdfBooth, setPdfBooth] = useState('');
   const [pdfDescription, setPdfDescription] = useState('');
 
+  // Ward Rename / Edit Modal states
+  const [showRenameWardModal, setShowRenameWardModal] = useState(false);
+  const [renameWardOld, setRenameWardOld] = useState('');
+  const [renameWardNew, setRenameWardNew] = useState('');
+  const [renamingWard, setRenamingWard] = useState(false);
+
   // UI enhancement states for records & import
   const [recordsSearchQuery, setRecordsSearchQuery] = useState('');
   const [importMode, setImportMode] = useState<'pdf' | 'excel'>('pdf');
@@ -1470,6 +1476,63 @@ export default function AdminPanel() {
       setNotice('');
     } finally {
       setImporting(false);
+    }
+  };
+
+  const handleRenameWard = async (e?: FormEvent) => {
+    if (e) e.preventDefault();
+    if (!organizationId) {
+      setError('कृपया पहले क्लाइंट चुनें।');
+      return;
+    }
+    if (!renameWardOld.trim() || !renameWardNew.trim()) {
+      setError('कृपया वर्तमान और नया वार्ड नाम दोनों चुनें/दर्ज करें।');
+      return;
+    }
+    if (renameWardOld.trim() === renameWardNew.trim()) {
+      setError('पुराना और नया वार्ड नाम समान हैं।');
+      return;
+    }
+
+    setRenamingWard(true);
+    setError('');
+    try {
+      const response = await apiFetch('/admin/wards/rename', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId,
+          oldWard: renameWardOld.trim(),
+          newWard: renameWardNew.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await getApiError(response, 'वार्ड का नाम अपडेट नहीं हो सका।'));
+      }
+
+      const data = await response.json() as { message?: string, totalModifiedVoters?: number };
+      setNotice(data.message || `वार्ड "${renameWardOld}" का नाम बदलकर "${renameWardNew}" कर दिया गया!`);
+      
+      const oldW = renameWardOld.trim();
+      const newW = renameWardNew.trim();
+      
+      if (wardFilter === oldW) setWardFilter(newW);
+      if (pdfWard === oldW) setPdfWard(newW);
+      if (excelWard === oldW) setExcelWard(newW);
+
+      setShowRenameWardModal(false);
+      setRenameWardOld('');
+      setRenameWardNew('');
+
+      await Promise.all([
+        loadOrganizations(),
+        loadVoters(1, newW),
+      ]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'वार्ड का नाम अपडेट करने में विफलता।');
+    } finally {
+      setRenamingWard(false);
     }
   };
 
@@ -4624,8 +4687,8 @@ export default function AdminPanel() {
                   </select>
                 </div>
 
-                {/* Ward Select */}
-                <div style={{ flex: '1 1 130px' }}>
+                {/* Ward Select with Quick Edit Button */}
+                <div style={{ flex: '1 1 180px', display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <select 
                     aria-label="वोटर डेटा वार्ड" 
                     value={wardFilter} 
@@ -4634,11 +4697,24 @@ export default function AdminPanel() {
                       setWardFilter(newWard);
                       void loadVoters(1, newWard);
                     }}
-                    style={{ height: '40px', fontSize: '13px', borderRadius: '8px', border: '1px solid #c0d3c5', background: '#ffffff', width: '100%' }}
+                    style={{ height: '40px', fontSize: '13px', borderRadius: '8px', border: '1px solid #c0d3c5', background: '#ffffff', flex: 1 }}
                   >
                     <option value="">📍 सभी वार्ड</option>
                     {wards.map((ward) => <option value={ward} key={ward}>वार्ड {ward}</option>)}
                   </select>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    style={{ height: '40px', padding: '0 10px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', color: '#059669', borderColor: '#a7f3d0' }}
+                    onClick={() => {
+                      setRenameWardOld(wardFilter || wards[0] || '');
+                      setRenameWardNew(wardFilter || wards[0] || '');
+                      setShowRenameWardModal(true);
+                    }}
+                    title="वार्ड नाम बदलें / एडिट करें"
+                  >
+                    <Edit3 size={14} /> एडिट
+                  </button>
                 </div>
 
                 {/* Bulk Delete Button */}
@@ -5092,7 +5168,7 @@ export default function AdminPanel() {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '13px', fontWeight: '500', color: '#1a2620' }}>
-                        वार्ड (Ward) <span style={{ fontSize: '11px', color: '#7d8981' }}>(चुनें या नया बनाएं - मल्टी-फाइल में वैकल्पिक)</span>
+                        वार्ड (Ward) <span style={{ fontSize: '11px', color: '#7d8981' }}>(एकल या कॉमा से क्रमबद्ध उदा. 17, 18)</span>
                       </label>
                       {!pdfIsNewWard ? (
                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -5102,6 +5178,10 @@ export default function AdminPanel() {
                               if (e.target.value === '__NEW__') {
                                 setPdfIsNewWard(true);
                                 setPdfWard('');
+                              } else if (e.target.value === '__RENAME__') {
+                                setRenameWardOld(pdfWard || availableWards[0] || '');
+                                setRenameWardNew(pdfWard || availableWards[0] || '');
+                                setShowRenameWardModal(true);
                               } else {
                                 setPdfWard(e.target.value);
                               }
@@ -5112,7 +5192,8 @@ export default function AdminPanel() {
                             {availableWards.map((w) => (
                               <option key={w} value={w}>वार्ड {w}</option>
                             ))}
-                            <option value="__NEW__">+ नया वार्ड बनाएं...</option>
+                            <option value="__NEW__">+ नया वार्ड या मल्टी-वार्ड (उदा. 17, 18)...</option>
+                            <option value="__RENAME__">✏️ किसी वार्ड का नाम बदलें / एडिट करें...</option>
                           </select>
                           <button
                             type="button"
@@ -5126,12 +5207,25 @@ export default function AdminPanel() {
                           >
                             <Plus size={14} /> नया
                           </button>
+                          <button
+                            type="button"
+                            className="button-secondary"
+                            style={{ padding: '0 10px', fontSize: '12px', whiteSpace: 'nowrap', color: '#059669', borderColor: '#a7f3d0' }}
+                            onClick={() => {
+                              setRenameWardOld(pdfWard || availableWards[0] || '');
+                              setRenameWardNew(pdfWard || availableWards[0] || '');
+                              setShowRenameWardModal(true);
+                            }}
+                            title="वार्ड नाम एडिट करें"
+                          >
+                            <Edit3 size={13} /> एडिट
+                          </button>
                         </div>
                       ) : (
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <input
                             type="text"
-                            placeholder="नया वार्ड दर्ज करें (उदा. 14 या वार्ड 14)"
+                            placeholder="वार्ड दर्ज करें (उदा. 17, 18 मल्टी-फाइल हेतु)"
                             value={pdfCustomWard}
                             onChange={(e) => setPdfCustomWard(e.target.value)}
                             autoFocus
@@ -5147,6 +5241,20 @@ export default function AdminPanel() {
                             }}
                           >
                             सूची से
+                          </button>
+                          <button
+                            type="button"
+                            className="button-secondary"
+                            style={{ padding: '0 10px', fontSize: '12px', whiteSpace: 'nowrap', color: '#059669', borderColor: '#a7f3d0' }}
+                            onClick={() => {
+                              const firstW = pdfCustomWard.split(',')[0]?.trim() || availableWards[0] || '';
+                              setRenameWardOld(firstW);
+                              setRenameWardNew(firstW);
+                              setShowRenameWardModal(true);
+                            }}
+                            title="वार्ड नाम एडिट करें"
+                          >
+                            <Edit3 size={13} /> एडिट
                           </button>
                         </div>
                       )}
@@ -5262,7 +5370,16 @@ export default function AdminPanel() {
 
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '8px', maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
                         {selectedPdfFiles.map((f, idx) => {
+                          const customWards = (pdfIsNewWard ? pdfCustomWard : pdfWard)
+                            .split(',')
+                            .map((w) => w.trim())
+                            .filter(Boolean);
                           const detectedWard = detectWardFromFilename(f.name);
+                          const hasSequential = customWards.length > idx;
+                          const assignedWard = hasSequential 
+                            ? customWards[idx] 
+                            : (customWards.length === 1 && selectedPdfFiles.length === 1 ? customWards[0] : detectedWard);
+
                           return (
                             <div
                               key={`${f.name}-${idx}`}
@@ -5285,9 +5402,13 @@ export default function AdminPanel() {
                                   </div>
                                   <div style={{ fontSize: '10px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <span>{(f.size / (1024 * 1024)).toFixed(1)} MB</span>
-                                    {detectedWard ? (
+                                    {hasSequential ? (
+                                      <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '1px 7px', borderRadius: '4px', fontWeight: '700' }}>
+                                        📍 वार्ड {assignedWard} (फाइल #{idx + 1})
+                                      </span>
+                                    ) : assignedWard ? (
                                       <span style={{ background: '#dcfce7', color: '#15803d', padding: '1px 5px', borderRadius: '4px', fontWeight: '600' }}>
-                                        वार्ड {detectedWard}
+                                        वार्ड {assignedWard}
                                       </span>
                                     ) : null}
                                   </div>
@@ -5321,11 +5442,29 @@ export default function AdminPanel() {
                         })}
                       </div>
 
-                      {selectedPdfFiles.length > 1 && (
-                        <div style={{ marginTop: '10px', fontSize: '11px', color: '#047857', background: '#ecfdf5', padding: '6px 10px', borderRadius: '6px' }}>
-                          💡 <strong>मल्टी-फाइल ऑटो-डिटेक्ट:</strong> प्रत्येक फाइल का वार्ड उसके नाम (उदा. &apos;Ward 5.pdf&apos;) से स्वतः ले लिया जाएगा यदि ऊपर वार्ड का फील्ड खाली छोड़ा गया है।
-                        </div>
-                      )}
+                      {(() => {
+                        const customWards = (pdfIsNewWard ? pdfCustomWard : pdfWard)
+                          .split(',')
+                          .map((w) => w.trim())
+                          .filter(Boolean);
+                        if (customWards.length > 1 && selectedPdfFiles.length > 0) {
+                          return (
+                            <div style={{ marginTop: '10px', fontSize: '12px', color: '#1e40af', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '8px 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <Sparkles size={15} style={{ color: '#2563eb', flexShrink: 0 }} />
+                              <span>
+                                <strong>क्रमबद्ध वार्ड असाइनमेंट (Sequential Multi-Ward):</strong> पहली फाइल ➔ <strong>वार्ड {customWards[0]}</strong>, दूसरी फाइल ➔ <strong>वार्ड {customWards[1] || '...'}</strong>{customWards.length > 2 ? `, तीसरी फाइल ➔ वार्ड ${customWards[2]}` : ''} में जाएगी।
+                              </span>
+                            </div>
+                          );
+                        } else if (selectedPdfFiles.length > 1) {
+                          return (
+                            <div style={{ marginTop: '10px', fontSize: '11px', color: '#047857', background: '#ecfdf5', padding: '6px 10px', borderRadius: '6px' }}>
+                              💡 <strong>मल्टी-फाइल ऑटो-डिटेक्ट:</strong> आप ऊपर कॉमा लगाकर क्रमबद्ध वार्ड दे सकते हैं (उदा. <strong>17, 18</strong>), या खाली छोड़ने पर फाइल नाम से स्वतः वार्ड ले लिया जाएगा।
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   )}
 
@@ -6067,6 +6206,144 @@ export default function AdminPanel() {
                       {saving ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />} सेव करें
                     </button>
                   </div>
+                </div>
+              </form>
+            </section>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* WARD RENAME / EDIT MODAL                                          */}
+        {/* ================================================================= */}
+        {showRenameWardModal && (
+          <div
+            className="feature-modal-backdrop"
+            role="presentation"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget && !renamingWard) setShowRenameWardModal(false);
+            }}
+          >
+            <section
+              className="form-modal"
+              role="dialog"
+              aria-modal="true"
+              style={{
+                maxWidth: '480px',
+                width: '95%',
+                borderRadius: '16px',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+                padding: '24px',
+              }}
+            >
+              <div className="modal-heading" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '10px',
+                      background: '#ecfdf5',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#059669',
+                    }}
+                  >
+                    <Edit3 size={20} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#059669', letterSpacing: '0.05em' }}>
+                      वार्ड प्रबंधन · WARD EDITOR
+                    </span>
+                    <h2 style={{ fontSize: '18px', color: '#1a2620', margin: '2px 0 0' }}>वार्ड का नाम बदलें / एडिट करें</h2>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="close-button"
+                  onClick={() => setShowRenameWardModal(false)}
+                  disabled={renamingWard}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleRenameWard} style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#334155', display: 'block', marginBottom: '6px' }}>
+                    संबंधित क्लाइंट (संगठन)
+                  </label>
+                  <select
+                    value={organizationId}
+                    onChange={(e) => setOrganizationId(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                    required
+                  >
+                    <option value="">क्लाइंट चुनें</option>
+                    {organizations.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#334155', display: 'block', marginBottom: '6px' }}>
+                    वर्तमान वार्ड का नाम (Old Ward)
+                  </label>
+                  <select
+                    value={renameWardOld}
+                    onChange={(e) => {
+                      setRenameWardOld(e.target.value);
+                      if (!renameWardNew) setRenameWardNew(e.target.value);
+                    }}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                    required
+                  >
+                    <option value="">वर्तमान वार्ड चुनें</option>
+                    {availableWards.map((w) => (
+                      <option key={w} value={w}>वार्ड {w}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#334155', display: 'block', marginBottom: '6px' }}>
+                    नया वार्ड नाम (New Ward Name)
+                  </label>
+                  <input
+                    type="text"
+                    value={renameWardNew}
+                    onChange={(e) => setRenameWardNew(e.target.value)}
+                    placeholder="नया वार्ड नाम दर्ज करें (उदा. 16 या 17A)"
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                    required
+                    autoFocus
+                  />
+                  <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                    💡 यह नाम बदलने से इस वार्ड के सभी मतदाताओं और पर्ची सेटिंग्स में नया नाम स्वतः लागू हो जाएगा।
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => setShowRenameWardModal(false)}
+                    disabled={renamingWard}
+                    style={{ padding: '8px 16px', fontSize: '13px' }}
+                  >
+                    रद्द करें
+                  </button>
+                  <button
+                    type="submit"
+                    className="button-primary"
+                    disabled={renamingWard || !renameWardOld.trim() || !renameWardNew.trim()}
+                    style={{ padding: '8px 20px', fontSize: '13px', fontWeight: '600' }}
+                  >
+                    {renamingWard ? <LoaderCircle size={15} className="spin" /> : <CheckCircle2 size={15} />}
+                    {' '}वार्ड नाम अपडेट करें
+                  </button>
                 </div>
               </form>
             </section>
