@@ -349,6 +349,18 @@ export default function VoterDirectoryPage() {
     }
   }, []);
 
+  const isInitialSearchMount = useRef(true);
+  useEffect(() => {
+    if (isInitialSearchMount.current) {
+      isInitialSearchMount.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      void loadVoters(searchQuery.trim(), houseQuery.trim(), 1, wardFilter, '', relativeNameQuery.trim());
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchQuery, relativeNameQuery, loadVoters, houseQuery, wardFilter]);
+
   useEffect(() => {
     void Promise.resolve().then(() => loadVoters());
   }, [loadVoters]);

@@ -2942,16 +2942,36 @@ export default function SlipsPage() {
                   </label>
                 </div>
 
-                <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                  EVM बैनर अपील (EVM Banner Appeal Text):
-                  <input
-                    type="text"
-                    placeholder="वार्ड नंबर 82 से भाजपा प्रत्याशी प्रसन्न चंद मेहता को अपना अमूल्य वोट देकर भारी मतों से विजय बनाएं।"
-                    value={editingConfig.appealText || ''}
-                    onChange={(e) => setEditingConfig({ ...editingConfig, appealText: e.target.value })}
-                    style={{ marginTop: '4px' }}
-                  />
-                </label>
+                {/* EVM Ribbon Toggle */}
+                <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', margin: '4px 0' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
+                    <input
+                      type="checkbox"
+                      checked={!editingConfig.hideEvmRibbon}
+                      onChange={(e) => setEditingConfig({ ...editingConfig, hideEvmRibbon: !e.target.checked })}
+                      style={{ width: '18px', height: '18px', accentColor: '#ea580c', cursor: 'pointer' }}
+                    />
+                    <span>ईवीएम / मतपत्र क्रम संख्या पट्टी दिखाएं (Show EVM Ribbon)</span>
+                  </label>
+                  <p style={{ margin: '4px 0 0 28px', fontSize: '11.5px', color: '#64748b', lineHeight: 1.4 }}>
+                    {editingConfig.hideEvmRibbon 
+                      ? 'पट्टी छिपी हुई है — ऊपर का प्रत्याशी फ़ोटो, चुनाव चिन्ह व नाम सेक्शन नीचे तक विस्तृत (extend) रहेगा।'
+                      : 'पट्टी दिख रही है — हटाने पर ऊपर का सेक्शन नीचे तक बड़ा हो जाएगा।'}
+                  </p>
+                </div>
+
+                {!editingConfig.hideEvmRibbon && (
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                    EVM बैनर अपील (EVM Banner Appeal Text):
+                    <input
+                      type="text"
+                      placeholder="वार्ड नंबर 82 से भाजपा प्रत्याशी प्रसन्न चंद मेहता को अपना अमूल्य वोट देकर भारी मतों से विजय बनाएं।"
+                      value={editingConfig.appealText || ''}
+                      onChange={(e) => setEditingConfig({ ...editingConfig, appealText: e.target.value })}
+                      style={{ marginTop: '4px' }}
+                    />
+                  </label>
+                )}
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '12px' }}>
                   <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>

@@ -6639,6 +6639,21 @@ export default function AdminPanel() {
                         </label>
                       </div>
 
+                      <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', margin: '4px 0' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 700, color: '#1e293b' }}>
+                          <input
+                            type="checkbox"
+                            checked={!editingTenant.slipConfig?.hideEvmRibbon}
+                            onChange={(e) => setEditingTenant({
+                              ...editingTenant,
+                              slipConfig: { ...(editingTenant.slipConfig || defaultSlipConfig), hideEvmRibbon: !e.target.checked }
+                            })}
+                            style={{ width: '16px', height: '16px', accentColor: '#ea580c', cursor: 'pointer' }}
+                          />
+                          <span>ईवीएम / मतपत्र क्रम संख्या पट्टी दिखाएं (Show EVM Ribbon)</span>
+                        </label>
+                      </div>
+
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                         <label style={{ fontSize: '12px', fontWeight: 600 }}>
                           उपशीर्षक / क्षेत्र

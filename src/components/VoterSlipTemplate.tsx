@@ -17,6 +17,7 @@ export interface SlipConfig {
   wardPollingStations?: Record<string, string>;
   useHeaderGraphic?: boolean;
   headerGraphicImage?: string;
+  hideEvmRibbon?: boolean;
 }
 
 export const defaultSlipConfig: SlipConfig = {
@@ -35,6 +36,7 @@ export const defaultSlipConfig: SlipConfig = {
   wardPollingStations: {},
   useHeaderGraphic: false,
   headerGraphicImage: '',
+  hideEvmRibbon: false,
 };
 
 
@@ -202,6 +204,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
   onRemoveImage,
 }) => {
   const merged: SlipConfig = { ...defaultSlipConfig, ...config };
+  const isRibbonHidden = Boolean(merged.hideEvmRibbon);
   const symbolFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const candidateFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const bannerFileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -590,99 +593,463 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             {/* Left: Party Symbol & Candidate Serial Box (Strictly Upload-Only, Identical Size with Photo Box) */}
             <div
               className="voter-slip-symbol-box"
-            onClick={() => {
-              if (isEditable) symbolFileInputRef.current?.click();
-            }}
-            style={{
-              width: '95px',
-              minWidth: '80px',
-              maxWidth: '100px',
-              height: '124px',
-              minHeight: '120px',
-              maxHeight: '126px',
-              boxSizing: 'border-box',
-              border: isEditable ? '2px dashed #ea580c' : '2px solid #fb923c',
-              borderRadius: '10px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              overflow: 'hidden',
-              background: '#fff',
-              position: 'relative',
-              cursor: isEditable ? 'pointer' : 'default',
-              transition: 'all 0.15s ease',
-              flexShrink: 0,
-            }}
-            title={isEditable ? 'चुनाव चिन्ह फोटो अपलोड करने के लिए क्लिक करें' : undefined}
-          >
-            {/* Top Serial Badge */}
-            <div
-              className="voter-slip-serial-badge"
+              onClick={() => {
+                if (isEditable) symbolFileInputRef.current?.click();
+              }}
               style={{
-                width: '100%',
-                height: '24px',
+                width: isRibbonHidden ? '120px' : '95px',
+                minWidth: isRibbonHidden ? '105px' : '80px',
+                maxWidth: isRibbonHidden ? '135px' : '100px',
+                height: isRibbonHidden ? '180px' : '124px',
+                minHeight: isRibbonHidden ? '175px' : '120px',
+                maxHeight: isRibbonHidden ? '190px' : '126px',
                 boxSizing: 'border-box',
-                background: '#ea580c',
-                color: '#ffffff',
-                fontSize: '11.5px',
-                fontWeight: 800,
-                textAlign: 'center',
-                padding: '0 4px',
-                letterSpacing: 'normal',
+                border: isEditable ? '2px dashed #ea580c' : '2px solid #fb923c',
+                borderRadius: '10px',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: '2px',
+                justifyContent: 'space-between',
+                overflow: 'hidden',
+                background: '#fff',
+                position: 'relative',
+                cursor: isEditable ? 'pointer' : 'default',
+                transition: 'all 0.15s ease',
                 flexShrink: 0,
               }}
+              title={isEditable ? 'चुनाव चिन्ह फोटो अपलोड करने के लिए क्लिक करें' : undefined}
             >
-              <span>क्र. सं.</span>
-              {isEditable ? (
-                <input
-                  type="text"
-                  value={merged.evmNumber || '1'}
-                  onChange={(e) => updateField('evmNumber', e.target.value)}
-                  title="EVM क्रम संख्या बदलें"
-                  className="voter-slip-evm-input"
+              {/* Top Serial Badge */}
+              <div
+                className="voter-slip-serial-badge"
+                style={{
+                  width: '100%',
+                  height: isRibbonHidden ? '26px' : '24px',
+                  boxSizing: 'border-box',
+                  background: '#ea580c',
+                  color: '#ffffff',
+                  fontSize: isRibbonHidden ? '12px' : '11.5px',
+                  fontWeight: 800,
+                  textAlign: 'center',
+                  padding: '0 4px',
+                  letterSpacing: 'normal',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '2px',
+                  flexShrink: 0,
+                }}
+              >
+                <span>क्र. सं.</span>
+                {isEditable ? (
+                  <input
+                    type="text"
+                    value={merged.evmNumber || '1'}
+                    onChange={(e) => updateField('evmNumber', e.target.value)}
+                    title="EVM क्रम संख्या बदलें"
+                    className="voter-slip-evm-input"
+                    style={{
+                      width: '28px',
+                      textAlign: 'center',
+                      background: 'rgba(255, 255, 255, 0.3)',
+                      border: '1px dashed #ffffff',
+                      borderRadius: '3px',
+                      color: '#ffffff',
+                      fontWeight: 900,
+                      fontSize: isRibbonHidden ? '12px' : '11.5px',
+                      padding: '0 2px',
+                      outline: 'none',
+                    }}
+                  />
+                ) : (
+                  <span> {merged.evmNumber || '1'}</span>
+                )}
+              </div>
+
+              {/* Symbol Image & Interactive Upload Prompt (Upload-Only, No Auto Vectors) */}
+              <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isRibbonHidden ? '6px' : '4px', position: 'relative', overflow: 'hidden' }}>
+                {merged.partySymbolImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={merged.partySymbolImage}
+                    alt={merged.partySymbolName || 'Party Symbol'}
+                    style={{ maxWidth: '100%', maxHeight: isRibbonHidden ? '112px' : '66px', width: 'auto', height: 'auto', objectFit: 'contain' }}
+                  />
+                ) : (
+                  /* Upload placeholder only - NO auto-generated vectors! */
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', padding: '2px' }}>
+                    <svg width={isRibbonHidden ? "46" : "34"} height={isRibbonHidden ? "46" : "34"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                    <span style={{ fontSize: isRibbonHidden ? '11px' : '10px', fontWeight: 700, color: '#ea580c', marginTop: '2px', lineHeight: 1.1 }}>चिन्ह फोटो</span>
+                    {isEditable && (
+                      <span style={{ fontSize: isRibbonHidden ? '9.5px' : '8.5px', color: '#64748b', marginTop: '1px' }}>अपलोड करें</span>
+                    )}
+                  </div>
+                )}
+
+                {isEditable && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'rgba(15, 23, 42, 0.45)',
+                      color: '#ffffff',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0,
+                      transition: 'opacity 0.15s ease',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      borderRadius: '6px',
+                      gap: '2px',
+                    }}
+                    className="photo-overlay-prompt"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                    <span>{merged.partySymbolImage ? 'फोटो बदलें' : 'फोटो अपलोड'}</span>
+                  </div>
+                )}
+
+                {isEditable && merged.partySymbolImage && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onRemoveImage) onRemoveImage('partySymbolImage');
+                      else updateField('partySymbolImage', '');
+                    }}
+                    title="चिन्ह फ़ोटो हटाएं"
+                    style={{
+                      position: 'absolute',
+                      top: '2px',
+                      right: '2px',
+                      background: '#fee2e2',
+                      border: '1px solid #fca5a5',
+                      color: '#dc2626',
+                      borderRadius: '50%',
+                      width: '18px',
+                      height: '18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      zIndex: 10,
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
+              {/* Bottom Symbol Caption (Directly Editable) */}
+              <div
+                className="voter-slip-symbol-caption"
+                style={{
+                  width: '92%',
+                  minHeight: isRibbonHidden ? '30px' : '26px',
+                  height: 'auto',
+                  boxSizing: 'border-box',
+                  marginBottom: '4px',
+                  background: '#eff6ff',
+                  border: isEditable ? '1px dashed #3b82f6' : '1px solid #bfdbfe',
+                  borderRadius: '5px',
+                  color: '#ea580c',
+                  fontSize: isRibbonHidden ? '11.5px' : '10.5px',
+                  fontWeight: 700,
+                  textAlign: 'center',
+                  padding: '2px 4px',
+                  overflow: 'visible',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  lineHeight: 1.25,
+                }}
+              >
+                <InlineText
+                  value={merged.partySymbolName}
+                  fallback="कमल का फूल"
+                  placeholder="चिन्ह नाम"
+                  isEditable={isEditable}
+                  onChange={(v) => updateField('partySymbolName', v)}
+                  title="चुनाव चिन्ह का नाम बदलें (उदा. कमल, हाथ, पतंग, बल्ला)"
                   style={{
-                    width: '28px',
+                    fontSize: isRibbonHidden ? '11.5px' : '10.5px',
+                    fontWeight: 700,
+                    color: '#ea580c',
                     textAlign: 'center',
-                    background: 'rgba(255, 255, 255, 0.3)',
-                    border: '1px dashed #ffffff',
-                    borderRadius: '3px',
-                    color: '#ffffff',
-                    fontWeight: 900,
-                    fontSize: '11.5px',
-                    padding: '0 2px',
-                    outline: 'none',
+                    padding: 0,
+                    margin: 0,
+                    border: 'none',
+                    background: 'transparent',
+                    lineHeight: 1.25,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100%',
                   }}
                 />
+              </div>
+            </div>
+
+            {/* Center: Party Headline & Candidate Name */}
+            <div
+              className="voter-slip-center-column"
+              style={{
+                flex: 1,
+                minHeight: isRibbonHidden ? '180px' : '124px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                textAlign: 'center',
+                padding: '0 8px',
+                minWidth: '150px',
+                overflow: 'visible',
+              }}
+            >
+              {isEditable ? (
+                <>
+                  <div style={{ display: 'flex', gap: '4px', width: '100%', marginBottom: isRibbonHidden ? '4px' : '2px' }}>
+                    <InlineText
+                      value={merged.partyName}
+                      fallback="भारतीय जनता पार्टी (भाजपा) प्रत्याशी"
+                      placeholder="पार्टी का नाम"
+                      isEditable={true}
+                      onChange={(v) => updateField('partyName', v)}
+                      title="पार्टी का नाम बदलें"
+                      className="voter-slip-party-headline"
+                      style={{
+                        flex: 1,
+                        color: '#ea580c',
+                        fontSize: isRibbonHidden ? '13px' : '12px',
+                        fontWeight: 700,
+                        lineHeight: 1.25,
+                        textAlign: 'center',
+                        background: 'rgba(255, 237, 213, 0.45)',
+                        border: '1px dashed #ea580c',
+                        padding: '2px 4px',
+                        borderRadius: '4px',
+                      }}
+                    />
+                    <InlineText
+                      value={merged.appealHeadline}
+                      fallback="(1 नंबर पर बटन दबाएं)"
+                      placeholder="अपील"
+                      isEditable={true}
+                      onChange={(v) => updateField('appealHeadline', v)}
+                      title="शीर्षक अपील बदलें"
+                      className="voter-slip-appeal-headline"
+                      style={{
+                        color: '#ea580c',
+                        fontSize: isRibbonHidden ? '12px' : '11px',
+                        fontWeight: 700,
+                        textAlign: 'center',
+                        background: 'rgba(255, 237, 213, 0.35)',
+                        border: '1px dashed #fdba74',
+                        padding: '2px 4px',
+                        borderRadius: '4px',
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', width: '100%', margin: isRibbonHidden ? '4px 0' : '2px 0' }}>
+                    <InlineText
+                      value={merged.candidateName}
+                      fallback="प्रसन्न चंद मेहता"
+                      placeholder="प्रत्याशी नाम (हिंदी)"
+                      isEditable={true}
+                      onChange={(v) => updateField('candidateName', v)}
+                      title="प्रत्याशी का हिंदी नाम बदलें"
+                      className="voter-slip-candidate-name"
+                      style={{
+                        width: '100%',
+                        color: '#1e3a8a',
+                        fontSize: isRibbonHidden ? '23px' : '19px',
+                        fontWeight: 900,
+                        letterSpacing: 'normal',
+                        lineHeight: 1.25,
+                        textAlign: 'center',
+                        background: 'rgba(219, 234, 254, 0.45)',
+                        border: '1.5px dashed #2563eb',
+                        padding: isRibbonHidden ? '4px 6px' : '2px 4px',
+                        borderRadius: '4px',
+                      }}
+                    />
+                    <InlineText
+                      value={merged.candidateNameEn}
+                      fallback="Prasann Chand Mehta"
+                      placeholder="Candidate Name (English)"
+                      isEditable={true}
+                      onChange={(v) => updateField('candidateNameEn', v)}
+                      title="Candidate Name in English"
+                      className="voter-slip-candidate-name-en"
+                      style={{
+                        width: '100%',
+                        color: '#2563eb',
+                        fontSize: isRibbonHidden ? '13.5px' : '12.5px',
+                        fontWeight: 700,
+                        textAlign: 'center',
+                        background: 'rgba(219, 234, 254, 0.35)',
+                        border: '1px dashed #60a5fa',
+                        padding: '2px 4px',
+                        borderRadius: '4px',
+                      }}
+                    />
+                  </div>
+                  <div style={{ width: '100%', marginTop: isRibbonHidden ? '4px' : '0' }}>
+                    <InlineText
+                      value={merged.subTitle}
+                      fallback={`मतदाता पर्ची (Voter Slip) · वार्ड नं. ${ward}`}
+                      placeholder="उपशीर्षक / क्षेत्र"
+                      isEditable={true}
+                      onChange={(v) => updateField('subTitle', v)}
+                      title="उपशीर्षक बदलें"
+                      className="voter-slip-subtitle"
+                      style={{
+                        color: '#475569',
+                        fontSize: isRibbonHidden ? '12px' : '11px',
+                        fontWeight: 600,
+                        textAlign: 'center',
+                        background: 'rgba(241, 245, 249, 0.8)',
+                        border: '1px dashed #94a3b8',
+                        padding: '2px 4px',
+                        borderRadius: '4px',
+                      }}
+                    />
+                  </div>
+                </>
               ) : (
-                <span> {merged.evmNumber || '1'}</span>
+                <>
+                  {/* Line 1: Party Name */}
+                  <div
+                    className="voter-slip-party-headline"
+                    style={{
+                      color: '#ea580c',
+                      fontSize: isRibbonHidden ? '14.5px' : '13px',
+                      fontWeight: 700,
+                      lineHeight: 1.35,
+                      textAlign: 'center',
+                      wordBreak: 'keep-all',
+                      maxWidth: '100%',
+                    }}
+                  >
+                    {merged.partyName || 'भारतीय जनता पार्टी (भाजपा) प्रत्याशी'}
+                  </div>
+
+                  {/* Line 2: Appeal Headline */}
+                  {merged.appealHeadline && (
+                    <div
+                      className="voter-slip-appeal-headline"
+                      style={{
+                        color: '#c2410c',
+                        fontSize: isRibbonHidden ? '13px' : '12px',
+                        fontWeight: 700,
+                        lineHeight: 1.35,
+                        textAlign: 'center',
+                        wordBreak: 'keep-all',
+                        maxWidth: '100%',
+                        marginTop: '2px',
+                      }}
+                    >
+                      {merged.appealHeadline}
+                    </div>
+                  )}
+
+                  {/* Line 3: Candidate Name (Hindi Prominent + English Subtitle) */}
+                  <div
+                    className="voter-slip-candidate-name"
+                    style={{
+                      color: '#1e3a8a',
+                      margin: isRibbonHidden ? '6px 0' : '4px 0',
+                      textAlign: 'center',
+                      wordBreak: 'keep-all',
+                      maxWidth: '100%',
+                    }}
+                  >
+                    <div style={{ fontSize: isRibbonHidden ? '24px' : '20px', fontWeight: 900, letterSpacing: 'normal', color: '#1e3a8a', lineHeight: 1.45, overflow: 'visible' }}>
+                      {merged.candidateName || 'प्रत्याशी नाम'}
+                    </div>
+                    {merged.candidateNameEn && (
+                      <div style={{ fontSize: isRibbonHidden ? '13.5px' : '12.5px', fontWeight: 700, color: '#2563eb', letterSpacing: '0.2px', marginTop: '2px', lineHeight: 1.4 }}>
+                        ({merged.candidateNameEn})
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Line 4: Subtitle */}
+                  <div
+                    className="voter-slip-subtitle"
+                    style={{
+                      color: '#475569',
+                      fontSize: isRibbonHidden ? '12.5px' : '11.5px',
+                      fontWeight: 600,
+                      lineHeight: 1.35,
+                      textAlign: 'center',
+                      wordBreak: 'keep-all',
+                      maxWidth: '100%',
+                      marginTop: '2px',
+                    }}
+                  >
+                    {merged.subTitle || `मतदाता सूचना पर्ची (Voter Slip) · वार्ड नं. ${ward}`}
+                  </div>
+                </>
               )}
             </div>
 
-            {/* Symbol Image & Interactive Upload Prompt (Upload-Only, No Auto Vectors) */}
-            <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', position: 'relative', overflow: 'hidden' }}>
-              {merged.partySymbolImage ? (
+            {/* Right: Candidate Photo Box (Strictly Identical Size with Left Symbol Box) */}
+            <div
+              className="voter-slip-photo-box"
+              onClick={() => {
+                if (isEditable) candidateFileInputRef.current?.click();
+              }}
+              style={{
+                width: isRibbonHidden ? '120px' : '95px',
+                minWidth: isRibbonHidden ? '105px' : '80px',
+                maxWidth: isRibbonHidden ? '135px' : '100px',
+                height: isRibbonHidden ? '180px' : '124px',
+                minHeight: isRibbonHidden ? '175px' : '120px',
+                maxHeight: isRibbonHidden ? '190px' : '126px',
+                boxSizing: 'border-box',
+                border: isEditable ? '2px dashed #ea580c' : '2px solid #fb923c',
+                borderRadius: '10px',
+                overflow: 'hidden',
+                background: '#f8fafc',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                cursor: isEditable ? 'pointer' : 'default',
+                transition: 'all 0.15s ease',
+                flexShrink: 0,
+              }}
+              title={isEditable ? 'प्रत्याशी फोटो अपलोड करने के लिए क्लिक करें' : undefined}
+            >
+              {merged.candidateImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={merged.partySymbolImage}
-                  alt={merged.partySymbolName || 'Party Symbol'}
-                  style={{ maxWidth: '100%', maxHeight: '66px', width: 'auto', height: 'auto', objectFit: 'contain' }}
+                  src={merged.candidateImage}
+                  alt={merged.candidateName || 'Candidate'}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               ) : (
-                /* Upload placeholder only - NO auto-generated vectors! */
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', padding: '2px' }}>
-                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                    <polyline points="21 15 16 10 5 21" />
+                /* Candidate Portrait Placeholder */
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', padding: '4px' }}>
+                  <svg width={isRibbonHidden ? "56" : "44"} height={isRibbonHidden ? "56" : "44"} viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                   </svg>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#ea580c', marginTop: '2px', lineHeight: 1.1 }}>चिन्ह फोटो</span>
+                  <span style={{ fontSize: isRibbonHidden ? '11px' : '10px', fontWeight: 700, color: '#ea580c', marginTop: '2px', lineHeight: 1.1 }}>प्रत्याशी फोटो</span>
                   {isEditable && (
-                    <span style={{ fontSize: '8.5px', color: '#64748b', marginTop: '1px' }}>अपलोड करें</span>
+                    <span style={{ fontSize: isRibbonHidden ? '9.5px' : '8.5px', color: '#64748b', marginTop: '1px' }}>अपलोड करें</span>
                   )}
                 </div>
               )}
@@ -703,7 +1070,6 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                     fontSize: '10px',
                     fontWeight: 700,
                     borderRadius: '6px',
-                    gap: '2px',
                   }}
                   className="photo-overlay-prompt"
                 >
@@ -711,19 +1077,19 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                     <circle cx="12" cy="13" r="4" />
                   </svg>
-                  <span>{merged.partySymbolImage ? 'फोटो बदलें' : 'फोटो अपलोड'}</span>
+                  <span>{merged.candidateImage ? 'फोटो बदलें' : 'फोटो अपलोड'}</span>
                 </div>
               )}
 
-              {isEditable && merged.partySymbolImage && (
+              {isEditable && merged.candidateImage && (
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (onRemoveImage) onRemoveImage('partySymbolImage');
-                    else updateField('partySymbolImage', '');
+                    if (onRemoveImage) onRemoveImage('candidateImage');
+                    else updateField('candidateImage', '');
                   }}
-                  title="चिन्ह फ़ोटो हटाएं"
+                  title="प्रत्याशी फ़ोटो हटाएं"
                   style={{
                     position: 'absolute',
                     top: '2px',
@@ -747,525 +1113,235 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                 </button>
               )}
             </div>
+          </div>
+        )}
 
-            {/* Bottom Symbol Caption (Directly Editable) */}
+        {/* ================= 2. MIDDLE EVM / RIBBON STRIPE ================= */}
+        {!isRibbonHidden ? (
+          <div
+            className="voter-slip-ribbon"
+            style={{
+              background: 'linear-gradient(90deg, #ea580c 0%, #c2410c 14%, #1d4ed8 40%, #1e3a8a 100%)',
+              borderRadius: '10px',
+              padding: '12px 14px',
+              minHeight: '68px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              color: '#ffffff',
+              boxSizing: 'border-box',
+              overflow: 'visible',
+              position: 'relative',
+            }}
+          >
+            {/* Big EVM Number Badge */}
             <div
-              className="voter-slip-symbol-caption"
+              className="voter-slip-ribbon-evm-badge"
               style={{
-                width: '92%',
-                minHeight: '26px',
-                height: 'auto',
-                boxSizing: 'border-box',
-                marginBottom: '4px',
-                background: '#eff6ff',
-                border: isEditable ? '1px dashed #3b82f6' : '1px solid #bfdbfe',
-                borderRadius: '5px',
+                background: '#ffffff',
                 color: '#ea580c',
-                fontSize: '10.5px',
-                fontWeight: 700,
-                textAlign: 'center',
-                padding: '2px 4px',
-                overflow: 'visible',
+                width: '42px',
+                height: '42px',
+                borderRadius: '8px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                fontSize: '22px',
+                fontWeight: 900,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
                 flexShrink: 0,
-                lineHeight: 1.25,
-              }}
-            >
-              <InlineText
-                value={merged.partySymbolName}
-                fallback="कमल का फूल"
-                placeholder="चिन्ह नाम"
-                isEditable={isEditable}
-                onChange={(v) => updateField('partySymbolName', v)}
-                title="चुनाव चिन्ह का नाम बदलें (उदा. कमल, हाथ, पतंग, बल्ला)"
-                style={{
-                  fontSize: '10.5px',
-                  fontWeight: 700,
-                  color: '#ea580c',
-                  textAlign: 'center',
-                  padding: 0,
-                  margin: 0,
-                  border: 'none',
-                  background: 'transparent',
-                  lineHeight: 1.25,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '100%',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Center: Party Headline & Candidate Name */}
-          <div className="voter-slip-center-column" style={{ flex: 1, minHeight: '124px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 8px', minWidth: '150px', overflow: 'visible' }}>
-            {isEditable ? (
-              <>
-                <div style={{ display: 'flex', gap: '4px', width: '100%', marginBottom: '2px' }}>
-                  <InlineText
-                    value={merged.partyName}
-                    fallback="भारतीय जनता पार्टी (भाजपा) प्रत्याशी"
-                    placeholder="पार्टी का नाम"
-                    isEditable={true}
-                    onChange={(v) => updateField('partyName', v)}
-                    title="पार्टी का नाम बदलें"
-                    className="voter-slip-party-headline"
-                    style={{
-                      flex: 1,
-                      color: '#ea580c',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      lineHeight: 1.25,
-                      textAlign: 'center',
-                      background: 'rgba(255, 237, 213, 0.45)',
-                      border: '1px dashed #ea580c',
-                      padding: '2px 4px',
-                      borderRadius: '4px',
-                    }}
-                  />
-                  <InlineText
-                    value={merged.appealHeadline}
-                    fallback="(1 नंबर पर बटन दबाएं)"
-                    placeholder="अपील"
-                    isEditable={true}
-                    onChange={(v) => updateField('appealHeadline', v)}
-                    title="शीर्षक अपील बदलें"
-                    className="voter-slip-appeal-headline"
-                    style={{
-                      color: '#ea580c',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      textAlign: 'center',
-                      background: 'rgba(255, 237, 213, 0.35)',
-                      border: '1px dashed #fdba74',
-                      padding: '2px 4px',
-                      borderRadius: '4px',
-                    }}
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', width: '100%', margin: '2px 0' }}>
-                  <InlineText
-                    value={merged.candidateName}
-                    fallback="प्रसन्न चंद मेहता"
-                    placeholder="प्रत्याशी नाम (हिंदी)"
-                    isEditable={true}
-                    onChange={(v) => updateField('candidateName', v)}
-                    title="प्रत्याशी का हिंदी नाम बदलें"
-                    className="voter-slip-candidate-name"
-                    style={{
-                      width: '100%',
-                      color: '#1e3a8a',
-                      fontSize: '19px',
-                      fontWeight: 900,
-                      letterSpacing: 'normal',
-                      lineHeight: 1.25,
-                      textAlign: 'center',
-                      background: 'rgba(219, 234, 254, 0.45)',
-                      border: '1.5px dashed #2563eb',
-                      padding: '2px 4px',
-                      borderRadius: '4px',
-                    }}
-                  />
-                  <InlineText
-                    value={merged.candidateNameEn}
-                    fallback="Prasann Chand Mehta"
-                    placeholder="Candidate Name (English)"
-                    isEditable={true}
-                    onChange={(v) => updateField('candidateNameEn', v)}
-                    title="Candidate Name in English"
-                    className="voter-slip-candidate-name-en"
-                    style={{
-                      width: '100%',
-                      color: '#2563eb',
-                      fontSize: '12.5px',
-                      fontWeight: 700,
-                      textAlign: 'center',
-                      background: 'rgba(219, 234, 254, 0.35)',
-                      border: '1px dashed #60a5fa',
-                      padding: '2px 4px',
-                      borderRadius: '4px',
-                    }}
-                  />
-                </div>
-                <div style={{ width: '100%' }}>
-                  <InlineText
-                    value={merged.subTitle}
-                    fallback={`मतदाता पर्ची (Voter Slip) · वार्ड नं. ${ward}`}
-                    placeholder="उपशीर्षक / क्षेत्र"
-                    isEditable={true}
-                    onChange={(v) => updateField('subTitle', v)}
-                    title="उपशीर्षक बदलें"
-                    className="voter-slip-subtitle"
-                    style={{
-                      color: '#475569',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      textAlign: 'center',
-                      background: 'rgba(241, 245, 249, 0.8)',
-                      border: '1px dashed #94a3b8',
-                      padding: '2px 4px',
-                      borderRadius: '4px',
-                    }}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Line 1: Party Name */}
-                <div
-                  className="voter-slip-party-headline"
-                  style={{
-                    color: '#ea580c',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    lineHeight: 1.35,
-                    textAlign: 'center',
-                    wordBreak: 'keep-all',
-                    maxWidth: '100%',
-                  }}
-                >
-                  {merged.partyName || 'भारतीय जनता पार्टी (भाजपा) प्रत्याशी'}
-                </div>
-
-                {/* Line 2: Appeal Headline */}
-                {merged.appealHeadline && (
-                  <div
-                    className="voter-slip-appeal-headline"
-                    style={{
-                      color: '#c2410c',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      lineHeight: 1.35,
-                      textAlign: 'center',
-                      wordBreak: 'keep-all',
-                      maxWidth: '100%',
-                      marginTop: '2px',
-                    }}
-                  >
-                    {merged.appealHeadline}
-                  </div>
-                )}
-
-                {/* Line 3: Candidate Name (Hindi Prominent + English Subtitle) */}
-                <div
-                  className="voter-slip-candidate-name"
-                  style={{
-                    color: '#1e3a8a',
-                    margin: '4px 0',
-                    textAlign: 'center',
-                    wordBreak: 'keep-all',
-                    maxWidth: '100%',
-                  }}
-                >
-                  <div style={{ fontSize: '20px', fontWeight: 900, letterSpacing: 'normal', color: '#1e3a8a', lineHeight: 1.45, overflow: 'visible' }}>
-                    {merged.candidateName || 'प्रत्याशी नाम'}
-                  </div>
-                  {merged.candidateNameEn && (
-                    <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#2563eb', letterSpacing: '0.2px', marginTop: '2px', lineHeight: 1.4 }}>
-                      ({merged.candidateNameEn})
-                    </div>
-                  )}
-                </div>
-
-                {/* Line 4: Subtitle */}
-                <div
-                  className="voter-slip-subtitle"
-                  style={{
-                    color: '#475569',
-                    fontSize: '11.5px',
-                    fontWeight: 600,
-                    lineHeight: 1.35,
-                    textAlign: 'center',
-                    wordBreak: 'keep-all',
-                    maxWidth: '100%',
-                    marginTop: '2px',
-                  }}
-                >
-                  {merged.subTitle || `मतदाता सूचना पर्ची (Voter Slip) · वार्ड नं. ${ward}`}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Right: Candidate Photo Box (Strictly Identical Size with Left Symbol Box) */}
-          <div
-            className="voter-slip-photo-box"
-            onClick={() => {
-              if (isEditable) candidateFileInputRef.current?.click();
-            }}
-            style={{
-              width: '95px',
-              minWidth: '80px',
-              maxWidth: '100px',
-              height: '124px',
-              minHeight: '120px',
-              maxHeight: '126px',
-              boxSizing: 'border-box',
-              border: isEditable ? '2px dashed #ea580c' : '2px solid #fb923c',
-              borderRadius: '10px',
-              overflow: 'hidden',
-              background: '#f8fafc',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-              cursor: isEditable ? 'pointer' : 'default',
-              transition: 'all 0.15s ease',
-              flexShrink: 0,
-            }}
-            title={isEditable ? 'प्रत्याशी फोटो अपलोड करने के लिए क्लिक करें' : undefined}
-          >
-            {merged.candidateImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={merged.candidateImage}
-                alt={merged.candidateName || 'Candidate'}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : (
-              /* Candidate Portrait Placeholder */
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', padding: '4px' }}>
-                <svg width="44" height="44" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                </svg>
-                <span style={{ fontSize: '10px', fontWeight: 700, color: '#ea580c', marginTop: '2px', lineHeight: 1.1 }}>प्रत्याशी फोटो</span>
-                {isEditable && (
-                  <span style={{ fontSize: '8.5px', color: '#64748b', marginTop: '1px' }}>अपलोड करें</span>
-                )}
-              </div>
-            )}
-
-            {isEditable && (
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  background: 'rgba(15, 23, 42, 0.45)',
-                  color: '#ffffff',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: 0,
-                  transition: 'opacity 0.15s ease',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  borderRadius: '6px',
-                }}
-                className="photo-overlay-prompt"
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                  <circle cx="12" cy="13" r="4" />
-                </svg>
-                <span>{merged.candidateImage ? 'फोटो बदलें' : 'फोटो अपलोड'}</span>
-              </div>
-            )}
-
-            {isEditable && merged.candidateImage && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onRemoveImage) onRemoveImage('candidateImage');
-                  else updateField('candidateImage', '');
-                }}
-                title="प्रत्याशी फ़ोटो हटाएं"
-                style={{
-                  position: 'absolute',
-                  top: '2px',
-                  right: '2px',
-                  background: '#fee2e2',
-                  border: '1px solid #fca5a5',
-                  color: '#dc2626',
-                  borderRadius: '50%',
-                  width: '18px',
-                  height: '18px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  zIndex: 10,
-                }}
-              >
-                ×
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-        {/* ================= 2. MIDDLE EVM / RIBBON STRIPE ================= */}
-        <div
-          className="voter-slip-ribbon"
-          style={{
-            background: 'linear-gradient(90deg, #ea580c 0%, #c2410c 14%, #1d4ed8 40%, #1e3a8a 100%)',
-            borderRadius: '10px',
-            padding: '12px 14px',
-            minHeight: '68px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            color: '#ffffff',
-            boxSizing: 'border-box',
-            overflow: 'visible',
-          }}
-        >
-          {/* Big EVM Number Badge */}
-          <div
-            className="voter-slip-ribbon-evm-badge"
-            style={{
-              background: '#ffffff',
-              color: '#ea580c',
-              width: '42px',
-              height: '42px',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '22px',
-              fontWeight: 900,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-              flexShrink: 0,
-              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-              lineHeight: 1,
-              boxSizing: 'border-box',
-              padding: 0,
-              overflow: 'hidden',
-            }}
-          >
-            {isEditable ? (
-              <input
-                type="text"
-                value={merged.evmNumber || '1'}
-                onChange={(e) => updateField('evmNumber', e.target.value)}
-                title="EVM क्रम संख्या बदलें"
-                className="voter-slip-ribbon-evm-input"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  textAlign: 'center',
-                  color: '#ea580c',
-                  fontSize: '22px',
-                  fontWeight: 900,
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  padding: 0,
-                  margin: 0,
-                  lineHeight: 1,
-                  fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              />
-            ) : (
-              <span style={{ lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', margin: 0, padding: 0 }}>
-                {merged.evmNumber || '1'}
-              </span>
-            )}
-          </div>
-
-          {/* EVM Message */}
-          <div
-            className="voter-slip-ribbon-content"
-            style={{
-              flex: 1,
-              minWidth: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              gap: '2px',
-              fontFamily: 'var(--font-anek-devanagari), var(--font-noto-sans-devanagari), "Anek Devanagari", "Noto Sans Devanagari", sans-serif',
-              overflow: 'visible',
-            }}
-          >
-            <div
-              style={{
-                fontSize: '12.5px',
-                fontWeight: 800,
-                letterSpacing: 'normal',
-                lineHeight: 1.35,
-                color: '#ffffff',
-                textRendering: 'geometricPrecision',
-                margin: 0,
+                fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                lineHeight: 1,
+                boxSizing: 'border-box',
                 padding: 0,
-              }}
-            >
-              ईवीएम / मतपत्र क्रम संख्या: {merged.evmNumber || '1'}
-            </div>
-            <div
-              style={{
-                fontSize: '13.5px',
-                fontWeight: 800,
-                opacity: 0.98,
-                lineHeight: 1.35,
-                margin: 0,
-                padding: 0,
-                letterSpacing: 'normal',
-                color: '#ffffff',
-                textRendering: 'geometricPrecision',
-                overflow: 'visible',
+                overflow: 'hidden',
               }}
             >
               {isEditable ? (
-                <InlineText
-                  value={merged.appealText}
-                  fallback={merged.candidateName || `वार्ड नं. ${ward} से प्रत्याशी`}
-                  placeholder="EVM पट्टी संदेश"
-                  isEditable={true}
-                  onChange={(v) => updateField('appealText', v)}
-                  title="EVM पट्टी संदेश बदलें"
+                <input
+                  type="text"
+                  value={merged.evmNumber || '1'}
+                  onChange={(e) => updateField('evmNumber', e.target.value)}
+                  title="EVM क्रम संख्या बदलें"
+                  className="voter-slip-ribbon-evm-input"
                   style={{
-                    color: '#ffffff',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    border: '1px dashed #fed7aa',
-                    borderRadius: '4px',
-                    padding: '2px 4px',
-                    lineHeight: 1.3,
+                    width: '100%',
+                    height: '100%',
+                    textAlign: 'center',
+                    color: '#ea580c',
+                    fontSize: '22px',
+                    fontWeight: 900,
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    padding: 0,
+                    margin: 0,
+                    lineHeight: 1,
+                    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 />
               ) : (
-                merged.candidateName || merged.appealText || `वार्ड नं. ${ward} से प्रत्याशी`
+                <span style={{ lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', margin: 0, padding: 0 }}>
+                  {merged.evmNumber || '1'}
+                </span>
               )}
             </div>
-          </div>
 
-          {/* Right Symbol Mini Pill */}
+            {/* EVM Message */}
+            <div
+              className="voter-slip-ribbon-content"
+              style={{
+                flex: 1,
+                minWidth: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                gap: '2px',
+                fontFamily: 'var(--font-anek-devanagari), var(--font-noto-sans-devanagari), "Anek Devanagari", "Noto Sans Devanagari", sans-serif',
+                overflow: 'visible',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '12.5px',
+                  fontWeight: 800,
+                  letterSpacing: 'normal',
+                  lineHeight: 1.35,
+                  color: '#ffffff',
+                  textRendering: 'geometricPrecision',
+                  margin: 0,
+                  padding: 0,
+                }}
+              >
+                ईवीएम / मतपत्र क्रम संख्या: {merged.evmNumber || '1'}
+              </div>
+              <div
+                style={{
+                  fontSize: '13.5px',
+                  fontWeight: 800,
+                  opacity: 0.98,
+                  lineHeight: 1.35,
+                  margin: 0,
+                  padding: 0,
+                  letterSpacing: 'normal',
+                  color: '#ffffff',
+                  textRendering: 'geometricPrecision',
+                  overflow: 'visible',
+                }}
+              >
+                {isEditable ? (
+                  <InlineText
+                    value={merged.appealText}
+                    fallback={merged.candidateName || `वार्ड नं. ${ward} से प्रत्याशी`}
+                    placeholder="EVM पट्टी संदेश"
+                    isEditable={true}
+                    onChange={(v) => updateField('appealText', v)}
+                    title="EVM पट्टी संदेश बदलें"
+                    style={{
+                      color: '#ffffff',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      border: '1px dashed #fed7aa',
+                      borderRadius: '4px',
+                      padding: '2px 4px',
+                      lineHeight: 1.3,
+                    }}
+                  />
+                ) : (
+                  merged.candidateName || merged.appealText || `वार्ड नं. ${ward} से प्रत्याशी`
+                )}
+              </div>
+            </div>
+
+            {/* Right Symbol Mini Pill */}
+            <div
+              className="voter-slip-ribbon-pill"
+              style={{
+                background: '#ffffff',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                minHeight: '28px',
+                boxSizing: 'border-box',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#ea580c',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                flexShrink: 0,
+                overflow: 'visible',
+              }}
+            >
+              {merged.partySymbolImage && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={merged.partySymbolImage} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} />
+              )}
+              <span style={{ lineHeight: 1.25, display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
+                {merged.partySymbolName || 'कमल का फूल'}
+              </span>
+            </div>
+
+            {/* Remove ribbon button when editable */}
+            {isEditable && (
+              <button
+                type="button"
+                data-html2canvas-ignore="true"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateField('hideEvmRibbon', true);
+                }}
+                title="ईवीएम / मतपत्र पट्टी हटाएं (Hide EVM Ribbon)"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.35)',
+                  border: '1px solid rgba(254, 202, 202, 0.7)',
+                  color: '#ffffff',
+                  borderRadius: '6px',
+                  padding: '4px 8px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  flexShrink: 0,
+                  transition: 'all 0.15s ease',
+                  marginLeft: '2px',
+                }}
+              >
+                <span>✕</span>
+                <span>हटाएं</span>
+              </button>
+            )}
+          </div>
+        ) : isEditable ? (
           <div
-            className="voter-slip-ribbon-pill"
+            data-html2canvas-ignore="true"
+            onClick={() => updateField('hideEvmRibbon', false)}
             style={{
-              background: '#ffffff',
+              cursor: 'pointer',
+              border: '1.5px dashed #3b82f6',
+              background: '#eff6ff',
               borderRadius: '8px',
-              padding: '6px 12px',
-              minHeight: '28px',
-              boxSizing: 'border-box',
+              padding: '8px 12px',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              color: '#ea580c',
-              fontSize: '11.5px',
+              justifyContent: 'center',
+              gap: '8px',
+              color: '#1d4ed8',
+              fontSize: '12.5px',
               fontWeight: 700,
-              flexShrink: 0,
-              overflow: 'visible',
+              transition: 'all 0.15s ease',
             }}
+            title="ईवीएम / मतपत्र क्रम संख्या पट्टी पुनः दिखाएं"
           >
-            {merged.partySymbolImage && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={merged.partySymbolImage} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} />
-            )}
-            <span style={{ lineHeight: 1.25, display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
-              {merged.partySymbolName || 'कमल का फूल'}
-            </span>
+            <span style={{ fontSize: '15px', fontWeight: 900 }}>+</span>
+            <span>ईवीएम / मतपत्र क्रम संख्या पट्टी पुनः जोड़ें (Show EVM Ribbon)</span>
           </div>
-        </div>
+        ) : null}
 
         {/* ================= 3. TWO BIG HIGHLIGHT METRIC CARDS ================= */}
         <div className="voter-slip-metric-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
