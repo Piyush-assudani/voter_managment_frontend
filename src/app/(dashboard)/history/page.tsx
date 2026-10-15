@@ -200,9 +200,11 @@ export default function DispatchHistoryPage() {
           <button className="button-secondary" type="button" onClick={() => void load()} disabled={loading}>
             {loading ? <LoaderCircle size={15} className="spin" /> : <RefreshCw size={15} />} रिफ्रेश
           </button>
-          <button className="button-secondary" type="button" onClick={() => void downloadExcel()} disabled={exporting}>
-            {exporting ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />} Excel एक्सपोर्ट
-          </button>
+          {isAdmin && (
+            <button className="button-secondary" type="button" onClick={() => void downloadExcel()} disabled={exporting}>
+              {exporting ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />} Excel एक्सपोर्ट
+            </button>
+          )}
           {isAdmin && Boolean(data?.dispatches?.length) && (
             <button
               className="button-secondary"

@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Download, LoaderCircle, MapPin, Phone, RefreshCw, Search, UserRoundX } from 'lucide-react';
-import { apiFetch, getApiError } from '@/lib/api';
+import { apiFetch, decodeJwtPayload, getApiError } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
 import { SortButton, SortState } from '@/components/SortButton';
 
@@ -34,6 +34,17 @@ export default function MigrantsPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [sort, setSort] = useState<SortState>({ field: 'name', direction: 'asc' });
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
+    if (token) {
+      try {
+        const payload = decodeJwtPayload<{ user?: { role?: string } }>(token);
+        setIsAdmin(payload?.user?.role === 'admin');
+      } catch {}
+    }
+  }, []);
 
   const handleSort = (field: string) => {
     setSort((prev) => ({
@@ -135,7 +146,11 @@ export default function MigrantsPage() {
         <div><div className="eyebrow-label"><span className="eyebrow-mark" /> MIGRANT VOTERS</div><h1>प्रवासी मतदाता</h1><p>प्रवासी चिह्नित रिकॉर्ड देखें, वर्तमान स्थान अपडेट करें और संपर्क सूची एक्सपोर्ट करें।</p></div>
         <div className="feature-actions">
           <button className="button-secondary" type="button" onClick={() => void load()} disabled={loading}>{loading ? <LoaderCircle size={15} className="spin" /> : <RefreshCw size={15} />} रिफ्रेश</button>
-          <button className="button-secondary" type="button" onClick={() => void exportExcel()} disabled={!voters.length || exporting}>{exporting ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />} Excel एक्सपोर्ट</button>
+          {isAdmin && (
+            <button className="button-secondary" type="button" onClick={() => void exportExcel()} disabled={!voters.length || exporting}>
+              {exporting ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />} Excel एक्सपोर्ट
+            </button>
+          )}
         </div>
       </div>
       {error && <div className="inline-notice error-notice" role="alert">{error}</div>}

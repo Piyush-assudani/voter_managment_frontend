@@ -1460,43 +1460,53 @@ export default function VoterDirectoryPage() {
             <UsersRound size={14} /> <span className="hidden sm:inline">परिवार</span>
           </button>
 
-          <button
-            type="button"
-            className="sb-floating-btn sb-floating-parchi"
-            onClick={() => {
-              if (selectedIds.length === 1) {
+          {/* Action button: 1 voter = View/Send slip (all users); >1 voter = Bulk ZIP Download (admin only) */}
+          {selectedIds.length === 1 ? (
+            <button
+              type="button"
+              className="sb-floating-btn sb-floating-parchi"
+              onClick={() => {
                 const target = voters.find((v) => selectedIds.includes(v._id));
                 if (target) openSlipModal(target);
-              } else {
-                void handleBulkDownload();
-              }
-            }}
-            title={selectedIds.length === 1 ? 'पर्ची देखें व WhatsApp भेजें' : `${selectedIds.length} पर्चियों का बल्क ZIP डाउनलोड करें`}
-            disabled={isDownloading}
-          >
-            {isDownloading ? (
-              <LoaderCircle size={14} className="spin" />
-            ) : selectedIds.length > 1 ? (
-              <Download size={14} color="#ffffff" />
-            ) : (
+              }}
+              title="पर्ची देखें व WhatsApp भेजें"
+              disabled={isDownloading}
+            >
               <WhatsAppLogo size={14} color="#ffffff" />
-            )}
-            <span>
+              <span>
+                <span className="hidden sm:inline">पर्ची देखें / भेजें</span>
+                <span className="sm:hidden">पर्ची</span>
+              </span>
+            </button>
+          ) : isAdmin ? (
+            <button
+              type="button"
+              className="sb-floating-btn sb-floating-parchi"
+              onClick={() => void handleBulkDownload()}
+              title={`${selectedIds.length} पर्चियों का बल्क ZIP डाउनलोड करें`}
+              disabled={isDownloading}
+            >
               {isDownloading ? (
-                'ZIP बन रहा...'
-              ) : selectedIds.length > 1 ? (
-                <>
-                  <span className="hidden sm:inline">बल्क ZIP डाउनलोड ({selectedIds.length})</span>
-                  <span className="sm:hidden">ZIP ({selectedIds.length})</span>
-                </>
+                <LoaderCircle size={14} className="spin" />
               ) : (
-                <>
-                  <span className="hidden sm:inline">पर्ची देखें / भेजें</span>
-                  <span className="sm:hidden">पर्ची</span>
-                </>
+                <Download size={14} color="#ffffff" />
               )}
+              <span>
+                {isDownloading ? (
+                  'ZIP बन रहा...'
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">बल्क ZIP डाउनलोड ({selectedIds.length})</span>
+                    <span className="sm:hidden">ZIP ({selectedIds.length})</span>
+                  </>
+                )}
+              </span>
+            </button>
+          ) : (
+            <span style={{ fontSize: '12px', color: '#64748b', padding: '0 8px' }}>
+              ({selectedIds.length} चुने गए)
             </span>
-          </button>
+          )}
 
           {isAdmin && (
             <button

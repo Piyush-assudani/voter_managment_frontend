@@ -1,7 +1,7 @@
 'use client';
 
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Circle, LoaderCircle, Printer, RefreshCw, Search, Vote } from 'lucide-react';
+import { Check, Circle, LoaderCircle, Printer, RefreshCw, Search, Vote, X } from 'lucide-react';
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { SortButton, SortState } from '@/components/SortButton';
 
@@ -187,6 +187,8 @@ export default function PollDeskPage() {
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setDebouncedSearch(search);
+    if (!search.trim()) return;
     if (!/^\d+$/.test(search.trim())) return;
     const voter = partVoters.find((item) => String(item.serialNo) === search.trim());
     if (!voter) {
@@ -252,9 +254,66 @@ export default function PollDeskPage() {
       <section className="records-panel">
         <div className="records-toolbar">
           <div><h2>मतदाता रिकॉर्ड</h2><p>स्थिति बदलते ही सर्वर पर सेव होगी।</p></div>
-          <form className="desk-search" onSubmit={handleSearch}>
-            <Search size={15} />
-            <input aria-label="नाम या क्रमांक से खोजें" placeholder="नाम खोजें या क्रमांक से जल्दी दर्ज करें" value={search} onChange={(event) => setSearch(event.target.value)} />
+          <form
+            className="desk-search-form"
+            onSubmit={handleSearch}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginLeft: 'auto',
+            }}
+          >
+            <div className="desk-search" style={{ margin: 0, minWidth: '240px' }}>
+              <Search size={15} />
+              <input
+                aria-label="नाम या क्रमांक से खोजें"
+                placeholder="नाम खोजें या क्रमांक से जल्दी दर्ज करें"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('');
+                    setDebouncedSearch('');
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '2px',
+                    color: '#94a3b8',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  title="साफ़ करें"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <button
+              type="submit"
+              className="button-primary"
+              style={{
+                height: '34px',
+                padding: '0 14px',
+                fontSize: '13px',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                borderRadius: '6px',
+                whiteSpace: 'nowrap',
+                cursor: 'pointer',
+              }}
+              title="खोजें या क्रमांक दर्ज करें"
+            >
+              <Search size={13} />
+              <span>खोजें</span>
+            </button>
           </form>
           <button className="button-secondary print-control" type="button" onClick={printPending} disabled={!pendingCount}><Printer size={15} />  शेष सूची प्रिंट</button>
         </div>

@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Download, LoaderCircle, Mic, Printer, Search, UsersRound, X } from 'lucide-react';
-import { apiFetch, getApiError } from '@/lib/api';
+import { apiFetch, decodeJwtPayload, getApiError } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
 
@@ -37,6 +37,17 @@ export default function CommunityPage() {
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
+    if (token) {
+      try {
+        const payload = decodeJwtPayload<{ user?: { role?: string } }>(token);
+        setIsAdmin(payload?.user?.role === 'admin');
+      } catch {}
+    }
+  }, []);
 
   useEffect(() => {
     void Promise.resolve().then(() => {
@@ -164,7 +175,11 @@ export default function CommunityPage() {
         <div><div className="eyebrow-label"><span className="eyebrow-mark" /> COMMUNITY LOOKUP</div><h1>समुदाय व परिवार खोज</h1><p>समुदाय/उपनाम से खोजें और चाहें तो आधिकारिक परिवार ID से जुड़े सदस्यों को शामिल करें।</p></div>
         <div className="feature-actions">
           <button className="button-secondary" type="button" onClick={() => window.print()} disabled={!voters.length}><Printer size={15} /> प्रिंट</button>
-          <button className="button-secondary" type="button" onClick={() => void exportExcel()} disabled={!voters.length || exporting}>{exporting ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />} Excel एक्सपोर्ट</button>
+          {isAdmin && (
+            <button className="button-secondary" type="button" onClick={() => void exportExcel()} disabled={!voters.length || exporting}>
+              {exporting ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />} Excel एक्सपोर्ट
+            </button>
+          )}
         </div>
       </div>
 

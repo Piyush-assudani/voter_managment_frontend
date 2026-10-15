@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, Download, LoaderCircle, Phone, RefreshCw } from 'lucide-react';
-import { apiFetch, getApiError } from '@/lib/api';
+import { apiFetch, decodeJwtPayload, getApiError } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
 
 interface Voter {
@@ -32,6 +32,17 @@ export default function TurnoutPage() {
   const [savingId, setSavingId] = useState('');
   const [exporting, setExporting] = useState(false);
   const [pendingWard, setPendingWard] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
+    if (token) {
+      try {
+        const payload = decodeJwtPayload<{ user?: { role?: string } }>(token);
+        setIsAdmin(payload?.user?.role === 'admin');
+      } catch {}
+    }
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -164,9 +175,13 @@ export default function TurnoutPage() {
           <section className="ward-grid">
             {wardSummaries.map((ward) => {
               const percent = ward.total ? Math.round((ward.voted / ward.total) * 100) : 0;
+              const formattedWard = /^(वार्ड|Ward)\s*/i.test(ward.name) ? ward.name : `वार्ड ${ward.name}`;
               return (
                 <article className="ward-card" key={ward.name}>
-                  <div className="ward-card-heading"><strong>{ward.name}</strong><span>{percent}%</span></div>
+                  <div className="ward-card-heading">
+                    <strong style={{ fontSize: '14px', fontWeight: 650, color: '#1e293b' }}>{formattedWard}</strong>
+                    <span>{percent}%</span>
+                  </div>
                   <div className="progress-track"><div className="progress-fill" style={{ width: `${percent}%` }} /></div>
                   <div className="ward-card-caption"><span>{ward.voted} मतदान दर्ज</span><span>{ward.total} मतदाता</span></div>
                 </article>
@@ -179,8 +194,19 @@ export default function TurnoutPage() {
             <div className="records-toolbar">
               <div><h2>बाकी मतदाता · संपर्क सूची</h2><p>{pending.length} रिकॉर्ड दिखाए गए; कुल {remaining} शेष।</p></div>
               <div className="feature-actions">
-                <select aria-label="शेष मतदाता का वार्ड फ़िल्टर" value={pendingWard} onChange={(event) => setPendingWard(event.target.value)}><option value="">सभी वार्ड</option>{wardSummaries.map((ward) => <option key={ward.name} value={ward.name}>{ward.name}</option>)}</select>
-                <button className="button-secondary" type="button" onClick={() => void exportPending()} disabled={!pending.length || exporting}>{exporting ? <LoaderCircle size={14} className="spin" /> : <Download size={14} />} सूची Excel</button>
+                <select aria-label="शेष मतदाता का वार्ड फ़िल्टर" value={pendingWard} onChange={(event) => setPendingWard(event.target.value)}>
+                  <option value="">सभी वार्ड</option>
+                  {wardSummaries.map((ward) => (
+                    <option key={ward.name} value={ward.name}>
+                      {/^(वार्ड|Ward)\s*/i.test(ward.name) ? ward.name : `वार्ड ${ward.name}`}
+                    </option>
+                  ))}
+                </select>
+                {isAdmin && (
+                  <button className="button-secondary" type="button" onClick={() => void exportPending()} disabled={!pending.length || exporting}>
+                    {exporting ? <LoaderCircle size={14} className="spin" /> : <Download size={14} />} सूची Excel
+                  </button>
+                )}
               </div>
             </div>
             {pending.length ? (
