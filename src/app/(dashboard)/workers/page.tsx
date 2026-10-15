@@ -477,12 +477,12 @@ export default function WorkersPage() {
               सभी क्लाइंट्स ({workers.length})
             </button>
 
-            {clients.map((c) => {
+            {clients.map((c, idx) => {
               const isSelected = currentOrgId === c.id;
               const count = workers.filter((w) => w.organizationId === c.id).length;
               return (
                 <button
-                  key={c.id}
+                  key={`${c.id}-${idx}`}
                   type="button"
                   onClick={() => handleClientSwitch(c.id)}
                   style={{
@@ -646,9 +646,9 @@ export default function WorkersPage() {
       ) : (!currentOrgId || currentOrgId === 'all') && workersByClient.length > 1 ? (
         /* MULTI-CLIENT GROUPED VIEW (WHEN ALL CLIENTS IS ACTIVE) */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-          {workersByClient.map((group) => (
+          {workersByClient.map((group, gIdx) => (
             <section
-              key={group.orgId}
+              key={`${group.orgId}-${gIdx}`}
               style={{
                 background: '#f8fafc',
                 border: '1px solid #e2e8f0',
@@ -712,9 +712,9 @@ export default function WorkersPage() {
                   gap: '16px',
                 }}
               >
-                {group.workers.map((worker) => (
+                {group.workers.map((worker, wIdx) => (
                   <WorkerCard
-                    key={worker.id}
+                    key={`${worker.id || 'worker'}-${wIdx}`}
                     worker={worker}
                     loadingWorkerId={loadingWorkerId}
                     showAssigned={showAssigned}
@@ -734,9 +734,9 @@ export default function WorkersPage() {
             gap: '16px',
           }}
         >
-          {displayWorkers.map((worker) => (
+          {displayWorkers.map((worker, wIdx) => (
             <WorkerCard
-              key={worker.id}
+              key={`${worker.id || 'worker'}-${wIdx}`}
               worker={worker}
               loadingWorkerId={loadingWorkerId}
               showAssigned={showAssigned}
