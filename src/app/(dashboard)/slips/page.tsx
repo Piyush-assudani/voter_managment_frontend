@@ -1527,7 +1527,7 @@ export default function SlipsPage() {
                 borderRadius: '8px',
                 border: 'none',
                 background: slipMode === 'single' && !bulkMode ? '#ffffff' : 'transparent',
-                color: slipMode === 'single' && !bulkMode ? '#1e3a8a' : '#64748b',
+                color: slipMode === 'single' && !bulkMode ? '#15803d' : '#64748b',
                 fontWeight: slipMode === 'single' && !bulkMode ? 700 : 600,
                 fontSize: '13px',
                 boxShadow: slipMode === 'single' && !bulkMode ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
@@ -1580,7 +1580,7 @@ export default function SlipsPage() {
                 borderRadius: '8px',
                 border: 'none',
                 background: bulkMode || slipMode === 'bulk' ? '#ffffff' : 'transparent',
-                color: bulkMode || slipMode === 'bulk' ? '#1d4ed8' : '#64748b',
+                color: bulkMode || slipMode === 'bulk' ? '#15803d' : '#64748b',
                 fontWeight: bulkMode || slipMode === 'bulk' ? 700 : 600,
                 fontSize: '13px',
                 boxShadow: bulkMode || slipMode === 'bulk' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
@@ -1602,12 +1602,13 @@ export default function SlipsPage() {
               disabled={isDownloadingBulkZip || (totalVotersCount === 0 && voters.length === 0)}
               onClick={handleDownloadBulkZip}
               style={{
-                background: '#1d4ed8',
-                borderColor: '#2563eb',
+                background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                borderColor: '#16a34a',
                 color: '#ffffff',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
+                boxShadow: '0 2px 6px rgba(22, 163, 74, 0.25)',
               }}
               title="सभी फ़िल्टर किए गए मतदाताओं की पर्चियां एक साथ ZIP फ़ाइल में डाउनलोड करें"
             >
@@ -1634,7 +1635,7 @@ export default function SlipsPage() {
         className="slips-branding-info-bar no-print"
         style={{
           background: '#ffffff',
-          borderRadius: '12px',
+          borderRadius: '14px',
           border: '1px solid #e2e8f0',
           padding: '12px 18px',
           marginBottom: '20px',
@@ -1643,24 +1644,25 @@ export default function SlipsPage() {
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '12px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#1e3a8a', fontSize: '12.5px', background: '#eff6ff', padding: '4px 10px', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
-            <Sparkles size={14} color="#ea580c" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#166534', fontSize: '12.5px', background: '#f0fdf4', padding: '5px 12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+            <Sparkles size={14} color="#16a34a" />
             <span>संगठन: {orgName}</span>
           </div>
-          <div style={{ fontSize: '12.5px', color: '#475569', background: '#f8fafc', padding: '4px 10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            पार्टी: <strong style={{ color: '#0f172a' }}>{slipConfig.partyName || 'प्रत्याशी'}</strong>
+          <div style={{ fontSize: '12.5px', color: '#475569', background: '#f8fafc', padding: '5px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span>पार्टी:</span> <strong style={{ color: '#0f172a' }}>{slipConfig.partyName || 'प्रत्याशी'}</strong>
           </div>
-          <div style={{ fontSize: '12.5px', color: '#475569', background: '#f8fafc', padding: '4px 10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            प्रत्याशी: <strong style={{ color: '#0f172a' }}>{slipConfig.candidateName || 'प्रत्याशी'}</strong>
+          <div style={{ fontSize: '12.5px', color: '#475569', background: '#f8fafc', padding: '5px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span>प्रत्याशी:</span> <strong style={{ color: '#0f172a' }}>{slipConfig.candidateName || 'प्रत्याशी'}</strong>
           </div>
-          <div style={{ fontSize: '12.5px', color: '#475569', background: '#fff7ed', padding: '4px 10px', borderRadius: '8px', border: '1px solid #fed7aa' }}>
-            चुनाव चिन्ह: <strong style={{ color: '#ea580c' }}>{slipConfig.partySymbolName || 'कमल का फूल'}</strong>
+          <div style={{ fontSize: '12.5px', color: '#9a3412', background: '#fff7ed', padding: '5px 12px', borderRadius: '8px', border: '1px solid #fed7aa', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span>चुनाव चिन्ह:</span> <strong style={{ color: '#c2410c' }}>{slipConfig.partySymbolName || 'कमल का फूल'}</strong>
           </div>
-          <div style={{ fontSize: '12.5px', color: '#475569', background: '#f0fdf4', padding: '4px 10px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-            EVM क्रम: <strong style={{ color: '#16a34a' }}>#{slipConfig.evmNumber || '1'}</strong>
+          <div style={{ fontSize: '12.5px', color: '#166534', background: '#f0fdf4', padding: '5px 12px', borderRadius: '8px', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span>EVM क्रम:</span> <strong style={{ color: '#16a34a' }}>#{slipConfig.evmNumber || '1'}</strong>
           </div>
         </div>
 
@@ -1668,17 +1670,22 @@ export default function SlipsPage() {
           <button
             onClick={openCustomizing}
             style={{
-              fontSize: '12px',
-              fontWeight: 600,
-              color: '#047857',
+              fontSize: '12.5px',
+              fontWeight: 700,
+              color: '#15803d',
               background: '#ecfdf5',
               border: '1px solid #a7f3d0',
-              padding: '4px 10px',
-              borderRadius: '6px',
+              padding: '6px 14px',
+              borderRadius: '8px',
               cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease',
             }}
           >
-            बदलाव करें
+            <Sliders size={13} />
+            <span>बदलाव करें</span>
           </button>
 
           {/* WhatsApp Quota Pill */}
@@ -1688,12 +1695,12 @@ export default function SlipsPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                padding: '4px 10px',
+                padding: '5px 12px',
                 borderRadius: '20px',
                 background: !whatsappQuota.whatsappEnabled ? '#fee2e2' : whatsappQuota.whatsappCredits <= 0 ? '#fef3c7' : '#f0fdf4',
                 border: !whatsappQuota.whatsappEnabled ? '1px solid #fecaca' : whatsappQuota.whatsappCredits <= 0 ? '1px solid #fde68a' : '1px solid #bbf7d0',
                 fontSize: '12px',
-                fontWeight: 600,
+                fontWeight: 700,
                 color: !whatsappQuota.whatsappEnabled ? '#991b1b' : whatsappQuota.whatsappCredits <= 0 ? '#92400e' : '#166534',
               }}
             >
@@ -1708,19 +1715,20 @@ export default function SlipsPage() {
         className="records-toolbar no-print"
         style={{
           background: '#ffffff',
-          borderRadius: '12px',
+          borderRadius: '14px',
           border: '1px solid #e2e8f0',
-          padding: '12px 16px',
+          padding: '14px 18px',
           marginBottom: '20px',
           display: 'flex',
           flexWrap: 'wrap',
           gap: '12px',
           alignItems: 'center',
           justifyContent: 'space-between',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
         }}
       >
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', flex: 1, minWidth: '280px' }}>
-          <div className="search-field" style={{ flex: '1 1 200px' }}>
+          <div className="search-field" style={{ flex: '1 1 240px' }}>
             <Search size={15} />
             <input
               placeholder="मतदाता खोजें (नाम, EPIC, क्रमांक, मकान)..."
@@ -1732,7 +1740,7 @@ export default function SlipsPage() {
           <select
             value={wardFilter}
             onChange={(e) => setWardFilter(e.target.value)}
-            style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+            style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 600, color: '#334155', background: '#fff' }}
           >
             <option value="">सभी वार्ड</option>
             {availableWards.map((w) => (
@@ -1745,7 +1753,7 @@ export default function SlipsPage() {
           <select
             value={partFilter}
             onChange={(e) => setPartFilter(e.target.value)}
-            style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+            style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 600, color: '#334155', background: '#fff' }}
           >
             <option value="">सभी भाग (Part)</option>
             {availableParts.map((p) => (
@@ -1756,8 +1764,8 @@ export default function SlipsPage() {
           </select>
         </div>
 
-        <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
-          कुल मतदाता: <strong style={{ color: '#0f172a' }}>{totalVotersCount || voters.length}</strong>
+        <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span>कुल मतदाता:</span> <strong style={{ color: '#0f172a', fontSize: '14px' }}>{(totalVotersCount || voters.length).toLocaleString('hi-IN')}</strong>
         </div>
       </div>
 
@@ -1830,7 +1838,7 @@ export default function SlipsPage() {
                     type="button"
                     disabled={isDownloadingBulkZip || (totalVotersCount === 0 && voters.length === 0)}
                     onClick={handleDownloadBulkZip}
-                    style={{ background: '#1d4ed8', borderColor: '#2563eb', padding: '8px 16px', fontSize: '13px' }}
+                    style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', borderColor: '#059669', padding: '8px 16px', fontSize: '13px', fontWeight: 600, color: '#ffffff', boxShadow: '0 2px 6px rgba(5, 150, 105, 0.25)' }}
                   >
                     {isDownloadingBulkZip ? (
                       <><LoaderCircle size={15} className="spin" /> ZIP बन रहा... ({bulkZipProgress.current}/{bulkZipProgress.total})</>

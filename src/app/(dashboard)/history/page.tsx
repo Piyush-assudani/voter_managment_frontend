@@ -268,12 +268,12 @@ export default function DispatchHistoryPage() {
           <strong>{data?.summary.sent ?? '—'}</strong>
           <small>वास्तविक भेजे गए संदेश</small>
         </article>
-        <article className="metric-card">
+        <article className="metric-card metric-card-rose">
           <span>विफल</span>
           <strong>{data?.summary.failed ?? '—'}</strong>
           <small>Meta send errors</small>
         </article>
-        <article className="metric-card">
+        <article className="metric-card metric-card-sky">
           <span>प्रोसेस में</span>
           <strong>{data?.summary.sending ?? '—'}</strong>
           <small>Webhook receipts प्रतीक्षित</small>

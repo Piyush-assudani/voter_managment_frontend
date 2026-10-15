@@ -354,7 +354,7 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
           <section className="feature-metrics">
             <article className="metric-card"><span>कुल खाते</span><strong>{loading ? '—' : accounts.length}</strong><small>अपने खाते को छोड़कर</small></article>
             <article className="metric-card metric-card-green"><span>सक्रिय</span><strong>{loading ? '—' : accounts.filter((item) => item.isActive).length}</strong><small>लॉगिन सक्षम</small></article>
-            <article className="metric-card"><span>अलग scopes</span><strong>{loading ? '—' : new Set(accounts.map((item) => item.scope)).size}</strong><small>Booth · Ward · Village · All</small></article>
+            <article className="metric-card metric-card-sky"><span>अलग scopes</span><strong>{loading ? '—' : new Set(accounts.map((item) => item.scope)).size}</strong><small>Booth · Ward · Village · All</small></article>
           </section>
         </>
       )}
@@ -382,7 +382,7 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
               <option value="">सभी क्लाइंट</option>{organizations.map((tenant, idx) => <option key={`${tenant.id}-${idx}`} value={tenant.id}>{tenant.name}</option>)}
             </select>
           </label>}
-          <span className="panel-count" style={{ whiteSpace: 'nowrap', width: 'auto' }}>
+          <span className="panel-count" style={{ whiteSpace: 'nowrap', width: 'auto', background: '#f0fdf4', borderColor: '#bbf7d0', color: '#166534', fontWeight: 600 }}>
             {isPlatformAdmin && !organizationId ? 'क्लाइंट-वार worker quota' : `${accounts.filter((account) => account.accountType === 'worker' && account.isActive).length} / 10 सक्रिय कार्यकर्ता`}
           </span>
           <label className="search-field account-search"><Search size={15} /><input aria-label="खाते खोजें" placeholder="नाम, email, फोन या scope" value={search} onChange={(event) => setSearch(event.target.value)} /></label>
@@ -424,18 +424,30 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
                         </span>
                       </td>
                       <td>
-                        <div className="feature-actions" style={{ flexWrap: 'nowrap' }}>
-                          <button className="button-secondary" type="button" onClick={() => startEdit(account)}>
-                            <Pencil size={14} /> बदलें
+                        <div className="feature-actions" style={{ flexWrap: 'nowrap', gap: '6px' }}>
+                          <button className="button-secondary" type="button" onClick={() => startEdit(account)} style={{ padding: '4px 10px', fontSize: '12.5px' }}>
+                            <Pencil size={13} /> बदलें
                           </button>
-                          <button className="button-quiet" type="button" onClick={() => startPermissions(account)}>
-                            <ShieldCheck size={14} /> अनुमतियाँ
+                          <button className="button-secondary" type="button" onClick={() => startPermissions(account)} style={{ padding: '4px 10px', fontSize: '12.5px' }}>
+                            <ShieldCheck size={13} /> अनुमतियाँ
                           </button>
-                          <button className="button-quiet" type="button" onClick={() => startPasswordChange(account)}>
-                            <KeyRound size={14} /> पासवर्ड
+                          <button className="button-secondary" type="button" onClick={() => startPasswordChange(account)} style={{ padding: '4px 10px', fontSize: '12.5px' }}>
+                            <KeyRound size={13} /> पासवर्ड
                           </button>
-                          <button className="button-quiet" type="button" onClick={() => void disable(account)} disabled={!account.isActive}>
-                            <UserRoundX size={14} /> बंद करें
+                          <button
+                            className="button-secondary"
+                            type="button"
+                            onClick={() => void disable(account)}
+                            disabled={!account.isActive}
+                            style={{
+                              padding: '4px 10px',
+                              fontSize: '12.5px',
+                              color: account.isActive ? '#b91c1c' : '#94a3b8',
+                              borderColor: account.isActive ? '#fecaca' : '#e2e8f0',
+                              background: account.isActive ? '#fef2f2' : '#f8fafc',
+                            }}
+                          >
+                            <UserRoundX size={13} /> बंद करें
                           </button>
                         </div>
                       </td>

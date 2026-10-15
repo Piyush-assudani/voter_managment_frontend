@@ -271,8 +271,8 @@ export default function PollDeskPage() {
       <section className="metric-grid">
         <article className="metric-card"><span>मतदाता</span><strong>{loading ? '—' : partVoters.length}</strong><small>{hidePartNo ? 'चुना गया वार्ड' : 'चुना गया वार्ड / भाग'}</small></article>
         <article className="metric-card metric-card-green"><span>मतदान दर्ज</span><strong>{loading ? '—' : votedCount}</strong><small>सर्वर पर सेव</small></article>
-        <article className="metric-card"><span>अभी शेष</span><strong>{loading ? '—' : pendingCount}</strong><small>मतदान दर्ज होना बाकी</small></article>
-        <article className="metric-card"><span>वार्ड प्रगति</span><strong>{loading ? '—' : `${turnout}%`}</strong><small>दर्ज मतदाता / कुल</small></article>
+        <article className="metric-card metric-card-amber"><span>अभी शेष</span><strong>{loading ? '—' : pendingCount}</strong><small>मतदान दर्ज होना बाकी</small></article>
+        <article className="metric-card metric-card-sky"><span>वार्ड प्रगति</span><strong>{loading ? '—' : `${turnout}%`}</strong><small>दर्ज मतदाता / कुल</small></article>
       </section>
 
       <section className="records-panel">

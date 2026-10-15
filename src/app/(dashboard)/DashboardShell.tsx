@@ -135,6 +135,54 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     };
   }, []);
 
+  // Disable right-click and developer shortcuts for client accounts
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
+    let role = userInfo.role;
+    if (!role && token) {
+      try {
+        const payload = decodeJwtPayload<{ user?: { role?: string } }>(token);
+        role = payload?.user?.role;
+      } catch {}
+    }
+
+    if (role === 'admin') return; // Super admin has full developer access
+
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F12' || e.keyCode === 123) {
+        e.preventDefault();
+        return false;
+      }
+      const ctrlOrCmd = e.ctrlKey || e.metaKey;
+      if (ctrlOrCmd) {
+        const key = e.key.toLowerCase();
+        if (
+          (e.shiftKey && (key === 'i' || key === 'j' || key === 'c')) ||
+          key === 'u' ||
+          key === 's'
+        ) {
+          e.preventDefault();
+          return false;
+        }
+      }
+    };
+
+    document.body.classList.add('client-protected');
+    document.addEventListener('contextmenu', handleContextMenu, { capture: true });
+    document.addEventListener('keydown', handleKeyDown, { capture: true });
+
+    return () => {
+      document.body.classList.remove('client-protected');
+      document.removeEventListener('contextmenu', handleContextMenu, { capture: true });
+      document.removeEventListener('keydown', handleKeyDown, { capture: true });
+    };
+  }, [userInfo.role]);
+
   useEffect(() => {
     let active = true;
     void Promise.resolve().then(() => {
