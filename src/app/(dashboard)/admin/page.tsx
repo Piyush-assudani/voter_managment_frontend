@@ -888,12 +888,31 @@ export default function AdminPanel() {
         : '/admin/pdf/jobs';
       const response = await apiFetch(url, { cache: 'no-store' });
       if (response.ok) {
-        setPdfJobs(await response.json() as UploadJob[]);
+        const rawJobs = await response.json() as UploadJob[];
+        const seen = new Set<string>();
+        const uniqueJobs = rawJobs.filter((job) => {
+          const timeBucket = Math.floor(new Date(job.uploadedAt).getTime() / 20000);
+          const key = `${job.filename}_${job.wardNo || ''}_${job.extractedCount}_${timeBucket}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setPdfJobs(uniqueJobs);
       }
     } catch {
       // ignore silently
     }
   }, [organizationId, activeView]);
+
+  const deletePdfJob = async (jobId: string) => {
+    try {
+      await apiFetch(`/admin/pdf/jobs/${jobId}`, { method: 'DELETE' });
+      setPdfJobs((prev) => prev.filter((j) => j.id !== jobId));
+      showToast('info', 'जॉब रिकॉर्ड हटा दिया गया।');
+    } catch {
+      // ignore silently
+    }
+  };
 
   const loadDictionaryStats = useCallback(async () => {
     try {
@@ -1476,7 +1495,6 @@ export default function AdminPanel() {
       const body = new FormData();
       body.set('organizationId', organizationId);
       selectedPdfFiles.forEach((file) => {
-        body.append('pdfs', file);
         body.append('pdf', file);
       });
       if (targetWard) body.set('wardNo', targetWard);
@@ -5615,9 +5633,29 @@ export default function AdminPanel() {
                           </span>
                         )}
 
-                        <span style={{ marginLeft: 'auto', color: '#9aa0a6', fontSize: '11px' }}>
-                          {new Date(job.uploadedAt).toLocaleString('hi-IN', { dateStyle: 'short', timeStyle: 'short' })}
-                        </span>
+                        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ color: '#9aa0a6', fontSize: '11px' }}>
+                            {new Date(job.uploadedAt).toLocaleString('hi-IN', { dateStyle: 'short', timeStyle: 'short' })}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => void deletePdfJob(job.id)}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: '#9aa0a6',
+                              cursor: 'pointer',
+                              padding: '2px 4px',
+                              display: 'inline-flex',
+                              alignItems: 'center'
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = '#9aa0a6')}
+                            title="यह जॉब इतिहास से हटाएं"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
