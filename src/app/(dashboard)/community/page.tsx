@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Download,
   ExternalLink,
@@ -81,6 +82,8 @@ export default function CommunityPage() {
   const [error, setError] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 50;
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
@@ -126,6 +129,7 @@ export default function CommunityPage() {
     setSelectedVoterForFamily(null);
     setFamily([]);
     setHasSearched(true);
+    setCurrentPage(1);
 
     try {
       const params = new URLSearchParams({
@@ -271,6 +275,12 @@ export default function CommunityPage() {
       turnout: total ? Math.round((votedCount / total) * 100) : 0,
     };
   }, [voters]);
+
+  const totalCommunityPages = Math.ceil(voters.length / pageSize) || 1;
+  const paginatedVoters = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return voters.slice(start, start + pageSize);
+  }, [voters, currentPage, pageSize]);
 
   return (
     <div className="work-page" style={{ maxWidth: '1360px', margin: '0 auto', paddingBottom: '50px' }}>
@@ -862,7 +872,7 @@ export default function CommunityPage() {
                 </tr>
               </thead>
               <tbody>
-                {voters.map((voter, index) => (
+                {paginatedVoters.map((voter, index) => (
                   <tr key={voter._id || index} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '10px 14px', fontSize: '12px', color: '#64748b' }}>
                       {voter.serialNo || index + 1}
@@ -956,6 +966,69 @@ export default function CommunityPage() {
                 ))}
               </tbody>
             </table>
+
+            {/* Community Pagination Bar */}
+            {totalCommunityPages > 1 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                borderTop: '1px solid #e2e8f0',
+                background: '#ffffff',
+                flexWrap: 'wrap',
+                gap: '10px'
+              }}>
+                <div style={{ fontSize: '13px', color: '#64748b' }}>
+                  दिखाए जा रहे हैं: <strong>{((currentPage - 1) * pageSize + 1).toLocaleString('hi-IN')}</strong> - <strong>{Math.min(currentPage * pageSize, voters.length).toLocaleString('hi-IN')}</strong> (कुल {voters.length.toLocaleString('hi-IN')} मतदाता)
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    disabled={currentPage <= 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '5px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      background: currentPage <= 1 ? '#e2e8f0' : '#ffffff',
+                      color: currentPage <= 1 ? '#94a3b8' : '#0f172a',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      cursor: currentPage <= 1 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <ChevronLeft size={15} /> पिछला
+                  </button>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                    पेज {currentPage} / {totalCommunityPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={currentPage >= totalCommunityPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalCommunityPages, p + 1))}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '5px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      background: currentPage >= totalCommunityPages ? '#e2e8f0' : '#ffffff',
+                      color: currentPage >= totalCommunityPages ? '#94a3b8' : '#0f172a',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      cursor: currentPage >= totalCommunityPages ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    अगला <ChevronRight size={15} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* POLISHED EMPTY STATE */

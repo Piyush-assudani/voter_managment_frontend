@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { CheckCircle2, Download, LoaderCircle, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Download, LoaderCircle, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
 
@@ -21,6 +21,7 @@ interface Dispatch {
 interface DispatchResponse {
   summary: { total: number; sent: number; failed: number; sending: number; manual?: number };
   dispatches: Dispatch[];
+  pagination?: { page: number; limit: number; total: number; totalPages: number };
 }
 
 export default function DispatchHistoryPage() {
@@ -35,6 +36,8 @@ export default function DispatchHistoryPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 50;
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
@@ -48,13 +51,15 @@ export default function DispatchHistoryPage() {
     }
   }, []);
 
-  const load = useCallback(async (query = search, state = status) => {
+  const load = useCallback(async (query = search, state = status, page = currentPage) => {
     setLoading(true);
     setError('');
     try {
       const params = new URLSearchParams();
       if (query.trim()) params.set('search', query.trim());
       if (state) params.set('status', state);
+      params.set('page', String(page));
+      params.set('limit', String(pageSize));
       const response = await apiFetch(`/features/dispatches?${params}`, { cache: 'no-store' });
       if (!response.ok) throw new Error(await getApiError(response, 'Dispatch history could not be loaded.'));
       const json = await response.json() as DispatchResponse;
@@ -67,9 +72,9 @@ export default function DispatchHistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, status]);
+  }, [search, status, currentPage]);
 
-  useEffect(() => { void Promise.resolve().then(() => load()); }, [load]);
+  useEffect(() => { void Promise.resolve().then(() => load(search, status, currentPage)); }, [load, currentPage]);
 
   useEffect(() => {
     const handleClientChange = () => {
@@ -81,7 +86,8 @@ export default function DispatchHistoryPage() {
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    void load(search, status);
+    setCurrentPage(1);
+    void load(search, status, 1);
   };
 
   const downloadExcel = async () => {
@@ -468,6 +474,70 @@ export default function DispatchHistoryPage() {
             <p>वास्तविक WhatsApp send attempts यहाँ दिखेंगे।</p>
           </div>
         )}
+
+        {/* Pagination Bar */}
+        {data && data.pagination && data.pagination.totalPages > 1 && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '14px 16px',
+            borderTop: '1px solid #e2e8f0',
+            background: '#ffffff',
+            borderRadius: '0 0 10px 10px',
+            flexWrap: 'wrap',
+            gap: '10px'
+          }}>
+            <div style={{ fontSize: '13px', color: '#64748b' }}>
+              कुल <strong>{data.pagination.total.toLocaleString('hi-IN')}</strong> में से <strong>{((data.pagination.page - 1) * data.pagination.limit + 1).toLocaleString('hi-IN')}</strong> - <strong>{Math.min(data.pagination.page * data.pagination.limit, data.pagination.total).toLocaleString('hi-IN')}</strong> रिकॉर्ड्स (पेज {data.pagination.page} / {data.pagination.totalPages})
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                disabled={currentPage <= 1 || loading}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  background: currentPage <= 1 ? '#f1f5f9' : '#ffffff',
+                  color: currentPage <= 1 ? '#94a3b8' : '#0f172a',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <ChevronLeft size={16} /> पिछला
+              </button>
+              <button
+                type="button"
+                disabled={currentPage >= (data.pagination.totalPages || 1) || loading}
+                onClick={() => setCurrentPage((p) => Math.min(data.pagination?.totalPages || 1, p + 1))}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  background: currentPage >= (data.pagination.totalPages || 1) ? '#f1f5f9' : '#ffffff',
+                  color: currentPage >= (data.pagination.totalPages || 1) ? '#94a3b8' : '#0f172a',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: currentPage >= (data.pagination.totalPages || 1) ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                अगला <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="records-footnote">
           संदेश भेजने का इतिहास Meta API response पर आधारित है; sent का अर्थ delivery या read confirmation नहीं है।
         </div>

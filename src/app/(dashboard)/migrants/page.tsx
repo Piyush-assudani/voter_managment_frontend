@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { Download, LoaderCircle, MapPin, Phone, RefreshCw, Search, UserRoundX } from 'lucide-react';
+import { Download, ChevronLeft, ChevronRight, LoaderCircle, MapPin, Phone, RefreshCw, Search, UserRoundX } from 'lucide-react';
 import { apiFetch, decodeJwtPayload, getApiError } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
 import { SortButton, SortState } from '@/components/SortButton';
@@ -33,6 +33,8 @@ export default function MigrantsPage() {
   const [savingId, setSavingId] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 50;
   const [sort, setSort] = useState<SortState>({ field: 'name', direction: 'asc' });
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -72,6 +74,16 @@ export default function MigrantsPage() {
     });
     return list;
   }, [voters, sort, locations]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, ward]);
+
+  const totalMigrantPages = Math.ceil(sortedVoters.length / pageSize) || 1;
+  const paginatedVoters = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedVoters.slice(start, start + pageSize);
+  }, [sortedVoters, currentPage, pageSize]);
 
   const load = useCallback(async (q = search, selectedWard = ward) => {
     setLoading(true);
@@ -181,7 +193,7 @@ export default function MigrantsPage() {
                 </tr>
               </thead>
               <tbody>
-                {sortedVoters.map((voter) => <tr key={voter._id}>
+                {paginatedVoters.map((voter) => <tr key={voter._id}>
                   <td><div className="voter-name">{voter.nameHi || voter.nameEn || '—'}</div><div className="voter-subline">{voter.relativeNameHi || '—'}</div></td>
                   <td>{voter.wardNo} · {voter.partNo} · मकान {voter.houseNo || '—'}<div className="voter-subline">क्रम {voter.serialNo || '—'} · परिवार में {voter.householdCount || 1}</div></td>
                   <td>{voter.phone ? <div className="feature-actions"><a className="button-quiet" href={`tel:${voter.phone}`} aria-label={`${voter.nameHi || voter.nameEn} को कॉल करें`}><Phone size={14} /> कॉल</a><a className="button-quiet" href={`https://wa.me/${voter.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">WhatsApp</a></div> : 'फोन दर्ज नहीं'}</td>
@@ -190,6 +202,69 @@ export default function MigrantsPage() {
                 </tr>)}
               </tbody>
             </table>
+
+            {/* Migrants Pagination Bar */}
+            {totalMigrantPages > 1 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                borderTop: '1px solid #e2e8f0',
+                background: '#ffffff',
+                flexWrap: 'wrap',
+                gap: '10px'
+              }}>
+                <div style={{ fontSize: '13px', color: '#64748b' }}>
+                  दिखाए जा रहे हैं: <strong>{((currentPage - 1) * pageSize + 1).toLocaleString('hi-IN')}</strong> - <strong>{Math.min(currentPage * pageSize, sortedVoters.length).toLocaleString('hi-IN')}</strong> (कुल {sortedVoters.length.toLocaleString('hi-IN')} प्रवासी)
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    disabled={currentPage <= 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '5px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      background: currentPage <= 1 ? '#e2e8f0' : '#ffffff',
+                      color: currentPage <= 1 ? '#94a3b8' : '#0f172a',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      cursor: currentPage <= 1 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <ChevronLeft size={15} /> पिछला
+                  </button>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                    पेज {currentPage} / {totalMigrantPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={currentPage >= totalMigrantPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalMigrantPages, p + 1))}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '5px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      background: currentPage >= totalMigrantPages ? '#e2e8f0' : '#ffffff',
+                      color: currentPage >= totalMigrantPages ? '#94a3b8' : '#0f172a',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      cursor: currentPage >= totalMigrantPages ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    अगला <ChevronRight size={15} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : <div className="empty-state"><strong>{loading ? 'लोड हो रहा है…' : 'कोई प्रवासी रिकॉर्ड नहीं'}</strong><p>मतदाता सूची में किसी रिकॉर्ड को प्रवासी चिह्नित करने पर वह यहाँ दिखेगा।</p></div>}
       </section>

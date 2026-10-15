@@ -1,7 +1,7 @@
 'use client';
 
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Circle, LoaderCircle, Printer, RefreshCw, Search, Vote, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Circle, LoaderCircle, Printer, RefreshCw, Search, Vote, X } from 'lucide-react';
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { SortButton, SortState } from '@/components/SortButton';
 
@@ -167,6 +167,19 @@ export default function PollDeskPage() {
     });
     return list;
   }, [visibleVoters, sort]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 50;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, debouncedSearch, selectedPart, selectedWard]);
+
+  const totalDeskPages = Math.ceil(sortedVisibleVoters.length / pageSize) || 1;
+  const paginatedVisibleVoters = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedVisibleVoters.slice(start, start + pageSize);
+  }, [sortedVisibleVoters, currentPage, pageSize]);
 
   const parts = useMemo(() => [...new Set(voters.map((voter) => voter.partNo).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [voters]);
   const partVoters = useMemo(() => voters.filter((voter) => !selectedPart || voter.partNo === selectedPart), [voters, selectedPart]);
@@ -369,9 +382,72 @@ export default function PollDeskPage() {
                 </tr>
               </thead>
               <tbody>
-                {sortedVisibleVoters.map((voter) => <VoterTableRow key={voter._id} voter={voter} toggleVote={toggleVote} savingId={savingId} />)}
+                {paginatedVisibleVoters.map((voter) => <VoterTableRow key={voter._id} voter={voter} toggleVote={toggleVote} savingId={savingId} />)}
               </tbody>
             </table>
+
+            {/* Poll Desk Pagination Controls */}
+            {totalDeskPages > 1 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                borderTop: '1px solid #e2e8f0',
+                background: '#f8fafc',
+                flexWrap: 'wrap',
+                gap: '10px'
+              }}>
+                <div style={{ fontSize: '13px', color: '#64748b' }}>
+                  दिखाए जा रहे हैं: <strong>{((currentPage - 1) * pageSize + 1).toLocaleString('hi-IN')}</strong> - <strong>{Math.min(currentPage * pageSize, sortedVisibleVoters.length).toLocaleString('hi-IN')}</strong> (कुल {sortedVisibleVoters.length.toLocaleString('hi-IN')} मतदाता)
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    disabled={currentPage <= 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '5px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      background: currentPage <= 1 ? '#e2e8f0' : '#ffffff',
+                      color: currentPage <= 1 ? '#94a3b8' : '#0f172a',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      cursor: currentPage <= 1 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <ChevronLeft size={15} /> पिछला
+                  </button>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                    पेज {currentPage} / {totalDeskPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={currentPage >= totalDeskPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalDeskPages, p + 1))}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '5px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      background: currentPage >= totalDeskPages ? '#e2e8f0' : '#ffffff',
+                      color: currentPage >= totalDeskPages ? '#94a3b8' : '#0f172a',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      cursor: currentPage >= totalDeskPages ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    अगला <ChevronRight size={15} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
         <div className="records-footnote">मतदान की स्थिति इस चुने गए वार्ड के रिकॉर्ड से गणना की गई है।</div>
