@@ -26,9 +26,10 @@ import {
 } from 'lucide-react';
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
-import { downloadSlip, downloadBulkSlipsAsZip, generateSlipImage } from '@/lib/downloadSlip';
-import { shareVoterSlipToWhatsApp } from '@/lib/whatsappShare';
+import { downloadSlip, downloadBulkSlipsAsZip, generateSlipImage, downloadFamilySlip, generateFamilySlipImage } from '@/lib/downloadSlip';
+import { shareVoterSlipToWhatsApp, shareFamilySlipToWhatsApp } from '@/lib/whatsappShare';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
+import { FamilyVoterSlipTemplate } from '@/components/FamilyVoterSlipTemplate';
 import { WhatsAppLogo } from '@/components/WhatsAppLogo';
 import { WhatsAppWebHelperModal } from '@/components/WhatsAppWebHelperModal';
 
@@ -127,6 +128,21 @@ export default function VoterDirectoryPage() {
   const [cachedSlipImageDataUrl, setCachedSlipImageDataUrl] = useState<string | null>(null);
   const modalSlipRef = useRef<HTMLDivElement>(null);
   const [isDownloadingSingleSlip, setIsDownloadingSingleSlip] = useState(false);
+
+  // Family slip modal state
+  const [familySlipData, setFamilySlipData] = useState<{
+    members: Voter[];
+    houseNo: string;
+    wardNo: string;
+    partNo: string;
+  } | null>(null);
+  const [familySlipPhone, setFamilySlipPhone] = useState('');
+  const [cachedFamilySlipDataUrl, setCachedFamilySlipDataUrl] = useState<string | null>(null);
+  const [isDownloadingFamilySlip, setIsDownloadingFamilySlip] = useState(false);
+  const [familySlipSending, setFamilySlipSending] = useState(false);
+  const [familySlipMessage, setFamilySlipMessage] = useState('');
+  const modalFamilySlipRef = useRef<HTMLDivElement>(null);
+
   const [workersList, setWorkersList] = useState<Array<{ id: string; name: string }>>([]);
   const [slipPhone, setSlipPhone] = useState('');
   const [saving, setSaving] = useState(false);
@@ -588,6 +604,135 @@ export default function VoterDirectoryPage() {
     };
   }, [slipVoter, slipConfig]);
 
+  // Pre-generate family slip image as soon as family slip modal is opened
+  useEffect(() => {
+    let active = true;
+    if (familySlipData && familySlipData.members.length > 0) {
+      setCachedFamilySlipDataUrl(null);
+      generateFamilySlipImage(familySlipData.members, slipConfig, {
+        houseNo: familySlipData.houseNo,
+        wardNo: familySlipData.wardNo,
+        partNo: familySlipData.partNo,
+      })
+        .then((dataUrl) => {
+          if (active) setCachedFamilySlipDataUrl(dataUrl);
+        })
+        .catch((err) => {
+          console.warn('Pre-rendering family slip failed:', err);
+        });
+    } else {
+      setCachedFamilySlipDataUrl(null);
+    }
+    return () => {
+      active = false;
+    };
+  }, [familySlipData, slipConfig]);
+
+  // Open Family Slip Modal
+  const openFamilySlipModal = async (houseNo: string, wardNo = '', partNo = '') => {
+    const h = (houseNo || '').trim();
+    if (!h) {
+      alert('मकान संख्या उपलब्ध नहीं है।');
+      return;
+    }
+    setFamilySlipMessage('');
+    setFamilySlipSending(false);
+
+    let members = voters.filter((v) => (v.houseNo || '').trim() === h);
+    if (members.length === 0) {
+      try {
+        const params = new URLSearchParams();
+        if (wardNo) params.set('ward', wardNo);
+        if (partNo) params.set('part', partNo);
+        const res = await apiFetch(`/voters/family/${encodeURIComponent(h)}?${params}`);
+        if (res.ok) {
+          const data = await res.json();
+          members = Array.isArray(data) ? data : data.voters || [];
+        }
+      } catch (e) {
+        console.warn('Family fetch error:', e);
+      }
+    }
+
+    if (members.length === 0) {
+      alert(`मकान #${h} के मतदाता सदस्य नहीं मिले।`);
+      return;
+    }
+
+    const phone = members.find((m) => m.phone)?.phone || members[0]?.phone || '';
+    setFamilySlipPhone(phone);
+    setFamilySlipData({
+      members,
+      houseNo: h,
+      wardNo: wardNo || members[0]?.wardNo || '',
+      partNo: partNo || members[0]?.partNo || '',
+    });
+    void loadWhatsappQuota();
+  };
+
+  // Download Family Slip as JPG
+  const handleDownloadFamilySlipModal = async () => {
+    if (!familySlipData) return;
+    setIsDownloadingFamilySlip(true);
+    try {
+      await downloadFamilySlip(familySlipData.members, slipConfig, {
+        houseNo: familySlipData.houseNo,
+        wardNo: familySlipData.wardNo,
+        partNo: familySlipData.partNo,
+      });
+    } catch {
+      alert('परिवार पर्ची डाउनलोड नहीं हो सकी');
+    } finally {
+      setIsDownloadingFamilySlip(false);
+    }
+  };
+
+  // Direct WhatsApp Family Slip
+  const handleSendFamilySlipDirectWhatsApp = async () => {
+    if (!familySlipData) return;
+    setFamilySlipSending(true);
+    setFamilySlipMessage('परिवार पर्ची तैयार की जा रही है...');
+    try {
+      const result = await shareFamilySlipToWhatsApp({
+        familyMembers: familySlipData.members,
+        slipConfig,
+        metadata: {
+          houseNo: familySlipData.houseNo,
+          wardNo: familySlipData.wardNo,
+          partNo: familySlipData.partNo,
+        },
+        phoneNumber: familySlipPhone,
+        preGeneratedImageDataUrl: cachedFamilySlipDataUrl || undefined,
+        onStatusUpdate: (msg) => setFamilySlipMessage(msg),
+      });
+
+      if (typeof result.remainingCredits === 'number') {
+        const remaining = result.remainingCredits;
+        setWhatsappQuota((prev) =>
+          prev ? { ...prev, whatsappCredits: remaining, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev
+        );
+      }
+
+      setFamilySlipMessage(result.message);
+      if (result.method === 'desktop_clipboard') {
+        setFamilySlipData(null);
+        setWhatsappHelperData({
+          isOpen: true,
+          voterName: result.voterName || `मकान #${familySlipData.houseNo} परिवार`,
+          epic: result.epic || `House #${familySlipData.houseNo}`,
+          imageDataUrl: result.imageDataUrl || cachedFamilySlipDataUrl || undefined,
+          waLink: result.waLink,
+        });
+      } else if (result.success) {
+        setTimeout(() => setFamilySlipData(null), 2200);
+      }
+    } catch (err) {
+      setFamilySlipMessage(err instanceof Error ? err.message : 'परिवार पर्ची भेजने में त्रुटि हुई');
+    } finally {
+      setFamilySlipSending(false);
+    }
+  };
+
   // Filter by family / houseNo
   const filterByFamily = (houseNo: string, wardNo = '', partNo = '') => {
     if (!houseNo) return;
@@ -1000,6 +1145,29 @@ export default function VoterDirectoryPage() {
               </div>
 
               <div className="smartbooth-family-actions">
+                <button
+                  type="button"
+                  className="button-primary"
+                  style={{
+                    background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                    borderColor: '#15803d',
+                    color: '#ffffff',
+                    padding: '7px 14px',
+                    fontSize: '12.5px',
+                    fontWeight: 700,
+                    borderRadius: '8px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap',
+                    boxShadow: '0 2px 6px rgba(22, 163, 74, 0.35)',
+                  }}
+                  onClick={() => openFamilySlipModal(familyHouse, familyWard, familyPart)}
+                  title="इस मकान के सभी सदस्यों की संयुक्त परिवार पर्ची बनाएं व WhatsApp भेजें"
+                >
+                  <Ticket size={14} /> 👨‍👩‍👧‍👦 परिवार पर्ची बनाएं
+                </button>
+
                 <button
                   type="button"
                   className="button-primary"
@@ -1503,6 +1671,155 @@ export default function VoterDirectoryPage() {
                 </button>
               </div>
             </form>
+          </section>
+        </div>
+      )}
+
+      {/* 6B. Digital Family Slip Preview Modal */}
+      {familySlipData && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setFamilySlipData(null);
+          }}
+        >
+          <section
+            className="form-modal slip-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="family-slip-title"
+            style={{ maxWidth: '640px', width: '95%', maxHeight: '92vh', overflowY: 'auto' }}
+          >
+            <div className="modal-heading">
+              <div>
+                <span className="eyebrow-label" style={{ color: '#047857' }}>FAMILY VOTER SLIP</span>
+                <h2 id="family-slip-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '4px 0' }}>
+                  <UsersRound size={18} color="#047857" />
+                  संयुक्त परिवार मतदाता पर्ची
+                </h2>
+                <p style={{ margin: 0 }}>
+                  मकान #{familySlipData.houseNo} · {familySlipData.members.length} सदस्य · वार्ड {familySlipData.wardNo || '—'}
+                </p>
+              </div>
+              <button className="icon-button" onClick={() => setFamilySlipData(null)} aria-label="बंद करें">
+                <X size={18} />
+              </button>
+            </div>
+
+            {whatsappQuota && (
+              <div
+                style={{
+                  margin: '10px 0',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  background: !whatsappQuota.whatsappEnabled
+                    ? '#fee2e2'
+                    : whatsappQuota.whatsappCredits <= 0
+                    ? '#fef3c7'
+                    : '#f0fdf4',
+                  border: !whatsappQuota.whatsappEnabled
+                    ? '1px solid #fecaca'
+                    : whatsappQuota.whatsappCredits <= 0
+                    ? '1px solid #fde68a'
+                    : '1px solid #bbf7d0',
+                  fontSize: '13px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                }}
+              >
+                <span
+                  style={{
+                    fontWeight: 600,
+                    color: !whatsappQuota.whatsappEnabled
+                      ? '#991b1b'
+                      : whatsappQuota.whatsappCredits <= 0
+                      ? '#92400e'
+                      : '#166534',
+                  }}
+                >
+                  {!whatsappQuota.whatsappEnabled
+                    ? 'संगठन के लिए WhatsApp सेवा बंद है'
+                    : whatsappQuota.whatsappCredits <= 0
+                    ? 'WhatsApp क्रेडिट समाप्त (0 शेष)'
+                    : `उपलब्ध WhatsApp क्रेडिट: ${whatsappQuota.whatsappCredits}`}
+                </span>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>
+                  प्रयुक्त: {whatsappQuota.whatsappUsed || 0} संदेश
+                </span>
+              </div>
+            )}
+
+            {/* Family Voter Slip Preview */}
+            <div ref={modalFamilySlipRef} style={{ margin: '8px 0', width: '100%', display: 'flex', justifyContent: 'center' }}>
+              <FamilyVoterSlipTemplate
+                familyMembers={familySlipData.members}
+                config={slipConfig}
+                metadata={{
+                  houseNo: familySlipData.houseNo,
+                  wardNo: familySlipData.wardNo,
+                  partNo: familySlipData.partNo,
+                }}
+                isInline={true}
+              />
+            </div>
+
+            <div className="modal-form">
+              <label>
+                परिवार मुखिया का WhatsApp नंबर
+                <input
+                  required
+                  inputMode="tel"
+                  value={familySlipPhone}
+                  onChange={(event) => setFamilySlipPhone(event.target.value)}
+                  placeholder="+91 98765 43210"
+                />
+              </label>
+
+              {familySlipMessage && (
+                <p className="form-error" role="alert" style={{ whiteSpace: 'pre-wrap', color: familySlipMessage.includes('कटा') ? '#166534' : '#dc2626' }}>
+                  {familySlipMessage}
+                </p>
+              )}
+
+              <div
+                className="modal-actions"
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  justifyContent: 'flex-end',
+                  marginTop: '16px',
+                }}
+              >
+                <button className="button-secondary" type="button" onClick={() => window.print()}>
+                  <Printer size={15} /> प्रिंट
+                </button>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  disabled={isDownloadingFamilySlip}
+                  onClick={handleDownloadFamilySlipModal}
+                >
+                  {isDownloadingFamilySlip ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />}
+                  {isDownloadingFamilySlip ? 'डाउनलोड हो रहा है...' : 'JPG डाउनलोड'}
+                </button>
+                <button
+                  type="button"
+                  className="button-primary"
+                  style={{ background: '#25D366', borderColor: '#22c55e', color: '#fff', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  onClick={handleSendFamilySlipDirectWhatsApp}
+                  disabled={familySlipSending || !familySlipPhone.trim()}
+                  title="WhatsApp पर परिवार पर्ची की फोटो व सभी सदस्यों का विवरण भेजें"
+                >
+                  {familySlipSending ? <LoaderCircle size={15} className="spin" /> : <WhatsAppLogo size={16} color="#ffffff" />}
+                  डायरेक्ट WhatsApp (फोटो + पर्ची)
+                </button>
+              </div>
+            </div>
           </section>
         </div>
       )}

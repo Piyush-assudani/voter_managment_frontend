@@ -2,6 +2,7 @@ import html2canvas from 'html2canvas';
 import { createRoot } from 'react-dom/client';
 import React from 'react';
 import { VoterSlipTemplate, SlipConfig, VoterSlipData } from '../components/VoterSlipTemplate';
+import { FamilyVoterSlipTemplate } from '../components/FamilyVoterSlipTemplate';
 import { downloadDataUrl, downloadBlob } from './fileDownload';
 
 export const generateSlipImage = async (
@@ -213,6 +214,134 @@ export const downloadSlip = async (
     return false;
   }
 };
+
+export const generateFamilySlipImage = async (
+  familyMembers: VoterSlipData[],
+  slipConfig?: SlipConfig,
+  metadata?: { houseNo?: string; wardNo?: string; partNo?: string; boothName?: string }
+): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.top = '0';
+    container.style.left = '0';
+    container.style.width = '660px';
+    container.style.minWidth = '660px';
+    container.style.maxWidth = '660px';
+    container.style.opacity = '0';
+    container.style.pointerEvents = 'none';
+    container.style.zIndex = '-99999';
+    container.style.background = '#ffffff';
+    container.style.overflow = 'visible';
+    container.dir = 'ltr';
+    document.body.appendChild(container);
+
+    const root = createRoot(container);
+    const ref = React.createRef<HTMLDivElement>();
+
+    root.render(
+      React.createElement(FamilyVoterSlipTemplate, {
+        familyMembers,
+        houseNo: metadata?.houseNo,
+        wardNo: metadata?.wardNo,
+        partNo: metadata?.partNo,
+        boothName: metadata?.boothName,
+        config: slipConfig,
+        forwardedRef: ref,
+        isInline: false,
+      })
+    );
+
+    setTimeout(async () => {
+      try {
+        if (!ref.current) throw new Error('Template not mounted');
+
+        if (document.fonts) {
+          try {
+            await document.fonts.ready;
+          } catch {}
+        }
+
+        const imgs = Array.from(ref.current.querySelectorAll('img'));
+        await Promise.all(
+          imgs.map(async (img) => {
+            try {
+              if (img.complete && img.naturalHeight !== 0) return true;
+              if (img.decode) {
+                await img.decode();
+                return true;
+              }
+            } catch {}
+            return new Promise((res) => {
+              img.onload = () => res(true);
+              img.onerror = () => res(true);
+              setTimeout(() => res(true), 1200);
+            });
+          })
+        );
+
+        await new Promise((res) => setTimeout(res, 200));
+
+        const targetNode = ref.current;
+        const canvas = await html2canvas(targetNode, {
+          scale: 2.5,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+          onclone: (clonedDoc) => {
+            const style = clonedDoc.createElement('style');
+            style.innerHTML = `
+              @import url('https://fonts.googleapis.com/css2?family=Anek+Devanagari:wght@400;500;600;700;800;900&family=Noto+Sans+Devanagari:wght@400;500;600;700;800;900&display=swap');
+              * {
+                -webkit-font-smoothing: antialiased !important;
+                -moz-osx-font-smoothing: grayscale !important;
+                text-rendering: optimizeLegibility !important;
+                font-family: 'Anek Devanagari', 'Noto Sans Devanagari', sans-serif !important;
+              }
+              .family-slip-printable-card {
+                width: 660px !important;
+                max-width: 660px !important;
+                padding: 16px !important;
+                overflow: visible !important;
+              }
+            `;
+            clonedDoc.head.appendChild(style);
+          },
+        });
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        root.unmount();
+        if (document.body.contains(container)) document.body.removeChild(container);
+        resolve(dataUrl);
+      } catch (err) {
+        root.unmount();
+        if (document.body.contains(container)) document.body.removeChild(container);
+        reject(err);
+      }
+    }, 280);
+  });
+};
+
+export const downloadFamilySlip = async (
+  familyMembers: VoterSlipData[],
+  slipConfig?: SlipConfig,
+  metadata?: { houseNo?: string; wardNo?: string; partNo?: string; boothName?: string }
+): Promise<boolean> => {
+  try {
+    const dataUrl = await generateFamilySlipImage(familyMembers, slipConfig, metadata);
+    const house = metadata?.houseNo || familyMembers[0]?.houseNo || 'family';
+    const ward = metadata?.wardNo || familyMembers[0]?.wardNo || '';
+    const fileName = `FamilySlip_House_${house}_Ward_${ward}_${familyMembers.length}Voters.jpg`;
+    downloadDataUrl(dataUrl, fileName);
+    return true;
+  } catch (err) {
+    console.error('Failed to download family slip:', err);
+    alert('परिवार पर्ची डाउनलोड नहीं हो सकी। कृपया दोबारा प्रयास करें।');
+    return false;
+  }
+};
+
 
 export const downloadBulkSlipsAsZip = async (
   votersList: VoterSlipData[],

@@ -17,13 +17,15 @@ import {
   Upload,
   Trash2,
   Building,
+  UsersRound,
 } from 'lucide-react';
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
+import { FamilyVoterSlipTemplate } from '@/components/FamilyVoterSlipTemplate';
 import { WardPollingStationEditor } from '@/components/WardPollingStationEditor';
 import { ImageCropModal } from '@/components/ImageCropModal';
-import { downloadSlip, downloadBulkSlipsAsZip, generateSlipImage } from '@/lib/downloadSlip';
-import { shareVoterSlipToWhatsApp } from '@/lib/whatsappShare';
+import { downloadSlip, downloadBulkSlipsAsZip, generateSlipImage, downloadFamilySlip, generateFamilySlipImage } from '@/lib/downloadSlip';
+import { shareVoterSlipToWhatsApp, shareFamilySlipToWhatsApp } from '@/lib/whatsappShare';
 import { SortButton, SortState } from '@/components/SortButton';
 import { WhatsAppLogo } from '@/components/WhatsAppLogo';
 import { WhatsAppWebHelperModal } from '@/components/WhatsAppWebHelperModal';
@@ -148,13 +150,19 @@ export default function SlipsPage() {
     waLink?: string;
   } | null>(null);
 
-  // Bulk Print Mode
+  // Modes: 'single' | 'family' | 'bulk'
+  const [slipMode, setSlipMode] = useState<'single' | 'family' | 'bulk'>('single');
   const [bulkMode, setBulkMode] = useState(false);
   const [perA4, setPerA4] = useState<4 | 8 | 12>(4);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDownloadingBulkZip, setIsDownloadingBulkZip] = useState(false);
   const [bulkZipProgress, setBulkZipProgress] = useState({ current: 0, total: 0 });
   const [sort, setSort] = useState<SortState>({ field: 'serialNo', direction: 'asc' });
+
+  // Family Mode State
+  const [selectedHouseKey, setSelectedHouseKey] = useState<string>('');
+  const [familySearch, setFamilySearch] = useState<string>('');
+  const [cachedFamilySlipImageDataUrl, setCachedFamilySlipImageDataUrl] = useState<string | null>(null);
 
   const handleSort = (field: string) => {
     setSort((prev) => ({
@@ -180,6 +188,56 @@ export default function SlipsPage() {
     });
     return list;
   }, [voters, sort]);
+
+  // Group voters into unique households for Family Slip mode
+  const households = useMemo(() => {
+    const map = new Map<string, { key: string; houseNo: string; wardNo: string; partNo: string; members: Voter[]; headName: string }>();
+    sortedVoters.forEach((v) => {
+      const h = (v.houseNo || '—').trim();
+      const w = (v.wardNo || '').trim();
+      const p = (v.partNo || '').trim();
+      const key = `${w}_${p}_${h}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          houseNo: h,
+          wardNo: w,
+          partNo: p,
+          members: [],
+          headName: v.nameHi || v.nameEn || '',
+        });
+      }
+      map.get(key)!.members.push(v);
+    });
+
+    const list = Array.from(map.values());
+    list.sort((a, b) => b.members.length - a.members.length);
+    return list;
+  }, [sortedVoters]);
+
+  const filteredHouseholds = useMemo(() => {
+    if (!familySearch.trim()) return households;
+    const q = familySearch.trim().toLowerCase();
+    return households.filter((h) => {
+      const houseMatch = h.houseNo.toLowerCase().includes(q);
+      const headMatch = h.headName.toLowerCase().includes(q);
+      const anyMember = h.members.some((m) =>
+        (m.nameHi || '').toLowerCase().includes(q) ||
+        (m.nameEn || '').toLowerCase().includes(q) ||
+        (m.epic || '').toLowerCase().includes(q)
+      );
+      return houseMatch || headMatch || anyMember;
+    });
+  }, [households, familySearch]);
+
+  const selectedHousehold = useMemo(() => {
+    if (selectedHouseKey) {
+      const found = households.find((h) => h.key === selectedHouseKey);
+      if (found) return found;
+    }
+    return filteredHouseholds[0] || households[0] || null;
+  }, [households, filteredHouseholds, selectedHouseKey]);
+
 
   const printContainerRef = useRef<HTMLDivElement>(null);
 
@@ -431,7 +489,7 @@ export default function SlipsPage() {
   // Pre-generate slip image as soon as voter is viewed for instant WhatsApp share
   useEffect(() => {
     let active = true;
-    if (selectedVoter) {
+    if (slipMode === 'single' && selectedVoter) {
       setCachedSlipImageDataUrl(null);
       generateSlipImage(selectedVoter, slipConfig, printContainerRef.current)
         .then((dataUrl) => {
@@ -446,45 +504,106 @@ export default function SlipsPage() {
     return () => {
       active = false;
     };
-  }, [selectedVoter, slipConfig]);
+  }, [slipMode, selectedVoter, slipConfig]);
+
+  // Pre-generate family slip image for instantaneous share
+  useEffect(() => {
+    let active = true;
+    if (slipMode === 'family' && selectedHousehold && selectedHousehold.members.length > 0) {
+      setCachedFamilySlipImageDataUrl(null);
+      generateFamilySlipImage(selectedHousehold.members, slipConfig, {
+        houseNo: selectedHousehold.houseNo,
+        wardNo: selectedHousehold.wardNo,
+        partNo: selectedHousehold.partNo,
+      })
+        .then((dataUrl) => {
+          if (active) setCachedFamilySlipImageDataUrl(dataUrl);
+        })
+        .catch((err) => {
+          console.warn('Pre-rendering family slip error:', err);
+        });
+    } else {
+      setCachedFamilySlipImageDataUrl(null);
+    }
+    return () => {
+      active = false;
+    };
+  }, [slipMode, selectedHousehold, slipConfig]);
 
   // Official WhatsApp Send (Meta Cloud API with Photo)
   const handleSendWhatsAppViaApi = async () => {
-    if (!selectedVoter) return;
     setWpSending(true);
     setWpMessage('पर्ची की फोटो और संदेश Meta API द्वारा भेजा जा रहा है...');
     try {
-      let slipImageDataUrl = cachedSlipImageDataUrl || undefined;
-      if (!slipImageDataUrl) {
-        try {
-          slipImageDataUrl = await generateSlipImage(selectedVoter, slipConfig, printContainerRef.current);
-        } catch (imgErr) {
-          console.warn('Failed to pre-render slip image for Meta API:', imgErr);
+      if (slipMode === 'family' && selectedHousehold) {
+        let slipImageDataUrl = cachedFamilySlipImageDataUrl || undefined;
+        if (!slipImageDataUrl) {
+          try {
+            slipImageDataUrl = await generateFamilySlipImage(selectedHousehold.members, slipConfig, {
+              houseNo: selectedHousehold.houseNo,
+              wardNo: selectedHousehold.wardNo,
+              partNo: selectedHousehold.partNo,
+            });
+          } catch (e) {
+            console.warn('Family slip render failed:', e);
+          }
         }
-      }
+        const first = selectedHousehold.members[0];
+        const response = await apiFetch('/whatsapp/send-slip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            voterId: first?._id,
+            phoneNumber: wpPhone || selectedHousehold.members.find((m) => m.phone)?.phone || '',
+            slipImageDataUrl,
+            slipType: 'family',
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.message || 'WhatsApp परिवार पर्ची नहीं भेजी जा सकी');
+        }
+        if (typeof data.remainingCredits === 'number') {
+          setWhatsappQuota((prev) =>
+            prev ? { ...prev, whatsappCredits: data.remainingCredits, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev
+          );
+        }
+        setWpMessage(data.message || 'Meta API द्वारा परिवार पर्ची फोटो व विवरण सफलतापूर्वक भेज दिया गया!');
+        setTimeout(() => setIsWpModalOpen(false), 2000);
+      } else {
+        if (!selectedVoter) return;
+        let slipImageDataUrl = cachedSlipImageDataUrl || undefined;
+        if (!slipImageDataUrl) {
+          try {
+            slipImageDataUrl = await generateSlipImage(selectedVoter, slipConfig, printContainerRef.current);
+          } catch (imgErr) {
+            console.warn('Failed to pre-render slip image for Meta API:', imgErr);
+          }
+        }
 
-      const response = await apiFetch('/whatsapp/send-slip', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          voterId: selectedVoter._id,
-          phoneNumber: wpPhone || selectedVoter.phone || '',
-          slipImageDataUrl,
-        }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(data.message || 'WhatsApp पर्ची नहीं भेजी जा सकी');
+        const response = await apiFetch('/whatsapp/send-slip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            voterId: selectedVoter._id,
+            phoneNumber: wpPhone || selectedVoter.phone || '',
+            slipImageDataUrl,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.message || 'WhatsApp पर्ची नहीं भेजी जा सकी');
+        }
+        if (typeof data.remainingCredits === 'number') {
+          setWhatsappQuota((prev) =>
+            prev ? { ...prev, whatsappCredits: data.remainingCredits, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev
+          );
+        }
+        setWpMessage(data.message || 'Meta API द्वारा पर्ची फोटो व विवरण सफलतापूर्वक भेज दिया गया है!');
+        setTimeout(() => {
+          setIsWpModalOpen(false);
+        }, 2000);
       }
-      if (typeof data.remainingCredits === 'number') {
-        setWhatsappQuota((prev) =>
-          prev ? { ...prev, whatsappCredits: data.remainingCredits, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev
-        );
-      }
-      setWpMessage(data.message || 'Meta API द्वारा पर्ची फोटो व विवरण सफलतापूर्वक भेज दिया गया है!');
-      setTimeout(() => {
-        setIsWpModalOpen(false);
-      }, 2000);
     } catch (err) {
       setWpMessage(err instanceof Error ? err.message : 'संदेश भेजने में त्रुटि हुई');
     } finally {
@@ -494,38 +613,76 @@ export default function SlipsPage() {
 
   // Direct WhatsApp (Mobile Share with Photo + Desktop Clipboard Paste + Android Native Bridge)
   const handleSendDirectWhatsApp = async () => {
-    if (!selectedVoter) return;
     setWpSending(true);
     try {
-      const result = await shareVoterSlipToWhatsApp({
-        voter: selectedVoter,
-        slipConfig,
-        phoneNumber: wpPhone || selectedVoter.phone || '',
-        preGeneratedImageDataUrl: cachedSlipImageDataUrl || undefined,
-        existingElement: printContainerRef.current,
-        onStatusUpdate: (msg) => setWpMessage(msg),
-      });
+      if (slipMode === 'family' && selectedHousehold) {
+        const result = await shareFamilySlipToWhatsApp({
+          familyMembers: selectedHousehold.members,
+          slipConfig,
+          metadata: {
+            houseNo: selectedHousehold.houseNo,
+            wardNo: selectedHousehold.wardNo,
+            partNo: selectedHousehold.partNo,
+          },
+          phoneNumber: wpPhone || selectedHousehold.members.find((m) => m.phone)?.phone || '',
+          preGeneratedImageDataUrl: cachedFamilySlipImageDataUrl || undefined,
+          onStatusUpdate: (msg) => setWpMessage(msg),
+        });
 
-      if (typeof result.remainingCredits === 'number') {
-        const remaining = result.remainingCredits;
-        setWhatsappQuota((prev) =>
-          prev ? { ...prev, whatsappCredits: remaining, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev
-        );
-      }
+        if (typeof result.remainingCredits === 'number') {
+          const remaining = result.remainingCredits;
+          setWhatsappQuota((prev) =>
+            prev ? { ...prev, whatsappCredits: remaining, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev
+          );
+        }
 
-      setWpMessage(result.message);
-      if (result.success) {
-        if (result.method === 'desktop_clipboard' && result.imageDataUrl) {
-          setIsWpModalOpen(false);
-          setWhatsappHelperData({
-            isOpen: true,
-            voterName: result.voterName || selectedVoter.nameHi || selectedVoter.nameEn,
-            epic: result.epic || selectedVoter.epic,
-            imageDataUrl: result.imageDataUrl,
-            waLink: result.waLink,
-          });
-        } else {
-          setTimeout(() => setIsWpModalOpen(false), 2200);
+        setWpMessage(result.message);
+        if (result.success) {
+          if (result.method === 'desktop_clipboard' && result.imageDataUrl) {
+            setIsWpModalOpen(false);
+            setWhatsappHelperData({
+              isOpen: true,
+              voterName: result.voterName || `मकान #${selectedHousehold.houseNo} परिवार`,
+              epic: result.epic || `House #${selectedHousehold.houseNo}`,
+              imageDataUrl: result.imageDataUrl,
+              waLink: result.waLink,
+            });
+          } else {
+            setTimeout(() => setIsWpModalOpen(false), 2200);
+          }
+        }
+      } else {
+        if (!selectedVoter) return;
+        const result = await shareVoterSlipToWhatsApp({
+          voter: selectedVoter,
+          slipConfig,
+          phoneNumber: wpPhone || selectedVoter.phone || '',
+          preGeneratedImageDataUrl: cachedSlipImageDataUrl || undefined,
+          existingElement: printContainerRef.current,
+          onStatusUpdate: (msg) => setWpMessage(msg),
+        });
+
+        if (typeof result.remainingCredits === 'number') {
+          const remaining = result.remainingCredits;
+          setWhatsappQuota((prev) =>
+            prev ? { ...prev, whatsappCredits: remaining, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev
+          );
+        }
+
+        setWpMessage(result.message);
+        if (result.success) {
+          if (result.method === 'desktop_clipboard' && result.imageDataUrl) {
+            setIsWpModalOpen(false);
+            setWhatsappHelperData({
+              isOpen: true,
+              voterName: result.voterName || selectedVoter.nameHi || selectedVoter.nameEn,
+              epic: result.epic || selectedVoter.epic,
+              imageDataUrl: result.imageDataUrl,
+              waLink: result.waLink,
+            });
+          } else {
+            setTimeout(() => setIsWpModalOpen(false), 2200);
+          }
         }
       }
     } catch (err) {
@@ -540,16 +697,31 @@ export default function SlipsPage() {
   };
 
   const handleDownloadImage = async () => {
-    if (!selectedVoter) return;
-    setIsDownloading(true);
-    try {
-      await downloadSlip(selectedVoter, slipConfig, printContainerRef.current);
-    } catch {
-      alert('पर्ची इमेज डाउनलोड नहीं हो सकी');
-    } finally {
-      setIsDownloading(false);
+    if (slipMode === 'family' && selectedHousehold) {
+      setIsDownloading(true);
+      try {
+        await downloadFamilySlip(selectedHousehold.members, slipConfig, {
+          houseNo: selectedHousehold.houseNo,
+          wardNo: selectedHousehold.wardNo,
+          partNo: selectedHousehold.partNo,
+        });
+      } catch {
+        alert('परिवार पर्ची डाउनलोड नहीं हो सकी');
+      } finally {
+        setIsDownloading(false);
+      }
+    } else if (selectedVoter) {
+      setIsDownloading(true);
+      try {
+        await downloadSlip(selectedVoter, slipConfig, printContainerRef.current);
+      } catch {
+        alert('पर्ची इमेज डाउनलोड नहीं हो सकी');
+      } finally {
+        setIsDownloading(false);
+      }
     }
   };
+
 
   return (
     <div className={`work-page slips-studio-page ${bulkMode ? `slips-bulk-print-mode slips-per-a4-${perA4}` : 'slips-single-print-mode'}`}>
@@ -1017,12 +1189,13 @@ export default function SlipsPage() {
             display: none !important;
           }
 
-          .slips-single-print-mode .voter-slip-printable-card {
+          .slips-single-print-mode .voter-slip-printable-card,
+          .slips-single-print-mode .family-voter-slip-printable-card {
             position: relative !important;
             left: auto !important;
             top: auto !important;
             margin: 20px auto 0 !important;
-            max-width: 580px !important;
+            max-width: 600px !important;
             width: 100% !important;
             box-shadow: none !important;
           }
@@ -1069,15 +1242,94 @@ export default function SlipsPage() {
             रिफ्रेश
           </button>
 
-          <button
-            className={`button-secondary ${bulkMode ? 'button-active' : ''}`}
-            type="button"
-            onClick={() => setBulkMode(!bulkMode)}
-            style={{ borderColor: bulkMode ? '#16a34a' : undefined, color: bulkMode ? '#16a34a' : undefined }}
+          <div
+            style={{
+              display: 'inline-flex',
+              background: '#f1f5f9',
+              padding: '3px',
+              borderRadius: '10px',
+              border: '1px solid #cbd5e1',
+              gap: '4px',
+            }}
           >
-            <Layers size={15} />
-            {bulkMode ? 'एकल पर्ची देखें' : 'बल्क पर्ची शीट'}
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSlipMode('single');
+                setBulkMode(false);
+              }}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                background: slipMode === 'single' && !bulkMode ? '#ffffff' : 'transparent',
+                color: slipMode === 'single' && !bulkMode ? '#1e3a8a' : '#64748b',
+                fontWeight: slipMode === 'single' && !bulkMode ? 700 : 600,
+                fontSize: '13px',
+                boxShadow: slipMode === 'single' && !bulkMode ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              <Ticket size={14} />
+              <span>एकल पर्ची</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSlipMode('family');
+                setBulkMode(false);
+              }}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                background: slipMode === 'family' ? '#ffffff' : 'transparent',
+                color: slipMode === 'family' ? '#047857' : '#64748b',
+                fontWeight: slipMode === 'family' ? 700 : 600,
+                fontSize: '13px',
+                boxShadow: slipMode === 'family' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              <UsersRound size={14} />
+              <span>परिवार पर्ची</span>
+              <span style={{ fontSize: '11px', background: '#dcfce7', color: '#15803d', padding: '1px 6px', borderRadius: '10px', fontWeight: 800 }}>
+                {households.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSlipMode('bulk');
+                setBulkMode(true);
+              }}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                background: bulkMode || slipMode === 'bulk' ? '#ffffff' : 'transparent',
+                color: bulkMode || slipMode === 'bulk' ? '#1d4ed8' : '#64748b',
+                fontWeight: bulkMode || slipMode === 'bulk' ? 700 : 600,
+                fontSize: '13px',
+                boxShadow: bulkMode || slipMode === 'bulk' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              <Layers size={14} />
+              <span>A4 बल्क शीट</span>
+            </button>
+          </div>
 
           <button
             className="button-primary"
@@ -1251,7 +1503,7 @@ export default function SlipsPage() {
       </div>
 
       {/* Main Studio Content */}
-      {bulkMode ? (
+      {bulkMode || slipMode === 'bulk' ? (
         /* ================= BULK PRINT VIEW ================= */
         <section
           className="slips-bulk-print-container"
@@ -1496,6 +1748,227 @@ export default function SlipsPage() {
             })}
           </div>
         </section>
+      ) : slipMode === 'family' ? (
+        /* ================= FAMILY VOTER SLIP STUDIO VIEW ================= */
+        <div className="slips-studio-layout">
+          {/* LEFT: Households List */}
+          <section
+            style={{
+              background: '#ffffff',
+              borderRadius: '14px',
+              border: '1px solid #e2e8f0',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: 'calc(100vh - 260px)',
+            }}
+          >
+            <div
+              style={{
+                padding: '12px 16px',
+                borderBottom: '1px solid #f1f5f9',
+                background: '#f8fafc',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: '#065f46', letterSpacing: '0.02em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <UsersRound size={15} color="#047857" />
+                  परिवार सूची ({filteredHouseholds.length} परिवार)
+                </span>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>क्लिक कर पर्ची देखें</span>
+              </div>
+              <div className="search-field" style={{ width: '100%' }}>
+                <Search size={14} />
+                <input
+                  placeholder="मकान नं., मुखिया या सदस्य खोजें..."
+                  value={familySearch}
+                  onChange={(e) => setFamilySearch(e.target.value)}
+                  style={{ fontSize: '12.5px', padding: '6px 10px' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ overflowY: 'auto', flex: 1, padding: '8px' }}>
+              {loading && voters.length === 0 ? (
+                <div style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
+                  <LoaderCircle size={20} className="spin" style={{ margin: '0 auto 8px' }} />
+                  डेटा लोड हो रहा है...
+                </div>
+              ) : filteredHouseholds.length === 0 ? (
+                <div style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                  कोई परिवार नहीं मिला
+                </div>
+              ) : (
+                filteredHouseholds.map((household) => {
+                  const isSelected = selectedHousehold?.key === household.key;
+                  return (
+                    <div
+                      key={household.key}
+                      onClick={() => setSelectedHouseKey(household.key)}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        marginBottom: '6px',
+                        cursor: 'pointer',
+                        background: isSelected ? '#ecfdf5' : '#ffffff',
+                        border: isSelected ? '1.5px solid #059669' : '1px solid #f1f5f9',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <strong style={{ color: isSelected ? '#065f46' : '#0f172a', fontSize: '13.5px', display: 'block' }}>
+                            {household.headName || 'परिवार मुखिया'}
+                          </strong>
+                          <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                            मकान नं. <strong>#{household.houseNo}</strong> · वार्ड <strong>{household.wardNo || '—'}</strong>
+                          </span>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            color: isSelected ? '#047857' : '#0284c7',
+                            background: isSelected ? '#d1fae5' : '#e0f2fe',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            border: `1px solid ${isSelected ? '#a7f3d0' : '#bae6fd'}`,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          👨‍👩‍👧‍👦 {household.members.length} सदस्य
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </section>
+
+          {/* RIGHT: Live Family Slip Preview & Actions */}
+          <section
+            className="slips-live-preview-section"
+            style={{
+              background: '#ffffff',
+              borderRadius: '14px',
+              border: '1px solid #e2e8f0',
+              padding: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
+          >
+            {/* Action Bar */}
+            <div
+              style={{
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '12px',
+                marginBottom: '20px',
+                paddingBottom: '16px',
+                borderBottom: '1px solid #f1f5f9',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>
+                  {selectedHousehold ? (
+                    <>
+                      मकान #{selectedHousehold.houseNo} ·{' '}
+                      <span style={{ color: '#059669' }}>{selectedHousehold.members.length} मतदाता</span>
+                      {selectedHousehold.wardNo && (
+                        <span style={{ color: '#64748b', fontSize: '13px', marginLeft: '6px' }}>
+                          (वार्ड {selectedHousehold.wardNo})
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    'परिवार पर्ची पूर्वावलोकन (Family Slip Preview)'
+                  )}
+                </h3>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  एक ही मकान के सभी सदस्यों की संयुक्त आधिकारिक पर्ची
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  className="button-secondary"
+                  type="button"
+                  onClick={handlePrint}
+                  disabled={!selectedHousehold || selectedHousehold.members.length === 0}
+                >
+                  <Printer size={15} /> प्रिंट
+                </button>
+
+                <button
+                  className="button-secondary"
+                  type="button"
+                  onClick={handleDownloadImage}
+                  disabled={!selectedHousehold || selectedHousehold.members.length === 0 || isDownloading}
+                >
+                  {isDownloading ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />}
+                  JPG डाउनलोड
+                </button>
+
+                <button
+                  className="button-primary"
+                  type="button"
+                  style={{
+                    background: '#25D366',
+                    borderColor: '#22c55e',
+                    color: '#fff',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                  onClick={() => {
+                    if (!selectedHousehold) return;
+                    const phoneWithNum = selectedHousehold.members.find((m) => m.phone)?.phone || '';
+                    setWpPhone(phoneWithNum);
+                    setWpMessage('');
+                    setIsWpModalOpen(true);
+                  }}
+                  disabled={
+                    !selectedHousehold ||
+                    whatsappQuota?.whatsappEnabled === false ||
+                    (whatsappQuota ? whatsappQuota.whatsappCredits <= 0 : false)
+                  }
+                  title="परिवार के मुखिया को सीधे WhatsApp भेजें"
+                >
+                  <WhatsAppLogo size={15} color="#ffffff" /> WhatsApp
+                </button>
+              </div>
+            </div>
+
+            {/* The Actual Family Voter Slip Card */}
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+              {selectedHousehold && selectedHousehold.members.length > 0 ? (
+                <FamilyVoterSlipTemplate
+                  familyMembers={selectedHousehold.members}
+                  config={slipConfig}
+                  metadata={{
+                    houseNo: selectedHousehold.houseNo,
+                    wardNo: selectedHousehold.wardNo,
+                    partNo: selectedHousehold.partNo,
+                  }}
+                  isInline={true}
+                  forwardedRef={printContainerRef}
+                />
+              ) : (
+                <div style={{ padding: '60px 20px', textAlign: 'center', color: '#94a3b8' }}>
+                  कृपया बाईं ओर से कोई परिवार चुनें
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
       ) : (
         /* ================= SINGLE VOTER SLIP STUDIO VIEW ================= */
         <div className="slips-studio-layout">
@@ -2351,7 +2824,7 @@ export default function SlipsPage() {
       )}
 
       {/* WhatsApp Modal */}
-      {isWpModalOpen && selectedVoter && (
+      {isWpModalOpen && (selectedVoter || (slipMode === 'family' && selectedHousehold)) && (
         <div
           className="modal-backdrop"
           role="presentation"
@@ -2363,9 +2836,15 @@ export default function SlipsPage() {
             <div className="modal-heading">
               <div>
                 <span className="eyebrow-label">WHATSAPP DISPATCH</span>
-                <h2 style={{ fontSize: '18px', margin: '4px 0' }}>WhatsApp पर्ची भेजें</h2>
+                <h2 style={{ fontSize: '18px', margin: '4px 0' }}>
+                  {slipMode === 'family' ? 'संयुक्त परिवार पर्ची WhatsApp' : 'WhatsApp पर्ची भेजें'}
+                </h2>
                 <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
-                  {selectedVoter.nameHi || selectedVoter.nameEn} ({selectedVoter.epic})
+                  {slipMode === 'family' && selectedHousehold
+                    ? `मकान #${selectedHousehold.houseNo} परिवार (${selectedHousehold.members.length} सदस्य) · वार्ड ${selectedHousehold.wardNo || '—'}`
+                    : selectedVoter
+                    ? `${selectedVoter.nameHi || selectedVoter.nameEn} (${selectedVoter.epic})`
+                    : ''}
                 </p>
               </div>
               <button className="icon-button" type="button" onClick={() => setIsWpModalOpen(false)}>

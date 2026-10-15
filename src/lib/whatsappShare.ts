@@ -1,5 +1,5 @@
 import { VoterSlipData, SlipConfig } from '@/components/VoterSlipTemplate';
-import { generateSlipImage } from './downloadSlip';
+import { generateSlipImage, generateFamilySlipImage } from './downloadSlip';
 import { downloadDataUrl } from './fileDownload';
 import { apiFetch } from './api';
 
@@ -9,6 +9,15 @@ export interface WhatsAppShareOptions {
   phoneNumber?: string;
   preGeneratedImageDataUrl?: string;
   existingElement?: HTMLElement | null;
+  onStatusUpdate?: (status: string) => void;
+}
+
+export interface WhatsAppFamilyShareOptions {
+  familyMembers: VoterSlipData[];
+  slipConfig?: SlipConfig;
+  metadata?: { houseNo?: string; wardNo?: string; partNo?: string; boothName?: string };
+  phoneNumber?: string;
+  preGeneratedImageDataUrl?: string;
   onStatusUpdate?: (status: string) => void;
 }
 
@@ -66,7 +75,7 @@ export async function copySlipImageToClipboard(dataUrl: string): Promise<boolean
 }
 
 /**
- * Universal WhatsApp Slip Sharing Helper:
+ * Universal WhatsApp Slip Sharing Helper (Individual):
  * 1. Android App: Uses native AndroidWhatsAppBridge with FileProvider URI (photo + caption)
  * 2. Mobile Browser: Uses Web Share API (attaches actual image file + caption to WhatsApp)
  * 3. Desktop Browser: Auto-downloads image + copies to clipboard + opens WhatsApp Web with instruction
@@ -99,6 +108,7 @@ export async function shareVoterSlipToWhatsApp(
         voterId: voter._id,
         phoneNumber: phoneNumber || voter.phone || '',
         slipImageDataUrl,
+        slipType: 'individual',
       }),
     });
     backendData = await response.json().catch(() => ({}));
@@ -218,5 +228,180 @@ export async function shareVoterSlipToWhatsApp(
     viewUrl: backendData.viewUrl || backendData.slipImageUrl,
     voterName: voter.nameHi || voter.nameEn || 'मतदाता',
     epic: voter.epic,
+  };
+}
+
+/**
+ * Universal WhatsApp Slip Sharing Helper (Family Wise):
+ * Sends the combined Family Voter Slip with all household members
+ */
+export async function shareFamilySlipToWhatsApp(
+  options: WhatsAppFamilyShareOptions
+): Promise<WhatsAppShareResult> {
+  const { familyMembers, slipConfig, metadata, phoneNumber, preGeneratedImageDataUrl, onStatusUpdate } = options;
+
+  onStatusUpdate?.('संयुक्त परिवार पर्ची की फोटो तैयार की जा रही है...');
+
+  const first = familyMembers[0] || {};
+  const house = metadata?.houseNo || first.houseNo || '—';
+  const ward = (metadata?.wardNo || first.wardNo || '').replace(/^(वार्ड|Ward)\s*/i, '') || '—';
+  const part = metadata?.partNo || first.partNo || '—';
+  const booth = metadata?.boothName || first.boothName || slipConfig?.pollingStationFallback || `भाग संख्या ${part}`;
+
+  // 1. Obtain image data URL (from cache or generate)
+  let familyImageDataUrl = preGeneratedImageDataUrl;
+  if (!familyImageDataUrl) {
+    try {
+      familyImageDataUrl = await generateFamilySlipImage(familyMembers, slipConfig, metadata);
+    } catch (imgErr) {
+      console.warn('Failed to render family slip image for WhatsApp:', imgErr);
+    }
+  }
+
+  // 2. Register dispatch in backend to deduct credit & store image for public link
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let backendData: any = {};
+  const targetPhone = phoneNumber || first.phone || '';
+  try {
+    const response = await apiFetch('/whatsapp/send-manual', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        voterId: first._id,
+        phoneNumber: targetPhone,
+        slipImageDataUrl: familyImageDataUrl,
+        slipType: 'family',
+        houseNo: house,
+        wardNo: ward,
+        partNo: part,
+        familyCount: familyMembers.length,
+      }),
+    });
+    backendData = await response.json().catch(() => ({}));
+  } catch (apiErr) {
+    console.warn('Backend send-manual family error:', apiErr);
+  }
+
+  // Structured multi-member message text
+  const memberListText = familyMembers
+    .map((m, idx) => `${idx + 1}. *${m.nameHi || m.nameEn}* (क्र. ${m.serialNo || '—'}) • EPIC: ${m.epic || '—'}`)
+    .join('\n');
+
+  const photoUrl = backendData.slipImageUrl || backendData.viewUrl;
+  const messageText = backendData.messageText || `🗳️ *आधिकारिक संयुक्त परिवार मतदाता सूचना पर्ची* 🗳️
+
+नमस्कार,
+आगामी चुनाव हेतु आपके परिवार की डिजिटल मतदाता पर्ची का विवरण:
+
+${photoUrl ? `📸 *डिजिटल परिवार पर्ची फोटो यहाँ देखें:*\n${photoUrl}\n\n` : ''}• *मकान संख्या:* #${house}
+• *वार्ड क्रमांक:* ${ward} · *भाग संख्या:* ${part}
+• *मतदान केंद्र:* ${booth}
+• *परिवार में कुल मतदाता:* ${familyMembers.length}
+
+*परिवार के मतदाता सदस्य:*
+${memberListText}
+
+🇮🇳 _मतदान हमारा अधिकार एवं कर्तव्य है। मतदान हेतु पहचान पत्र अवश्य साथ लाएं।_
+*— ${slipConfig?.candidateName || 'विजयसेतु चुनाव वॉर रूम'}*`;
+
+  // 3. ANDROID NATIVE APP: If running inside VijaySetu Android APK
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (typeof window !== 'undefined' && (window as any).AndroidWhatsAppBridge?.shareSlipToWhatsApp) {
+    try {
+      if (familyImageDataUrl) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).AndroidWhatsAppBridge.shareSlipToWhatsApp(
+          familyImageDataUrl,
+          targetPhone,
+          messageText
+        );
+        onStatusUpdate?.('✅ WhatsApp खुल गया! परिवार पर्ची व विवरण भेजा जा रहा है।');
+        return {
+          success: true,
+          method: 'android_native',
+          message: 'WhatsApp ऐप में परिवार पर्ची खुल गई है!',
+          remainingCredits: backendData.remainingCredits,
+        };
+      }
+    } catch (androidErr) {
+      console.warn('Android bridge family share error:', androidErr);
+    }
+  }
+
+  // 4. MOBILE BROWSER WEB SHARE API
+  let sharedViaNative = false;
+  if (familyImageDataUrl && typeof window !== 'undefined' && navigator.canShare) {
+    try {
+      const res = await fetch(familyImageDataUrl);
+      const blob = await res.blob();
+      const slipFile = new File([blob], `FamilySlip_House_${house}_${familyMembers.length}Voters.jpg`, {
+        type: 'image/jpeg',
+      });
+
+      if (navigator.canShare({ files: [slipFile] })) {
+        await navigator.share({
+          title: `संयुक्त परिवार पर्ची - मकान #${house}`,
+          text: messageText,
+          files: [slipFile],
+        });
+        sharedViaNative = true;
+        onStatusUpdate?.('✅ WhatsApp शेयर खुल गया! परिवार पर्ची फोटो व विवरण भेजा जा रहा है।');
+        return {
+          success: true,
+          method: 'web_share',
+          message: 'WhatsApp शेयर सफलतापूर्वक खुल गया!',
+          remainingCredits: backendData.remainingCredits,
+        };
+      }
+    } catch (shareErr) {
+      if ((shareErr as Error).name === 'AbortError') {
+        return {
+          success: false,
+          method: 'web_share',
+          message: 'शेयर रद्द किया गया।',
+          remainingCredits: backendData.remainingCredits,
+        };
+      }
+      console.warn('Native Web Share family failed, falling back:', shareErr);
+    }
+  }
+
+  // 5. DESKTOP BROWSER FALLBACK
+  if (!sharedViaNative) {
+    if (familyImageDataUrl) {
+      try {
+        downloadDataUrl(familyImageDataUrl, `FamilySlip_House_${house}_${familyMembers.length}Voters.jpg`);
+      } catch (dlErr) {
+        console.warn('Auto download error:', dlErr);
+      }
+      await copySlipImageToClipboard(familyImageDataUrl);
+    }
+
+    const waLink = backendData.waLink || `https://wa.me/${targetPhone.replace(/\D/g, '')}?text=${encodeURIComponent(messageText)}`;
+    if (typeof window !== 'undefined') {
+      window.open(waLink, '_blank');
+    }
+
+    onStatusUpdate?.('📋 परिवार पर्ची क्लिपबोर्ड में कॉपी हो गई (Download भी हुई)! WhatsApp Web में Cmd + V (Ctrl + V) दबाकर फोटो भेजें।');
+    return {
+      success: true,
+      method: 'desktop_clipboard',
+      message: 'परिवार पर्ची डाउनलोड और क्लिपबोर्ड में कॉपी हो गई है! WhatsApp Web में Cmd + V दबाकर फोटो भेजें।',
+      remainingCredits: backendData.remainingCredits,
+      waLink,
+      imageDataUrl: familyImageDataUrl,
+      viewUrl: backendData.viewUrl || backendData.slipImageUrl,
+      voterName: `मकान #${house} परिवार (${familyMembers.length} सदस्य)`,
+      epic: `House #${house}`,
+    };
+  }
+
+  return {
+    success: true,
+    method: 'desktop_clipboard',
+    message: 'संदेश तैयार है।',
+    imageDataUrl: familyImageDataUrl,
+    viewUrl: backendData.viewUrl || backendData.slipImageUrl,
+    voterName: `मकान #${house} परिवार`,
   };
 }
