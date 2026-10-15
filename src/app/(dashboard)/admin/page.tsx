@@ -172,6 +172,7 @@ interface LeadRecord {
 
 interface DemoUserRecord {
   id: string;
+  userId?: string;
   name: string;
   email: string;
   password: string;
@@ -2594,9 +2595,9 @@ export default function AdminPanel() {
                 <>
                   {/* MOBILE VIEW (< 768px): Clean, Unclipped Demo Account Cards */}
                   <div className="mobile-card-view" style={{ padding: '10px' }}>
-                    {sortedDemoUsers.map((user) => (
+                    {sortedDemoUsers.map((user, idx) => (
                       <div
-                        key={user.id}
+                        key={user.userId || `${user.id}-${idx}`}
                         style={{
                           background: '#ffffff',
                           border: '1px solid #e2e8f0',
@@ -2745,8 +2746,8 @@ export default function AdminPanel() {
                         </tr>
                       </thead>
                       <tbody>
-                        {sortedDemoUsers.map((user) => (
-                          <tr key={user.id}>
+                        {sortedDemoUsers.map((user, idx) => (
+                          <tr key={user.userId || `${user.id}-${idx}`}>
                             <td>
                               <strong className="voter-name">{user.name}</strong>
                             </td>
@@ -6281,8 +6282,8 @@ export default function AdminPanel() {
                     required
                   >
                     <option value="">क्लाइंट चुनें</option>
-                    {organizations.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
+                    {organizations.map((t, idx) => (
+                      <option key={`${t.id}-${idx}`} value={t.id}>{t.name}</option>
                     ))}
                   </select>
                 </div>
