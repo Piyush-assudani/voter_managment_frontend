@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Download,
   LoaderCircle,
@@ -100,6 +100,126 @@ const partyPresets: Record<string, Partial<SlipConfig>> = {
     footerAppeal: 'झाड़ू का बटन दबाएं और भारी मतों से विजयी बनाएं',
   },
 };
+
+interface Household {
+  key: string;
+  houseNo: string;
+  wardNo: string;
+  partNo: string;
+  members: Voter[];
+  headName: string;
+}
+
+const VoterCardItem = React.memo(function VoterCardItem({
+  voter,
+  isSelected,
+  onSelect,
+}: {
+  voter: Voter;
+  isSelected: boolean;
+  onSelect: (voter: Voter) => void;
+}) {
+  return (
+    <div
+      onClick={() => onSelect(voter)}
+      style={{
+        padding: '10px 12px',
+        borderRadius: '8px',
+        marginBottom: '6px',
+        cursor: 'pointer',
+        background: isSelected ? '#eff6ff' : '#ffffff',
+        border: isSelected ? '1.5px solid #3b82f6' : '1px solid #f1f5f9',
+        transition: 'background 0.1s ease',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <strong style={{ color: isSelected ? '#1e40af' : '#0f172a', fontSize: '14px' }}>
+          {voter.nameHi || voter.nameEn || 'मतदाता'}
+        </strong>
+        <span
+          style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            color: '#ea580c',
+            background: '#fff7ed',
+            padding: '1px 6px',
+            borderRadius: '4px',
+            border: '1px solid #fed7aa',
+          }}
+        >
+          क्र. {voter.serialNo || '-'}
+        </span>
+      </div>
+
+      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+        {voter.relationType === 'husband' ? 'पति' : 'पिता'}: {voter.relativeNameHi || voter.relativeNameEn || '-'}
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontSize: '11px',
+          color: '#94a3b8',
+          marginTop: '4px',
+        }}
+      >
+        <span style={{ color: '#2563eb', fontWeight: 600 }}>{voter.epic || 'EPIC: N/A'}</span>
+        <span>भाग: {voter.partNo || '-'} · मकान: {voter.houseNo || '-'}</span>
+      </div>
+    </div>
+  );
+});
+
+const HouseholdCardItem = React.memo(function HouseholdCardItem({
+  household,
+  isSelected,
+  onSelect,
+}: {
+  household: Household;
+  isSelected: boolean;
+  onSelect: (household: Household) => void;
+}) {
+  return (
+    <div
+      onClick={() => onSelect(household)}
+      style={{
+        padding: '10px 12px',
+        borderRadius: '8px',
+        marginBottom: '6px',
+        cursor: 'pointer',
+        background: isSelected ? '#ecfdf5' : '#ffffff',
+        border: isSelected ? '1.5px solid #059669' : '1px solid #f1f5f9',
+        transition: 'background 0.15s ease',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <strong style={{ color: isSelected ? '#065f46' : '#0f172a', fontSize: '13.5px', display: 'block' }}>
+            {household.headName || 'परिवार मुखिया'}
+          </strong>
+          <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+            मकान नं. <strong>#{household.houseNo}</strong> · वार्ड <strong>{household.wardNo || '—'}</strong>
+          </span>
+        </div>
+        <span
+          style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            color: isSelected ? '#047857' : '#0284c7',
+            background: isSelected ? '#d1fae5' : '#e0f2fe',
+            padding: '2px 8px',
+            borderRadius: '12px',
+            border: `1px solid ${isSelected ? '#a7f3d0' : '#bae6fd'}`,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          👨‍👩‍👧‍👦 {household.members.length} सदस्य
+        </span>
+      </div>
+    </div>
+  );
+});
 
 export default function SlipsPage() {
   const [voters, setVoters] = useState<Voter[]>([]);
@@ -238,6 +358,39 @@ export default function SlipsPage() {
     return filteredHouseholds[0] || households[0] || null;
   }, [households, filteredHouseholds, selectedHouseKey]);
 
+  // Performance Optimization: Progressive Chunked Rendering to eliminate lag on 7,000+ items
+  const [visibleCount, setVisibleCount] = useState(100);
+  const [visibleFamilyCount, setVisibleFamilyCount] = useState(60);
+
+  useEffect(() => {
+    setVisibleCount(100);
+  }, [searchQuery, wardFilter, partFilter, sort]);
+
+  useEffect(() => {
+    setVisibleFamilyCount(60);
+  }, [familySearch, wardFilter, partFilter]);
+
+  const handleSelectVoter = useCallback((voter: Voter) => {
+    setSelectedVoter(voter);
+  }, []);
+
+  const handleSelectHousehold = useCallback((household: Household) => {
+    setSelectedHouseKey(household.key);
+  }, []);
+
+  const handleVoterListScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 300) {
+      setVisibleCount((prev) => Math.min(prev + 100, sortedVoters.length));
+    }
+  }, [sortedVoters.length]);
+
+  const handleFamilyListScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 300) {
+      setVisibleFamilyCount((prev) => Math.min(prev + 50, filteredHouseholds.length));
+    }
+  }, [filteredHouseholds.length]);
 
   const printContainerRef = useRef<HTMLDivElement>(null);
 
@@ -486,49 +639,8 @@ export default function SlipsPage() {
     }
   };
 
-  // Pre-generate slip image as soon as voter is viewed for instant WhatsApp share
-  useEffect(() => {
-    let active = true;
-    if (slipMode === 'single' && selectedVoter) {
-      setCachedSlipImageDataUrl(null);
-      generateSlipImage(selectedVoter, slipConfig, printContainerRef.current)
-        .then((dataUrl) => {
-          if (active) setCachedSlipImageDataUrl(dataUrl);
-        })
-        .catch((err) => {
-          console.warn('Pre-rendering slip image error:', err);
-        });
-    } else {
-      setCachedSlipImageDataUrl(null);
-    }
-    return () => {
-      active = false;
-    };
-  }, [slipMode, selectedVoter, slipConfig]);
-
-  // Pre-generate family slip image for instantaneous share
-  useEffect(() => {
-    let active = true;
-    if (slipMode === 'family' && selectedHousehold && selectedHousehold.members.length > 0) {
-      setCachedFamilySlipImageDataUrl(null);
-      generateFamilySlipImage(selectedHousehold.members, slipConfig, {
-        houseNo: selectedHousehold.houseNo,
-        wardNo: selectedHousehold.wardNo,
-        partNo: selectedHousehold.partNo,
-      })
-        .then((dataUrl) => {
-          if (active) setCachedFamilySlipImageDataUrl(dataUrl);
-        })
-        .catch((err) => {
-          console.warn('Pre-rendering family slip error:', err);
-        });
-    } else {
-      setCachedFamilySlipImageDataUrl(null);
-    }
-    return () => {
-      active = false;
-    };
-  }, [slipMode, selectedHousehold, slipConfig]);
+  // Note: Slip images are generated on-demand when WhatsApp or Download is clicked,
+  // preventing main-thread UI freezing and canvas lag on voter selection.
 
   // Official WhatsApp Send (Meta Cloud API with Photo)
   const handleSendWhatsAppViaApi = async () => {
@@ -1798,7 +1910,10 @@ export default function SlipsPage() {
               </div>
             </div>
 
-            <div style={{ overflowY: 'auto', flex: 1, padding: '8px' }}>
+            <div
+              onScroll={handleFamilyListScroll}
+              style={{ overflowY: 'auto', flex: 1, padding: '8px' }}
+            >
               {loading && voters.length === 0 ? (
                 <div style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
                   <LoaderCircle size={20} className="spin" style={{ margin: '0 auto 8px' }} />
@@ -1809,49 +1924,30 @@ export default function SlipsPage() {
                   कोई परिवार नहीं मिला
                 </div>
               ) : (
-                filteredHouseholds.map((household) => {
-                  const isSelected = selectedHousehold?.key === household.key;
-                  return (
-                    <div
+                <>
+                  {filteredHouseholds.slice(0, visibleFamilyCount).map((household) => (
+                    <HouseholdCardItem
                       key={household.key}
-                      onClick={() => setSelectedHouseKey(household.key)}
-                      style={{
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        marginBottom: '6px',
-                        cursor: 'pointer',
-                        background: isSelected ? '#ecfdf5' : '#ffffff',
-                        border: isSelected ? '1.5px solid #059669' : '1px solid #f1f5f9',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                          <strong style={{ color: isSelected ? '#065f46' : '#0f172a', fontSize: '13.5px', display: 'block' }}>
-                            {household.headName || 'परिवार मुखिया'}
-                          </strong>
-                          <span style={{ fontSize: '11.5px', color: '#64748b' }}>
-                            मकान नं. <strong>#{household.houseNo}</strong> · वार्ड <strong>{household.wardNo || '—'}</strong>
-                          </span>
-                        </div>
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            color: isSelected ? '#047857' : '#0284c7',
-                            background: isSelected ? '#d1fae5' : '#e0f2fe',
-                            padding: '2px 8px',
-                            borderRadius: '12px',
-                            border: `1px solid ${isSelected ? '#a7f3d0' : '#bae6fd'}`,
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          👨‍👩‍👧‍👦 {household.members.length} सदस्य
-                        </span>
-                      </div>
+                      household={household}
+                      isSelected={selectedHousehold?.key === household.key}
+                      onSelect={handleSelectHousehold}
+                    />
+                  ))}
+                  {visibleFamilyCount < filteredHouseholds.length && (
+                    <div style={{ textAlign: 'center', padding: '12px 8px', fontSize: '12px', color: '#64748b' }}>
+                      <span>{filteredHouseholds.length} में से {visibleFamilyCount} परिवार लोड हुए हैं</span>
+                      <br />
+                      <button
+                        type="button"
+                        className="button-secondary"
+                        onClick={() => setVisibleFamilyCount((prev) => Math.min(prev + 80, filteredHouseholds.length))}
+                        style={{ marginTop: '6px', fontSize: '11.5px', padding: '4px 12px' }}
+                      >
+                        और लोड करें (+80)
+                      </button>
                     </div>
-                  );
-                })
+                  )}
+                </>
               )}
             </div>
           </section>
@@ -2013,7 +2109,10 @@ export default function SlipsPage() {
               </div>
             </div>
 
-            <div style={{ overflowY: 'auto', flex: 1, padding: '8px' }}>
+            <div
+              onScroll={handleVoterListScroll}
+              style={{ overflowY: 'auto', flex: 1, padding: '8px' }}
+            >
               {loading && voters.length === 0 ? (
                 <div style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
                   <LoaderCircle size={20} className="spin" style={{ margin: '0 auto 8px' }} />
@@ -2024,60 +2123,30 @@ export default function SlipsPage() {
                   कोई मतदाता नहीं मिला
                 </div>
               ) : (
-                sortedVoters.map((voter) => {
-                  const isSelected = selectedVoter?._id === voter._id;
-                  return (
-                    <div
+                <>
+                  {sortedVoters.slice(0, visibleCount).map((voter) => (
+                    <VoterCardItem
                       key={voter._id}
-                      onClick={() => setSelectedVoter(voter)}
-                      style={{
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        marginBottom: '6px',
-                        cursor: 'pointer',
-                        background: isSelected ? '#eff6ff' : '#ffffff',
-                        border: isSelected ? '1.5px solid #3b82f6' : '1px solid #f1f5f9',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <strong style={{ color: isSelected ? '#1e40af' : '#0f172a', fontSize: '14px' }}>
-                          {voter.nameHi || voter.nameEn || 'मतदाता'}
-                        </strong>
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            color: '#ea580c',
-                            background: '#fff7ed',
-                            padding: '1px 6px',
-                            borderRadius: '4px',
-                            border: '1px solid #fed7aa',
-                          }}
-                        >
-                          क्र. {voter.serialNo || '-'}
-                        </span>
-                      </div>
-
-                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                        {voter.relationType === 'husband' ? 'पति' : 'पिता'}: {voter.relativeNameHi || voter.relativeNameEn || '-'}
-                      </div>
-
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          fontSize: '11px',
-                          color: '#94a3b8',
-                          marginTop: '4px',
-                        }}
+                      voter={voter}
+                      isSelected={selectedVoter?._id === voter._id}
+                      onSelect={handleSelectVoter}
+                    />
+                  ))}
+                  {visibleCount < sortedVoters.length && (
+                    <div style={{ textAlign: 'center', padding: '12px 8px', fontSize: '12px', color: '#64748b' }}>
+                      <span>{sortedVoters.length} में से {visibleCount} मतदाता लोड हुए हैं</span>
+                      <br />
+                      <button
+                        type="button"
+                        className="button-secondary"
+                        onClick={() => setVisibleCount((prev) => Math.min(prev + 150, sortedVoters.length))}
+                        style={{ marginTop: '6px', fontSize: '11.5px', padding: '4px 12px' }}
                       >
-                        <span style={{ color: '#2563eb', fontWeight: 600 }}>{voter.epic || 'EPIC: N/A'}</span>
-                        <span>भाग: {voter.partNo || '-'} · मकान: {voter.houseNo || '-'}</span>
-                      </div>
+                        और लोड करें (+150)
+                      </button>
                     </div>
-                  );
-                })
+                  )}
+                </>
               )}
             </div>
           </section>
