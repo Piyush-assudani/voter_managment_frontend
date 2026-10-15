@@ -279,10 +279,44 @@ export default function SlipsPage() {
   const [bulkZipProgress, setBulkZipProgress] = useState({ current: 0, total: 0 });
   const [sort, setSort] = useState<SortState>({ field: 'serialNo', direction: 'asc' });
 
-  // Family Mode State
+  // Single Voter Pagination state
+  const [voterPage, setVoterPage] = useState(1);
+  const [voterPageSize, setVoterPageSize] = useState(40);
+  const [totalVotersCount, setTotalVotersCount] = useState(0);
+
+  // Family Mode State & Pagination
   const [selectedHouseKey, setSelectedHouseKey] = useState<string>('');
   const [familySearch, setFamilySearch] = useState<string>('');
   const [cachedFamilySlipImageDataUrl, setCachedFamilySlipImageDataUrl] = useState<string | null>(null);
+  const [familyPage, setFamilyPage] = useState(1);
+  const [familyPageSize, setFamilyPageSize] = useState(30);
+  const [totalHouseholdsCount, setTotalHouseholdsCount] = useState(0);
+  const [householdsList, setHouseholdsList] = useState<Household[]>([]);
+  const [isLoadingHouseholds, setIsLoadingHouseholds] = useState(false);
+  const [selectedHouseholdData, setSelectedHouseholdData] = useState<Household | null>(null);
+
+  // Debounced Search states (300ms)
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [debouncedFamilySearch, setDebouncedFamilySearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setVoterPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFamilySearch(familySearch);
+      setFamilyPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [familySearch]);
+
+  const voterTotalPages = Math.max(1, Math.ceil(totalVotersCount / voterPageSize));
+  const familyTotalPages = Math.max(1, Math.ceil(totalHouseholdsCount / familyPageSize));
 
   const handleSort = (field: string) => {
     setSort((prev) => ({
@@ -309,88 +343,37 @@ export default function SlipsPage() {
     return list;
   }, [voters, sort]);
 
-  // Group voters into unique households for Family Slip mode
-  const households = useMemo(() => {
-    const map = new Map<string, { key: string; houseNo: string; wardNo: string; partNo: string; members: Voter[]; headName: string }>();
-    sortedVoters.forEach((v) => {
-      const h = (v.houseNo || '—').trim();
-      const w = (v.wardNo || '').trim();
-      const p = (v.partNo || '').trim();
-      const key = `${w}_${p}_${h}`;
-      if (!map.has(key)) {
-        map.set(key, {
-          key,
-          houseNo: h,
-          wardNo: w,
-          partNo: p,
-          members: [],
-          headName: v.nameHi || v.nameEn || '',
-        });
-      }
-      map.get(key)!.members.push(v);
-    });
-
-    const list = Array.from(map.values());
-    list.sort((a, b) => b.members.length - a.members.length);
-    return list;
-  }, [sortedVoters]);
-
-  const filteredHouseholds = useMemo(() => {
-    if (!familySearch.trim()) return households;
-    const q = familySearch.trim().toLowerCase();
-    return households.filter((h) => {
-      const houseMatch = h.houseNo.toLowerCase().includes(q);
-      const headMatch = h.headName.toLowerCase().includes(q);
-      const anyMember = h.members.some((m) =>
-        (m.nameHi || '').toLowerCase().includes(q) ||
-        (m.nameEn || '').toLowerCase().includes(q) ||
-        (m.epic || '').toLowerCase().includes(q)
-      );
-      return houseMatch || headMatch || anyMember;
-    });
-  }, [households, familySearch]);
-
   const selectedHousehold = useMemo(() => {
-    if (selectedHouseKey) {
-      const found = households.find((h) => h.key === selectedHouseKey);
-      if (found) return found;
-    }
-    return filteredHouseholds[0] || households[0] || null;
-  }, [households, filteredHouseholds, selectedHouseKey]);
-
-  // Performance Optimization: Progressive Chunked Rendering to eliminate lag on 7,000+ items
-  const [visibleCount, setVisibleCount] = useState(100);
-  const [visibleFamilyCount, setVisibleFamilyCount] = useState(60);
-
-  useEffect(() => {
-    setVisibleCount(100);
-  }, [searchQuery, wardFilter, partFilter, sort]);
-
-  useEffect(() => {
-    setVisibleFamilyCount(60);
-  }, [familySearch, wardFilter, partFilter]);
+    if (selectedHouseholdData) return selectedHouseholdData;
+    if (householdsList.length > 0) return householdsList[0];
+    return null;
+  }, [selectedHouseholdData, householdsList]);
 
   const handleSelectVoter = useCallback((voter: Voter) => {
     setSelectedVoter(voter);
   }, []);
 
-  const handleSelectHousehold = useCallback((household: Household) => {
+  const handleSelectHousehold = useCallback(async (household: Household) => {
+    setSelectedHouseholdData(household);
     setSelectedHouseKey(household.key);
+    // If members list is empty or partial, fetch complete household from /voters/family/:houseNo
+    if (!household.members || household.members.length === 0) {
+      try {
+        const res = await apiFetch(
+          `/voters/family/${encodeURIComponent(household.houseNo)}?ward=${encodeURIComponent(household.wardNo || '')}&part=${encodeURIComponent(household.partNo || '')}`
+        );
+        if (res.ok) {
+          const fresh = await res.json();
+          if (Array.isArray(fresh) && fresh.length > 0) {
+            setSelectedHouseholdData({
+              ...household,
+              members: fresh,
+            });
+          }
+        }
+      } catch {}
+    }
   }, []);
-
-  const handleVoterListScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollHeight - scrollTop - clientHeight < 300) {
-      setVisibleCount((prev) => Math.min(prev + 100, sortedVoters.length));
-    }
-  }, [sortedVoters.length]);
-
-  const handleFamilyListScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollHeight - scrollTop - clientHeight < 300) {
-      setVisibleFamilyCount((prev) => Math.min(prev + 50, filteredHouseholds.length));
-    }
-  }, [filteredHouseholds.length]);
 
   const printContainerRef = useRef<HTMLDivElement>(null);
 
@@ -459,17 +442,33 @@ export default function SlipsPage() {
     } catch {}
   }, []);
 
-  // Load Voters
-  const loadVoters = useCallback(async () => {
+  // Load Wards list and counts (Cached)
+  const loadWardsSummary = useCallback(async () => {
+    try {
+      const res = await apiFetch('/voters/wards-summary', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.wards)) {
+          const ws = data.wards.map((w: any) => String(w._id)).filter(Boolean);
+          if (ws.length > 0) setAvailableWards(ws);
+        }
+        if (typeof data.total === 'number' && data.total > 0) {
+          setTotalVotersCount((prev) => (prev > 0 ? prev : data.total));
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Load Voters with Server-side Pagination
+  const loadVoters = useCallback(async (targetPage = 1) => {
     setLoading(true);
     setError('');
     try {
       const params = new URLSearchParams({
-        page: '1',
-        pageSize: '10000',
-        all: 'true',
+        page: String(targetPage),
+        pageSize: String(voterPageSize),
       });
-      if (searchQuery.trim()) params.set('search', searchQuery.trim());
+      if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
       if (wardFilter) params.set('ward', wardFilter);
       if (partFilter) params.set('part', partFilter);
 
@@ -477,12 +476,13 @@ export default function SlipsPage() {
       if (!res.ok) throw new Error(await getApiError(res, 'मतदाता लोड नहीं हो सके'));
       const data = await res.json();
       const list: Voter[] = Array.isArray(data) ? data : data.data || data.voters || [];
+      const total = typeof data.total === 'number' ? data.total : list.length;
       setVoters(list);
+      setTotalVotersCount(total);
+      setVoterPage(targetPage);
 
-      // Extract unique wards & parts
-      const wards = Array.from(new Set(list.map((v) => v.wardNo).filter(Boolean))) as string[];
+      // Extract unique parts
       const parts = Array.from(new Set(list.map((v) => v.partNo).filter(Boolean))) as string[];
-      if (wards.length) setAvailableWards((prev) => Array.from(new Set([...prev, ...wards])).sort());
       if (parts.length) setAvailableParts((prev) => Array.from(new Set([...prev, ...parts])).sort());
 
       // Select first voter by default if not set
@@ -498,22 +498,127 @@ export default function SlipsPage() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, wardFilter, partFilter]);
+  }, [debouncedSearch, wardFilter, partFilter, voterPageSize]);
+
+  // Fallback for households if remote server hasn't restarted with /households route yet
+  const loadHouseholdsFallback = useCallback(async (targetPage: number) => {
+    try {
+      const params = new URLSearchParams({
+        page: '1',
+        pageSize: '1000',
+      });
+      if (debouncedFamilySearch.trim()) params.set('search', debouncedFamilySearch.trim());
+      if (wardFilter) params.set('ward', wardFilter);
+      if (partFilter) params.set('part', partFilter);
+
+      const res = await apiFetch(`/voters?${params.toString()}`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list: Voter[] = Array.isArray(data) ? data : data.data || data.voters || [];
+
+      const map = new Map<string, Household>();
+      list.forEach((v) => {
+        const h = (v.houseNo || '—').trim();
+        const w = (v.wardNo || '').trim();
+        const p = (v.partNo || '').trim();
+        const key = `${w}_${p}_${h}`;
+        if (!map.has(key)) {
+          map.set(key, {
+            key,
+            houseNo: h,
+            wardNo: w,
+            partNo: p,
+            members: [],
+            headName: v.nameHi || v.nameEn || 'मुखिया',
+          });
+        }
+        map.get(key)!.members.push(v);
+      });
+
+      const allHouseholds = Array.from(map.values()).sort((a, b) => b.members.length - a.members.length);
+      setTotalHouseholdsCount(allHouseholds.length);
+      const start = (targetPage - 1) * familyPageSize;
+      const pageItems = allHouseholds.slice(start, start + familyPageSize);
+      setHouseholdsList(pageItems);
+      setFamilyPage(targetPage);
+      if (pageItems.length > 0 && !selectedHouseholdData) {
+        setSelectedHouseholdData(pageItems[0]);
+      }
+    } catch (e) {
+      console.warn('Household fallback failed:', e);
+    }
+  }, [debouncedFamilySearch, wardFilter, partFilter, familyPageSize, selectedHouseholdData]);
+
+  // Load Paginated Households (Primary: /voters/households with fallback)
+  const loadHouseholds = useCallback(async (targetPage = 1) => {
+    setIsLoadingHouseholds(true);
+    try {
+      const params = new URLSearchParams({
+        page: String(targetPage),
+        limit: String(familyPageSize),
+      });
+      if (debouncedFamilySearch.trim()) params.set('search', debouncedFamilySearch.trim());
+      if (wardFilter) params.set('ward', wardFilter);
+      if (partFilter) params.set('part', partFilter);
+
+      const res = await apiFetch(`/voters/households?${params.toString()}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        const list: Household[] = data.households || [];
+        const total = data.pagination?.total ?? list.length;
+        setHouseholdsList(list);
+        setTotalHouseholdsCount(total);
+        setFamilyPage(targetPage);
+        if (list.length > 0) {
+          setSelectedHouseholdData((prev) => {
+            if (!prev) return list[0];
+            const exists = list.find((h) => h.key === prev.key);
+            return exists || list[0];
+          });
+        }
+        return;
+      }
+      await loadHouseholdsFallback(targetPage);
+    } catch {
+      await loadHouseholdsFallback(targetPage);
+    } finally {
+      setIsLoadingHouseholds(false);
+    }
+  }, [debouncedFamilySearch, wardFilter, partFilter, familyPageSize, loadHouseholdsFallback]);
 
   // Initial load
   useEffect(() => {
     void loadSlipConfig();
     void loadWhatsappQuota();
-    void loadVoters();
     void loadClientsList();
-  }, [loadSlipConfig, loadWhatsappQuota, loadVoters, loadClientsList]);
+    void loadWardsSummary();
+  }, [loadSlipConfig, loadWhatsappQuota, loadClientsList, loadWardsSummary]);
+
+  // Load voters when single/bulk mode is active or when single filters change
+  useEffect(() => {
+    if (slipMode === 'single' || slipMode === 'bulk') {
+      void loadVoters(1);
+    }
+  }, [slipMode, debouncedSearch, wardFilter, partFilter, loadVoters]);
+
+  // Load households when family mode is active or when family filters change
+  useEffect(() => {
+    if (slipMode === 'family') {
+      void loadHouseholds(1);
+    }
+  }, [slipMode, debouncedFamilySearch, wardFilter, partFilter, loadHouseholds]);
 
   // Listen to Client Switch event from Dashboard Shell
   useEffect(() => {
     const handleClientChange = () => {
       void loadSlipConfig();
       void loadWhatsappQuota();
-      void loadVoters();
+      void loadWardsSummary();
+      if (slipMode === 'family') {
+        void loadHouseholds(1);
+      } else {
+        void loadVoters(1);
+      }
     };
     const handleSlipConfigChange = (e: any) => {
       if (e.detail) {
@@ -528,7 +633,7 @@ export default function SlipsPage() {
       window.removeEventListener('client-changed', handleClientChange);
       window.removeEventListener('slip-config-changed', handleSlipConfigChange);
     };
-  }, [loadSlipConfig, loadWhatsappQuota, loadVoters]);
+  }, [loadSlipConfig, loadWhatsappQuota, loadWardsSummary, loadVoters, loadHouseholds, slipMode]);
 
   // Image Cropper Modal state (Meta style)
   const [cropModalOpen, setCropModalOpen] = useState(false);
@@ -834,6 +939,50 @@ export default function SlipsPage() {
     }
   };
 
+  const handleDownloadBulkZip = async () => {
+    setIsDownloadingBulkZip(true);
+    setBulkZipProgress({ current: 0, total: totalVotersCount || 1 });
+    try {
+      const allVoters: Voter[] = [];
+      let p = 1;
+      const batchSize = 100;
+      while (true) {
+        const params = new URLSearchParams({
+          page: String(p),
+          pageSize: String(batchSize),
+        });
+        if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
+        if (wardFilter) params.set('ward', wardFilter);
+        if (partFilter) params.set('part', partFilter);
+
+        const res = await apiFetch(`/voters?${params.toString()}`);
+        if (!res.ok) break;
+        const json = await res.json();
+        const batch: Voter[] = Array.isArray(json) ? json : json.data || json.voters || [];
+        if (!batch.length) break;
+        allVoters.push(...batch);
+        const total = typeof json.total === 'number' ? json.total : allVoters.length;
+        setBulkZipProgress({ current: allVoters.length, total });
+        if (batch.length < batchSize || allVoters.length >= total) break;
+        p++;
+        await new Promise((r) => setTimeout(r, 20));
+      }
+
+      if (allVoters.length === 0) {
+        alert('कोई मतदाता नहीं मिला');
+        return;
+      }
+
+      setBulkZipProgress({ current: 0, total: allVoters.length });
+      await downloadBulkSlipsAsZip(allVoters, slipConfig, (current, total) => {
+        setBulkZipProgress({ current, total });
+      });
+    } catch {
+      alert('बल्क ZIP डाउनलोड करने में समस्या आई');
+    } finally {
+      setIsDownloadingBulkZip(false);
+    }
+  };
 
   return (
     <div className={`work-page slips-studio-page ${bulkMode ? `slips-bulk-print-mode slips-per-a4-${perA4}` : 'slips-single-print-mode'}`}>
@@ -1416,7 +1565,7 @@ export default function SlipsPage() {
               <UsersRound size={14} />
               <span>परिवार पर्ची</span>
               <span style={{ fontSize: '11px', background: '#dcfce7', color: '#15803d', padding: '1px 6px', borderRadius: '10px', fontWeight: 800 }}>
-                {households.length}
+                {totalHouseholdsCount || householdsList.length}
               </span>
             </button>
 
@@ -1450,15 +1599,8 @@ export default function SlipsPage() {
             <button
               className="button-primary"
               type="button"
-              disabled={isDownloadingBulkZip || sortedVoters.length === 0}
-              onClick={async () => {
-                setIsDownloadingBulkZip(true);
-                setBulkZipProgress({ current: 0, total: sortedVoters.length });
-                await downloadBulkSlipsAsZip(sortedVoters, slipConfig, (current, total) => {
-                  setBulkZipProgress({ current, total });
-                });
-                setIsDownloadingBulkZip(false);
-              }}
+              disabled={isDownloadingBulkZip || (totalVotersCount === 0 && voters.length === 0)}
+              onClick={handleDownloadBulkZip}
               style={{
                 background: '#1d4ed8',
                 borderColor: '#2563eb',
@@ -1477,7 +1619,7 @@ export default function SlipsPage() {
               ) : (
                 <>
                   <Download size={15} />
-                  <span>बल्क ZIP डाउनलोड ({sortedVoters.length})</span>
+                  <span>बल्क ZIP डाउनलोड ({totalVotersCount || voters.length})</span>
                 </>
               )}
             </button>
@@ -1615,7 +1757,7 @@ export default function SlipsPage() {
         </div>
 
         <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
-          कुल मतदाता: <strong style={{ color: '#0f172a' }}>{voters.length}</strong>
+          कुल मतदाता: <strong style={{ color: '#0f172a' }}>{totalVotersCount || voters.length}</strong>
         </div>
       </div>
 
@@ -1686,15 +1828,8 @@ export default function SlipsPage() {
                   <button
                     className="button-primary"
                     type="button"
-                    disabled={isDownloadingBulkZip || sortedVoters.length === 0}
-                    onClick={async () => {
-                      setIsDownloadingBulkZip(true);
-                      setBulkZipProgress({ current: 0, total: sortedVoters.length });
-                      await downloadBulkSlipsAsZip(sortedVoters, slipConfig, (current, total) => {
-                        setBulkZipProgress({ current, total });
-                      });
-                      setIsDownloadingBulkZip(false);
-                    }}
+                    disabled={isDownloadingBulkZip || (totalVotersCount === 0 && voters.length === 0)}
+                    onClick={handleDownloadBulkZip}
                     style={{ background: '#1d4ed8', borderColor: '#2563eb', padding: '8px 16px', fontSize: '13px' }}
                   >
                     {isDownloadingBulkZip ? (
@@ -1895,7 +2030,7 @@ export default function SlipsPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '13px', fontWeight: 800, color: '#065f46', letterSpacing: '0.02em', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <UsersRound size={15} color="#047857" />
-                  परिवार सूची ({filteredHouseholds.length} परिवार)
+                  परिवार सूची ({totalHouseholdsCount || householdsList.length} परिवार)
                 </span>
                 <span style={{ fontSize: '11px', color: '#64748b' }}>क्लिक कर पर्ची देखें</span>
               </div>
@@ -1911,45 +2046,66 @@ export default function SlipsPage() {
             </div>
 
             <div
-              onScroll={handleFamilyListScroll}
               style={{ overflowY: 'auto', flex: 1, padding: '8px' }}
             >
-              {loading && voters.length === 0 ? (
+              {isLoadingHouseholds ? (
                 <div style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
                   <LoaderCircle size={20} className="spin" style={{ margin: '0 auto 8px' }} />
-                  डेटा लोड हो रहा है...
+                  परिवार लोड हो रहे हैं...
                 </div>
-              ) : filteredHouseholds.length === 0 ? (
+              ) : householdsList.length === 0 ? (
                 <div style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
                   कोई परिवार नहीं मिला
                 </div>
               ) : (
-                <>
-                  {filteredHouseholds.slice(0, visibleFamilyCount).map((household) => (
-                    <HouseholdCardItem
-                      key={household.key}
-                      household={household}
-                      isSelected={selectedHousehold?.key === household.key}
-                      onSelect={handleSelectHousehold}
-                    />
-                  ))}
-                  {visibleFamilyCount < filteredHouseholds.length && (
-                    <div style={{ textAlign: 'center', padding: '12px 8px', fontSize: '12px', color: '#64748b' }}>
-                      <span>{filteredHouseholds.length} में से {visibleFamilyCount} परिवार लोड हुए हैं</span>
-                      <br />
-                      <button
-                        type="button"
-                        className="button-secondary"
-                        onClick={() => setVisibleFamilyCount((prev) => Math.min(prev + 80, filteredHouseholds.length))}
-                        style={{ marginTop: '6px', fontSize: '11.5px', padding: '4px 12px' }}
-                      >
-                        और लोड करें (+80)
-                      </button>
-                    </div>
-                  )}
-                </>
+                householdsList.map((household) => (
+                  <HouseholdCardItem
+                    key={household.key}
+                    household={household}
+                    isSelected={selectedHousehold?.key === household.key}
+                    onSelect={handleSelectHousehold}
+                  />
+                ))
               )}
             </div>
+
+            {/* Pagination Controls for Family Mode */}
+            {totalHouseholdsCount > familyPageSize && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  background: '#f8fafc',
+                  borderTop: '1px solid #e2e8f0',
+                  fontSize: '12px',
+                  flexShrink: 0,
+                }}
+              >
+                <button
+                  type="button"
+                  className="button-secondary"
+                  disabled={familyPage <= 1 || isLoadingHouseholds}
+                  onClick={() => loadHouseholds(Math.max(1, familyPage - 1))}
+                  style={{ padding: '4px 10px', fontSize: '11.5px', borderRadius: '6px', fontWeight: 600 }}
+                >
+                  ◀ पिछला
+                </button>
+                <span style={{ fontWeight: 700, color: '#334155', fontSize: '12px' }}>
+                  पेज <strong style={{ color: '#047857' }}>{familyPage}</strong> / {familyTotalPages}
+                </span>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  disabled={familyPage >= familyTotalPages || isLoadingHouseholds}
+                  onClick={() => loadHouseholds(Math.min(familyTotalPages, familyPage + 1))}
+                  style={{ padding: '4px 10px', fontSize: '11.5px', borderRadius: '6px', fontWeight: 600 }}
+                >
+                  अगला ▶
+                </button>
+              </div>
+            )}
           </section>
 
           {/* RIGHT: Live Family Slip Preview & Actions */}
@@ -2099,7 +2255,7 @@ export default function SlipsPage() {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.05em' }}>
-                  मतदाता सूची ({voters.length})
+                  मतदाता सूची ({totalVotersCount || voters.length})
                 </span>
                 <span style={{ fontSize: '11px', color: '#94a3b8' }}>क्लिक कर पर्ची देखें</span>
               </div>
@@ -2110,7 +2266,6 @@ export default function SlipsPage() {
             </div>
 
             <div
-              onScroll={handleVoterListScroll}
               style={{ overflowY: 'auto', flex: 1, padding: '8px' }}
             >
               {loading && voters.length === 0 ? (
@@ -2123,32 +2278,54 @@ export default function SlipsPage() {
                   कोई मतदाता नहीं मिला
                 </div>
               ) : (
-                <>
-                  {sortedVoters.slice(0, visibleCount).map((voter) => (
-                    <VoterCardItem
-                      key={voter._id}
-                      voter={voter}
-                      isSelected={selectedVoter?._id === voter._id}
-                      onSelect={handleSelectVoter}
-                    />
-                  ))}
-                  {visibleCount < sortedVoters.length && (
-                    <div style={{ textAlign: 'center', padding: '12px 8px', fontSize: '12px', color: '#64748b' }}>
-                      <span>{sortedVoters.length} में से {visibleCount} मतदाता लोड हुए हैं</span>
-                      <br />
-                      <button
-                        type="button"
-                        className="button-secondary"
-                        onClick={() => setVisibleCount((prev) => Math.min(prev + 150, sortedVoters.length))}
-                        style={{ marginTop: '6px', fontSize: '11.5px', padding: '4px 12px' }}
-                      >
-                        और लोड करें (+150)
-                      </button>
-                    </div>
-                  )}
-                </>
+                sortedVoters.map((voter) => (
+                  <VoterCardItem
+                    key={voter._id}
+                    voter={voter}
+                    isSelected={selectedVoter?._id === voter._id}
+                    onSelect={handleSelectVoter}
+                  />
+                ))
               )}
             </div>
+
+            {/* Pagination Controls for Single Voter Mode */}
+            {totalVotersCount > voterPageSize && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  background: '#f8fafc',
+                  borderTop: '1px solid #e2e8f0',
+                  fontSize: '12px',
+                  flexShrink: 0,
+                }}
+              >
+                <button
+                  type="button"
+                  className="button-secondary"
+                  disabled={voterPage <= 1 || loading}
+                  onClick={() => loadVoters(Math.max(1, voterPage - 1))}
+                  style={{ padding: '4px 10px', fontSize: '11.5px', borderRadius: '6px', fontWeight: 600 }}
+                >
+                  ◀ पिछला
+                </button>
+                <span style={{ fontWeight: 700, color: '#334155', fontSize: '12px' }}>
+                  पेज <strong style={{ color: '#2563eb' }}>{voterPage}</strong> / {voterTotalPages}
+                </span>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  disabled={voterPage >= voterTotalPages || loading}
+                  onClick={() => loadVoters(Math.min(voterTotalPages, voterPage + 1))}
+                  style={{ padding: '4px 10px', fontSize: '11.5px', borderRadius: '6px', fontWeight: 600 }}
+                >
+                  अगला ▶
+                </button>
+              </div>
+            )}
           </section>
 
           {/* RIGHT: Live Voter Slip Preview & Actions */}
