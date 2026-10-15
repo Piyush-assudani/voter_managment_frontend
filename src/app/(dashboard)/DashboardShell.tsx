@@ -62,12 +62,15 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const [isSuspended, setIsSuspended] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return window.localStorage.getItem('account_suspended') === 'true';
+  const [mounted, setMounted] = useState(false);
+  const [isSuspended, setIsSuspended] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== 'undefined' && window.localStorage.getItem('account_suspended') === 'true') {
+      setIsSuspended(true);
     }
-    return false;
-  });
+  }, []);
 
   useEffect(() => {
     const handleSuspended = () => {
@@ -237,6 +240,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       {/* Top Header Bar with VijaySetu Logo, Name, Back Button & Controls */}
       <header
         className="topbar"
+        suppressHydrationWarning
         style={{
           position: 'sticky',
           top: 0,
@@ -353,8 +357,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         </div>
 
         {/* Right: Live Status (Hidden on mobile) + Profile Dropdown with Logout */}
-        <div className="topbar-right-cluster">
-          <span className={`connection-pill ${health} hidden sm:inline-flex`} title={`सर्वर स्थिति: ${health === 'connected' ? 'लाइव कनेक्टेड' : health}`}>
+        <div className="topbar-right-cluster" suppressHydrationWarning>
+          <span className={`connection-pill ${health} hidden sm:inline-flex`} suppressHydrationWarning title={`सर्वर स्थिति: ${health === 'connected' ? 'लाइव कनेक्टेड' : health}`}>
             <span className={`status-dot status-${health}`} />
             <span className="hidden sm:inline">
               {health === 'connected' ? 'Live data' : health === 'offline' ? 'Offline' : 'Checking'}
@@ -362,9 +366,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           </span>
 
           {/* Profile Badge Button with Dropdown Menu containing Logout */}
-          <div className="topbar-profile-container" ref={profileMenuRef} style={{ position: 'relative' }}>
+          <div className="topbar-profile-container" ref={profileMenuRef} suppressHydrationWarning style={{ position: 'relative' }}>
             <button
               type="button"
+              suppressHydrationWarning
               onClick={() => setProfileMenuOpen((prev) => !prev)}
               className="topbar-user-badge"
               aria-expanded={profileMenuOpen}
