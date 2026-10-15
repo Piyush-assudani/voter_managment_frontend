@@ -5,15 +5,10 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Building2,
   ChevronLeft,
+  ChevronDown,
   LogOut,
-  Home,
-  Ticket,
-  CheckSquare,
-  ContactRound,
-  TrendingUp,
-  Database,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { apiFetch, decodeJwtPayload } from '@/lib/api';
 
 const pageTitles = new Map([
@@ -57,6 +52,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [clients, setClients] = useState<Array<{ id: string; name: string; candidateName?: string; voterCount?: number }>>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 640);
@@ -79,6 +76,32 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     window.addEventListener('account-suspended', handleSuspended);
     return () => window.removeEventListener('account-suspended', handleSuspended);
   }, []);
+
+  // Close profile dropdown on outside click or escape
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setProfileMenuOpen(false);
+    };
+    if (profileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [profileMenuOpen]);
+
+  useEffect(() => {
+    setProfileMenuOpen(false);
+  }, [pathname]);
 
   // Periodic active status verification (Heartbeat every 10s)
   useEffect(() => {
@@ -259,6 +282,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                   VijaySetu
                 </span>
                 <span
+                  className="hidden sm:inline-block"
                   style={{
                     fontSize: '9.5px',
                     fontWeight: 700,
@@ -328,37 +352,143 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           )}
         </div>
 
-        {/* Right: Live Status + User Profile + Logout */}
+        {/* Right: Live Status (Hidden on mobile) + Profile Dropdown with Logout */}
         <div className="topbar-right-cluster">
-          <span className={`connection-pill ${health}`} title={`सर्वर स्थिति: ${health === 'connected' ? 'लाइव कनेक्टेड' : health}`}>
+          <span className={`connection-pill ${health} hidden sm:inline-flex`} title={`सर्वर स्थिति: ${health === 'connected' ? 'लाइव कनेक्टेड' : health}`}>
             <span className={`status-dot status-${health}`} />
             <span className="hidden sm:inline">
               {health === 'connected' ? 'Live data' : health === 'offline' ? 'Offline' : 'Checking'}
             </span>
           </span>
 
-          <div className="topbar-user-badge">
-            <span className="topbar-user-avatar">
-              {userInfo.name ? userInfo.name.charAt(0).toUpperCase() : 'U'}
-            </span>
-            <div className="hidden md:flex" style={{ flexDirection: 'column' }}>
-              <span className="topbar-user-name">
-                {userInfo.name || userInfo.email || 'User'}
+          {/* Profile Badge Button with Dropdown Menu containing Logout */}
+          <div className="topbar-profile-container" ref={profileMenuRef} style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setProfileMenuOpen((prev) => !prev)}
+              className="topbar-user-badge"
+              aria-expanded={profileMenuOpen}
+              aria-haspopup="true"
+              title="प्रोफ़ाइल व खाता मेन्यू"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: profileMenuOpen ? '#f1f5f9' : 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px 6px',
+                borderRadius: '8px',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span className="topbar-user-avatar">
+                {userInfo.name ? userInfo.name.charAt(0).toUpperCase() : 'U'}
               </span>
-              <span className="topbar-user-role">
-                {userInfo.role === 'admin' ? 'Super Admin' : 'Operations Desk'}
-              </span>
-            </div>
-          </div>
+              <div className="hidden md:flex" style={{ flexDirection: 'column', textAlign: 'left' }}>
+                <span className="topbar-user-name">
+                  {userInfo.name || userInfo.email || 'User'}
+                </span>
+                <span className="topbar-user-role">
+                  {userInfo.role === 'admin' ? 'Super Admin' : 'Operations Desk'}
+                </span>
+              </div>
+              <ChevronDown
+                size={13}
+                style={{
+                  color: '#64748b',
+                  transition: 'transform 0.2s ease',
+                  transform: profileMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                }}
+              />
+            </button>
 
-          <button
-            onClick={signOut}
-            className="topbar-logout-btn"
-            title="लॉगआउट"
-          >
-            <LogOut size={13} />
-            <span className="hidden sm:inline">लॉगआउट</span>
-          </button>
+            {/* Profile Dropdown Menu with Logout */}
+            {profileMenuOpen && (
+              <div
+                className="topbar-profile-dropdown"
+                role="menu"
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  right: 0,
+                  minWidth: '220px',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                  zIndex: 1000,
+                  padding: '8px',
+                }}
+              >
+                {/* User Info Header */}
+                <div style={{ padding: '8px 10px 10px 10px', borderBottom: '1px solid #f1f5f9', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <span className="topbar-user-avatar" style={{ width: '32px', height: '32px', fontSize: '13px' }}>
+                      {userInfo.name ? userInfo.name.charAt(0).toUpperCase() : 'U'}
+                    </span>
+                    <div style={{ overflow: 'hidden' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {userInfo.name || 'उपयोगकर्ता'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {userInfo.email || ''}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      padding: '2px 6px',
+                      borderRadius: '5px',
+                      background: userInfo.role === 'admin' ? '#fef3c7' : '#ecfdf5',
+                      color: userInfo.role === 'admin' ? '#b45309' : '#047857',
+                    }}>
+                      {userInfo.role === 'admin' ? '🛡️ Super Admin' : '🧑‍💻 Operations Desk'}
+                    </span>
+                    {userInfo.organizationName && (
+                      <span style={{ fontSize: '10.5px', color: '#64748b', maxWidth: '110px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        • {userInfo.organizationName}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Logout Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfileMenuOpen(false);
+                    signOut();
+                  }}
+                  role="menuitem"
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: '#dc2626',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'background 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = '#fef2f2')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <LogOut size={15} strokeWidth={2.2} />
+                  <span>लॉगआउट करें (Sign Out)</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -372,64 +502,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         <span>&copy; 2026 VijaySetu &bull; Roots Reach Media. All Rights Reserved. &bull; <a href="https://vijaysetu-website.vercel.app" target="_blank" rel="noopener noreferrer" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>वेबसाइट</a> &bull; <a href="/privacy" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Privacy Policy</a> &bull; <a href="/terms" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Terms of Service</a> &bull; 📞 7231077770</span>
       </footer>
 
-      {/* Mobile Sticky Bottom Navigation Bar (Visible only on mobile/tablet < 768px) */}
-      <nav className="mobile-bottom-nav" aria-label="मोबाइल नेविगेशन बार">
-        <Link
-          href="/"
-          className={`mobile-bottom-nav-item ${pathname === '/' ? 'is-active' : ''}`}
-          title="मुख्य डैशबोर्ड"
-        >
-          <Home size={19} strokeWidth={pathname === '/' ? 2.5 : 2} />
-          <span>होम</span>
-        </Link>
-
-        <Link
-          href="/voters"
-          className={`mobile-bottom-nav-item ${pathname === '/voters' ? 'is-active' : ''}`}
-          title="मतदाता खोज व पर्ची"
-        >
-          <Ticket size={19} strokeWidth={pathname === '/voters' ? 2.5 : 2} />
-          <span>वोटर</span>
-        </Link>
-
-        <Link
-          href="/poll-desk"
-          className={`mobile-bottom-nav-item ${pathname === '/poll-desk' ? 'is-active' : ''}`}
-          title="मतदान दिवस डेस्क"
-        >
-          <CheckSquare size={19} strokeWidth={pathname === '/poll-desk' ? 2.5 : 2} />
-          <span>पोल-डेस्क</span>
-        </Link>
-
-        <Link
-          href="/workers"
-          className={`mobile-bottom-nav-item ${pathname === '/workers' ? 'is-active' : ''}`}
-          title="कार्यकर्ता प्रबंधन"
-        >
-          <ContactRound size={19} strokeWidth={pathname === '/workers' ? 2.5 : 2} />
-          <span>कार्यकर्ता</span>
-        </Link>
-
-        {userInfo.role === 'admin' ? (
-          <Link
-            href="/admin"
-            className={`mobile-bottom-nav-item ${pathname.startsWith('/admin') ? 'is-active' : ''}`}
-            title="सुपर एडमिन कंसोल"
-          >
-            <Database size={19} strokeWidth={pathname.startsWith('/admin') ? 2.5 : 2} />
-            <span>एडमिन</span>
-          </Link>
-        ) : (
-          <Link
-            href="/warroom"
-            className={`mobile-bottom-nav-item ${pathname === '/warroom' ? 'is-active' : ''}`}
-            title="राजनीतिक वॉर-रूम"
-          >
-            <TrendingUp size={19} strokeWidth={pathname === '/warroom' ? 2.5 : 2} />
-            <span>वॉर-रूम</span>
-          </Link>
-        )}
-      </nav>
 
       {/* FULL-SCREEN SUSPENSION LOCKOUT MODAL */}
       {isSuspended && (

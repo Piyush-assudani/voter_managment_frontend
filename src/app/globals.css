@@ -6156,75 +6156,24 @@ img {
 /* VIJAYSETU 100% NATIVE MOBILE RESPONSIVE ENGINE                             */
 /* ========================================================================= */
 
-/* 1. MOBILE BOTTOM NAVIGATION BAR */
+/* 1. MOBILE BOTTOM NAVIGATION BAR (REMOVED) */
 .mobile-bottom-nav {
-  display: none;
+  display: none !important;
 }
 
 @media (max-width: 768px) {
   .mobile-bottom-nav {
-    display: flex;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: calc(58px + env(safe-area-inset-bottom, 0px));
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    background: rgba(255, 255, 255, 0.97);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border-top: 1px solid #e2e8f0;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.07);
-    z-index: 999;
-    align-items: stretch;
-    justify-content: space-around;
+    display: none !important;
   }
 
-  .mobile-bottom-nav-item {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    color: #64748b;
-    text-decoration: none;
-    font-size: 11px;
-    font-weight: 600;
-    transition: all 0.15s ease;
-    padding: 5px 2px;
-    position: relative;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .mobile-bottom-nav-item:active {
-    transform: scale(0.92);
-  }
-
-  .mobile-bottom-nav-item.is-active {
-    color: #047857;
-    font-weight: 750;
-  }
-
-  .mobile-bottom-nav-item.is-active::before {
-    content: '';
-    position: absolute;
-    top: 3px;
-    width: 24px;
-    height: 3px;
-    border-radius: 9999px;
-    background: #047857;
-  }
-
-  /* Page content bottom padding prevents content from being hidden behind bottom nav */
+  /* Page content bottom padding */
   .page-content {
-    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
-  /* Floating voter action bar sits gracefully above the bottom nav */
+  /* Floating voter action bar sits gracefully at bottom */
   .sb-floating-bottom-bar {
-    bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 
@@ -6395,28 +6344,16 @@ img {
   }
 
   .connection-pill {
-    padding: 4px !important;
-    border-radius: 50% !important;
-    min-width: 22px !important;
-    height: 22px !important;
-    justify-content: center !important;
-  }
-
-  .connection-pill .status-dot {
-    margin: 0 !important;
+    display: none !important;
   }
 
   .topbar-logout-btn {
-    padding: 6px !important;
-    border-radius: 7px !important;
-    min-width: 30px !important;
-    height: 30px !important;
-    justify-content: center !important;
+    display: none !important;
   }
 
   /* Work-page mobile layout */
   .work-page {
-    padding: 8px 10px 80px 10px !important;
+    padding: 8px 10px 24px 10px !important;
   }
 
   /* Metrics grid 2x2 on mobile */
