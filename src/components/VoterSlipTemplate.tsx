@@ -18,6 +18,9 @@ export interface SlipConfig {
   useHeaderGraphic?: boolean;
   headerGraphicImage?: string;
   hideEvmRibbon?: boolean;
+  metricType?: 'ward' | 'part';
+  showWardInsteadOfPart?: boolean;
+  metricLabel?: string;
 }
 
 export const defaultSlipConfig: SlipConfig = {
@@ -37,6 +40,8 @@ export const defaultSlipConfig: SlipConfig = {
   useHeaderGraphic: false,
   headerGraphicImage: '',
   hideEvmRibbon: false,
+  metricType: 'ward',
+  showWardInsteadOfPart: true,
 };
 
 
@@ -266,10 +271,23 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
 
   const relativeName = formatName(voter.relativeNameEn, voter.relativeNameHi, 'नरिगा राम');
 
-  const rawWard = (voter.wardNo || '82').toString().trim();
-  const ward = rawWard.replace(/^(वार्ड|Ward)\s*/i, '').trim();
+  const rawWard = (voter.wardNo || (isEditable ? '1' : '')).toString().trim();
+  const ward = rawWard.replace(/^(वार्ड|Ward)\s*/i, '').trim() || (isEditable ? '1' : '—');
   const part = (voter.partNo || '1').toString().replace(/^(भाग|Part)\s*/i, '').trim();
   const serial = voter.serialNo ?? '1';
+
+  // Determine whether to display Ward Number or Part Number in the highlight metric card
+  const shouldShowWard = React.useMemo(() => {
+    if (merged.metricType === 'ward') return true;
+    if (merged.metricType === 'part') return false;
+    if (merged.showWardInsteadOfPart !== undefined) return Boolean(merged.showWardInsteadOfPart);
+    if (typeof window !== 'undefined') {
+      const sysHide = localStorage.getItem('sys_hide_part_no');
+      if (sysHide === 'true') return true;
+    }
+    return true; // Default to Ward No. for local elections
+  }, [merged.metricType, merged.showWardInsteadOfPart]);
+
   const house = voter.houseNo || '279';
   const ageGender = `${voter.age || '28'} वर्ष | ${voter.gender || 'पुरुष'}`;
   const epic = voter.epic || 'RLJ1213180';
@@ -1345,7 +1363,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
 
         {/* ================= 3. TWO BIG HIGHLIGHT METRIC CARDS ================= */}
         <div className="voter-slip-metric-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-          {/* Part Card */}
+          {/* Highlight Metric Card 1: Ward No. or Part No. */}
           <div
             className="voter-slip-metric-card"
             style={{
@@ -1359,13 +1377,46 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               overflow: 'hidden',
+              position: 'relative',
             }}
           >
-            <div className="voter-slip-metric-label" style={{ color: '#1e3a8a', fontSize: '12px', fontWeight: 700, letterSpacing: 'normal', lineHeight: 1.2, marginBottom: '2px' }}>
-              भाग संख्या (PART)
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', flexWrap: 'wrap', marginBottom: '2px' }}>
+              <div className="voter-slip-metric-label" style={{ color: '#1e3a8a', fontSize: '12px', fontWeight: 700, letterSpacing: 'normal', lineHeight: 1.2 }}>
+                {merged.metricLabel || (shouldShowWard ? 'वार्ड संख्या (WARD NO.)' : 'भाग संख्या (PART)')}
+              </div>
+              {isEditable && (
+                <button
+                  type="button"
+                  data-html2canvas-ignore="true"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const next = shouldShowWard ? 'part' : 'ward';
+                    updateField('metricType', next);
+                    updateField('showWardInsteadOfPart', next === 'ward');
+                  }}
+                  title={shouldShowWard ? 'क्लिक कर भाग संख्या (PART) दिखाएं' : 'क्लिक कर वार्ड संख्या (WARD) दिखाएं'}
+                  style={{
+                    background: '#e0e7ff',
+                    border: '1px solid #93c5fd',
+                    color: '#1d4ed8',
+                    borderRadius: '5px',
+                    fontSize: '9.5px',
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span>⇄</span>
+                  <span>{shouldShowWard ? 'भाग संख्या करें' : 'वार्ड संख्या करें'}</span>
+                </button>
+              )}
             </div>
             <div className="voter-slip-metric-num" style={{ color: '#1e3a8a', fontSize: '34px', fontWeight: 900, lineHeight: 1.15, margin: 0, padding: '0 0 2px 0' }}>
-              {part}
+              {shouldShowWard ? ward : part}
             </div>
           </div>
 

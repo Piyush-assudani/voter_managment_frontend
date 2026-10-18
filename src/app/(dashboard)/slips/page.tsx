@@ -2968,6 +2968,40 @@ export default function SlipsPage() {
                   </p>
                 </div>
 
+                {/* Highlight Metric Card Selection: Ward No. vs Part No. */}
+                <div style={{ background: '#f0fdf4', padding: '12px 14px', borderRadius: '8px', border: '1.5px solid #86efac', margin: '4px 0' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#166534', marginBottom: '8px' }}>
+                    हाईलाइट मुख्य कार्ड (Highlight Metric): वार्ड संख्या या भाग संख्या
+                  </label>
+                  <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '7px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
+                      <input
+                        type="radio"
+                        name="slipMetricType"
+                        value="ward"
+                        checked={editingConfig.metricType !== 'part' && editingConfig.showWardInsteadOfPart !== false}
+                        onChange={() => setEditingConfig({ ...editingConfig, metricType: 'ward', showWardInsteadOfPart: true })}
+                        style={{ width: '17px', height: '17px', accentColor: '#16a34a', cursor: 'pointer' }}
+                      />
+                      <span>🏛️ वार्ड संख्या (WARD NO.) <span style={{ fontSize: '11px', color: '#15803d', background: '#dcfce7', padding: '1px 6px', borderRadius: '4px' }}>पंचायत / वार्ड चुनाव</span></span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '7px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                      <input
+                        type="radio"
+                        name="slipMetricType"
+                        value="part"
+                        checked={editingConfig.metricType === 'part' || editingConfig.showWardInsteadOfPart === false}
+                        onChange={() => setEditingConfig({ ...editingConfig, metricType: 'part', showWardInsteadOfPart: false })}
+                        style={{ width: '17px', height: '17px', accentColor: '#2563eb', cursor: 'pointer' }}
+                      />
+                      <span>📋 भाग संख्या (PART NO.) <span style={{ fontSize: '11px', color: '#64748b' }}>विधानसभा / लोकसभा</span></span>
+                    </label>
+                  </div>
+                  <p style={{ margin: '6px 0 0 0', fontSize: '11.5px', color: '#166534', lineHeight: 1.4 }}>
+                    पर्ची के मुख्य बाएं कार्ड में <strong>'वार्ड संख्या'</strong> दिखेगी या <strong>'भाग संख्या'</strong>, इसे यहाँ से कभी भी बदल सकते हैं।
+                  </p>
+                </div>
+
                 {!editingConfig.hideEvmRibbon && (
                   <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
                     EVM बैनर अपील (EVM Banner Appeal Text):

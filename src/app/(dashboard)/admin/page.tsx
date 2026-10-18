@@ -7119,6 +7119,42 @@ export default function AdminPanel() {
                         </label>
                       </div>
 
+                      <div style={{ background: '#f0fdf4', padding: '10px 12px', borderRadius: '8px', border: '1.5px solid #86efac', margin: '4px 0' }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#166534', marginBottom: '6px' }}>
+                          मुख्य हाईलाइट कार्ड (Highlight Card):
+                        </label>
+                        <div style={{ display: 'flex', gap: '14px' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
+                            <input
+                              type="radio"
+                              name={`tenant_metric_${editingTenant.id}`}
+                              value="ward"
+                              checked={editingTenant.slipConfig?.metricType !== 'part' && editingTenant.slipConfig?.showWardInsteadOfPart !== false}
+                              onChange={() => setEditingTenant({
+                                ...editingTenant,
+                                slipConfig: { ...(editingTenant.slipConfig || defaultSlipConfig), metricType: 'ward', showWardInsteadOfPart: true }
+                              })}
+                              style={{ width: '15px', height: '15px', accentColor: '#16a34a', cursor: 'pointer' }}
+                            />
+                            <span>🏛️ वार्ड संख्या (WARD NO.)</span>
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: '#475569' }}>
+                            <input
+                              type="radio"
+                              name={`tenant_metric_${editingTenant.id}`}
+                              value="part"
+                              checked={editingTenant.slipConfig?.metricType === 'part' || editingTenant.slipConfig?.showWardInsteadOfPart === false}
+                              onChange={() => setEditingTenant({
+                                ...editingTenant,
+                                slipConfig: { ...(editingTenant.slipConfig || defaultSlipConfig), metricType: 'part', showWardInsteadOfPart: false }
+                              })}
+                              style={{ width: '15px', height: '15px', accentColor: '#2563eb', cursor: 'pointer' }}
+                            />
+                            <span>📋 भाग संख्या (PART NO.)</span>
+                          </label>
+                        </div>
+                      </div>
+
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                         <label style={{ fontSize: '12px', fontWeight: 600 }}>
                           उपशीर्षक / क्षेत्र

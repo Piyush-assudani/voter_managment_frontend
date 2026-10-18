@@ -43,7 +43,18 @@ export const FamilyVoterSlipTemplate: React.FC<FamilyVoterSlipProps> = ({
        || Object.entries(merged.wardPollingStations).find(([k, v]) => k.replace(/^(वार्ड|Ward)\s*/i, '').trim() === cleanWard && typeof v === 'string' && v.trim())?.[1])
     : null;
 
-  const effectiveBooth = boothName || wardStation || first.boothName || merged.pollingStationFallback || `भाग संख्या ${effectivePart} का मतदान केंद्र`;
+  const shouldShowWard = React.useMemo(() => {
+    if (merged.metricType === 'ward') return true;
+    if (merged.metricType === 'part') return false;
+    if (merged.showWardInsteadOfPart !== undefined) return Boolean(merged.showWardInsteadOfPart);
+    if (typeof window !== 'undefined') {
+      const sysHide = localStorage.getItem('sys_hide_part_no');
+      if (sysHide === 'true') return true;
+    }
+    return true;
+  }, [merged.metricType, merged.showWardInsteadOfPart]);
+
+  const effectiveBooth = boothName || wardStation || first.boothName || merged.pollingStationFallback || (shouldShowWard ? `वार्ड संख्या ${effectiveWard} का मतदान केंद्र` : `भाग संख्या ${effectivePart} का मतदान केंद्र`);
 
   const totalMembers = familyMembers.length;
 
@@ -201,7 +212,10 @@ export const FamilyVoterSlipTemplate: React.FC<FamilyVoterSlipProps> = ({
                 संयुक्त परिवार मतदाता सूचना पर्ची (Family Voter Slip)
               </div>
               <div style={{ fontSize: '12px', color: '#475569', fontWeight: 600, marginTop: '1px' }}>
-                मकान संख्या: <strong style={{ color: '#0f172a' }}>#{effectiveHouse}</strong> • वार्ड: <strong style={{ color: '#0f172a' }}>{effectiveWard}</strong> • भाग: <strong style={{ color: '#0f172a' }}>{effectivePart}</strong>
+                मकान संख्या: <strong style={{ color: '#0f172a' }}>#{effectiveHouse}</strong> • वार्ड: <strong style={{ color: '#0f172a' }}>{effectiveWard}</strong>
+                {!shouldShowWard && (
+                  <> • भाग: <strong style={{ color: '#0f172a' }}>{effectivePart}</strong></>
+                )}
               </div>
             </div>
           </div>
