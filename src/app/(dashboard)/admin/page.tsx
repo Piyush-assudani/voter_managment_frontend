@@ -114,6 +114,7 @@ interface Tenant {
   ulbWardGramPanchayat?: string;
   adminEmail?: string;
   initialPassword?: string;
+  customCastes?: string[];
 }
 
 interface AdminVoter {
@@ -201,11 +202,76 @@ interface CreatedClientDetails {
   ulbWardGramPanchayat?: string;
 }
 
-type AdminView = 'dashboard' | 'tenants' | 'demo' | 'branding' | 'templates' | 'leads' | 'records' | 'users' | 'import' | 'export';
+type AdminView = 'dashboard' | 'tenants' | 'castes' | 'demo' | 'branding' | 'templates' | 'leads' | 'records' | 'users' | 'import' | 'export';
+
+const SAMANDAR_SINGH_CASTES: string[] = [
+  'जंज राजपूत',
+  'फ़िटक राजपूत',
+  'खालत राजपूत',
+  'तंवर राजपूत',
+  'अन्य राजपूत',
+  'रावना राजपूत',
+  'मेघवाल जयपाल',
+  'मेघवाल वानर',
+  'मेघवाल पंवार',
+  'मेघवाल बडल',
+  'भील',
+  'भील सिंध',
+  'बेलदार',
+  'सुथार',
+  'कुंभार',
+  'दर्जी',
+  'मुसलमान',
+  'जाट',
+  'बिश्नोई',
+  'गवारिया',
+  'भाट',
+  'ब्राह्मण',
+  'शर्मा',
+  'पालीवाल',
+  'जोगी',
+  'कुष्ठ कॉलोनी',
+  'खत्री',
+  'गर्ग',
+  'माली',
+  'साध',
+  'सोनी',
+  'लोहार',
+  'सांसी',
+  'गोस्वामी',
+  'नाई',
+  'दिशांत्री',
+  'अन्य',
+];
+
+const DEFAULT_RAJASTHAN_CASTES: string[] = [
+  'राजपूत',
+  'जाट',
+  'ब्राह्मण',
+  'मेघवाल',
+  'भील',
+  'बिश्नोई',
+  'गुर्जर',
+  'माली / सैनी',
+  'कुमावत / प्रजापत',
+  'वैश्य / महाजन',
+  'मुस्लिम',
+  'यादव',
+  'मीणा',
+  'देवासी / रबारी',
+  'सुथार / खाती',
+  'लोहार',
+  'चारण',
+  'सोनी',
+];
 
 export default function AdminPanel() {
   const [activeView, setActiveView] = useState<AdminView>('dashboard');
   const [organizations, setOrganizations] = useState<Tenant[]>([]);
+  const [casteSelectedOrgId, setCasteSelectedOrgId] = useState<string>('');
+  const [orgCastesList, setOrgCastesList] = useState<string[]>([]);
+  const [newCasteInput, setNewCasteInput] = useState('');
+  const [savingCastes, setSavingCastes] = useState(false);
   const [deletingTenant, setDeletingTenant] = useState<Tenant | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeletingClient, setIsDeletingClient] = useState(false);
@@ -892,8 +958,65 @@ export default function AdminPanel() {
         }
         return selectedId;
       });
+
+      setCasteSelectedOrgId((prev) => {
+        const currentValid = data.some((o) => o.id === prev);
+        const selectedId = currentValid ? prev : (data.find((o) => o.name?.includes('समंदर'))?.id || data[0].id);
+        const selectedOrg = data.find((o) => o.id === selectedId);
+        if (selectedOrg) {
+          setOrgCastesList(selectedOrg.customCastes || []);
+        }
+        return selectedId;
+      });
     }
   }, []);
+
+  useEffect(() => {
+    if (!casteSelectedOrgId) return;
+    const org = organizations.find((o) => o.id === casteSelectedOrgId);
+    if (org) {
+      setOrgCastesList(org.customCastes || []);
+    }
+  }, [casteSelectedOrgId, organizations]);
+
+  const handleAddCaste = () => {
+    if (!newCasteInput.trim()) return;
+    const parts = newCasteInput.split(',').map((p) => p.trim()).filter(Boolean);
+    const updated = [...orgCastesList];
+    for (const part of parts) {
+      if (!updated.includes(part)) {
+        updated.push(part);
+      }
+    }
+    setOrgCastesList(updated);
+    setNewCasteInput('');
+  };
+
+  const handleRemoveCaste = (casteToRemove: string) => {
+    setOrgCastesList((prev) => prev.filter((c) => c !== casteToRemove));
+  };
+
+  const handleSaveCastes = async () => {
+    if (!casteSelectedOrgId) return;
+    setSavingCastes(true);
+    try {
+      const response = await apiFetch(`/admin/organizations/${encodeURIComponent(casteSelectedOrgId)}/custom-castes`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customCastes: orgCastesList }),
+      });
+      if (!response.ok) throw new Error(await getApiError(response, 'जाति सूची सेव नहीं हो सकी।'));
+      const data = await response.json();
+      setOrganizations((prev) =>
+        prev.map((o) => (o.id === casteSelectedOrgId ? { ...o, customCastes: orgCastesList } : o))
+      );
+      showToast('success', data.message || 'कस्टम जातियां सफलतापूर्वक सेव कर दी गईं!');
+    } catch (err) {
+      showToast('error', err instanceof Error ? err.message : 'जाति सूची सेव नहीं हो सकी।');
+    } finally {
+      setSavingCastes(false);
+    }
+  };
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -1289,7 +1412,7 @@ export default function AdminPanel() {
       else if (activeView === 'leads') await loadLeads();
       else if (activeView === 'templates') {
         await Promise.all([loadOrganizations(), loadMetaTemplates(), loadMetaConfig()]);
-      } else if (activeView === 'tenants' || activeView === 'branding' || activeView === 'users' || activeView === 'import' || activeView === 'export') {
+      } else if (activeView === 'tenants' || activeView === 'castes' || activeView === 'branding' || activeView === 'users' || activeView === 'import' || activeView === 'export') {
         await loadOrganizations();
         await loadPdfJobs();
         if (activeView === 'import') {
@@ -1542,6 +1665,7 @@ export default function AdminPanel() {
           district: editingTenant.district || '',
           ulbPanchayatSamiti: editingTenant.ulbPanchayatSamiti || '',
           ulbWardGramPanchayat: editingTenant.ulbWardGramPanchayat || '',
+          customCastes: editingTenant.customCastes || [],
         }),
       });
       if (!response.ok) throw new Error(await getApiError(response, 'क्लाइंट सेटिंग सेव नहीं हुई।'));
@@ -1810,6 +1934,7 @@ export default function AdminPanel() {
           {([
             { key: 'dashboard', label: 'डैशबोर्ड एवं सेटिंग्स', Icon: LayoutDashboard },
             { key: 'tenants', label: 'क्लाइंट व संगठन', Icon: UsersRound },
+            { key: 'castes', label: 'जाति प्रबंधन (Caste Config)', Icon: Tag },
             { key: 'demo', label: `डेमो यूज़र जनरेटर ${demoUsers.length > 0 ? `(${demoUsers.length})` : ''}`, Icon: KeyRound },
             { key: 'branding', label: 'पर्ची ब्रांडिंग', Icon: Ticket },
             { key: 'templates', label: 'Meta टेम्पलेट मैनेजमेंट', Icon: MessageSquareCode },
@@ -2807,6 +2932,17 @@ export default function AdminPanel() {
                             <Ticket size={13} /> पर्ची ब्रांडिंग
                           </button>
                           <button
+                            className="button-secondary"
+                            type="button"
+                            style={{ fontSize: '12px', padding: '6px 8px', justifyContent: 'center', color: '#6b21a8', borderColor: '#d8b4fe', background: '#faf5ff', fontWeight: 600 }}
+                            onClick={() => {
+                              setCasteSelectedOrgId(tenant.id);
+                              setActiveView('castes');
+                            }}
+                          >
+                            <Tag size={13} /> जातियां ({tenant.customCastes?.length || 0})
+                          </button>
+                          <button
                             className="button-quiet"
                             type="button"
                             style={{ fontSize: '12px', padding: '6px 8px', justifyContent: 'center', border: '1px solid #cbd5e1' }}
@@ -2942,6 +3078,18 @@ export default function AdminPanel() {
                                   <Ticket size={13} /> पर्ची ब्रांडिंग
                                 </button>
                                 <button
+                                  className="button-secondary"
+                                  type="button"
+                                  style={{ padding: '4px 10px', fontSize: '12px', color: '#6b21a8', borderColor: '#d8b4fe', background: '#faf5ff', fontWeight: 600 }}
+                                  onClick={() => {
+                                    setCasteSelectedOrgId(tenant.id);
+                                    setActiveView('castes');
+                                  }}
+                                  title="इस क्लाइंट की जातियां कस्टमाइज़ करें"
+                                >
+                                  <Tag size={13} /> जातियां ({tenant.customCastes?.length || 0})
+                                </button>
+                                <button
                                   className="button-quiet"
                                   type="button"
                                   onClick={() => setEditingTenant({ ...tenant, slipConfig: tenant.slipConfig || { ...defaultSlipConfig } })}
@@ -2971,6 +3119,323 @@ export default function AdminPanel() {
               ) : (
                 <div className="empty-state"><strong>अभी कोई क्लाइंट नहीं</strong><p>पहला संगठन बनाने पर वह इस सूची में दिखेगा।</p></div>
               )}
+            </section>
+          </>
+        )}
+
+        {/* ================================================================= */}
+        {/* CASTE CONFIGURATION PER CLIENT / CANDIDATE                      */}
+        {/* ================================================================= */}
+        {activeView === 'castes' && (
+          <>
+            <section className="feature-metrics">
+              <article className="metric-card">
+                <span>सक्रिय क्लाइंट</span>
+                <strong>{organizations.length}</strong>
+                <small>संगठन उपलब्ध</small>
+              </article>
+              <article className="metric-card metric-card-green">
+                <span>चयनित संगठन में जातियां</span>
+                <strong>{orgCastesList.length}</strong>
+                <small>{organizations.find((o) => o.id === casteSelectedOrgId)?.name || 'कोई नहीं'}</small>
+              </article>
+              <article className="metric-card">
+                <span>वोटर टैग स्थिति</span>
+                <strong>सक्रिय + अन्य (Other)</strong>
+                <small>कस्टम जाति विकल्प हमेशा खुला रहेगा</small>
+              </article>
+            </section>
+
+            <section className="records-panel" style={{ padding: '24px', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <Tag size={20} color="#7c3aed" />
+                    <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', margin: 0 }}>
+                      क्लाइंट / यूज़र अनुसार जाति प्रबंधन (Custom Caste Configurator)
+                    </h2>
+                  </div>
+                  <p style={{ fontSize: '13.5px', color: '#64748b', margin: 0 }}>
+                    प्रत्येक प्रत्याशी / संगठन के लिए उनकी स्थानीय जातियां सेट करें। कार्यकर्ता जब वोटर को टैग देंगे, तो यही जातियां चिप्स में दिखेंगी।
+                  </p>
+                </div>
+
+                {/* Organization Selector */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#f8fafc', padding: '8px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}>
+                  <Building2 size={16} color="#7c3aed" />
+                  <label style={{ fontSize: '12.5px', fontWeight: 700, color: '#334155', margin: 0 }}>
+                    प्रत्याशी / संगठन चुनें:
+                  </label>
+                  <select
+                    value={casteSelectedOrgId}
+                    onChange={(e) => setCasteSelectedOrgId(e.target.value)}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: '1.5px solid #a855f7',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: '#0f172a',
+                      background: '#ffffff',
+                      outline: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {organizations.map((org) => (
+                      <option key={org.id} value={org.id}>
+                        {org.name} {org.candidateName ? `(${org.candidateName})` : ''} • {(org.customCastes || []).length} जातियां
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Action Toolbar with Presets */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '10px',
+                  padding: '12px 16px',
+                  background: '#faf5ff',
+                  border: '1px solid #e9d5ff',
+                  borderRadius: '10px',
+                  marginBottom: '20px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#6b21a8' }}>त्वरित प्रीसेट लोड करें:</span>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => {
+                      setOrgCastesList(SAMANDAR_SINGH_CASTES);
+                      showToast('info', 'समंदर सिंह जी वाली 25 क्षेत्रीय जातियां लोड कर दी गईं। सेव करने के लिए नीचे सेव बटन दबाएं।');
+                    }}
+                    style={{
+                      fontSize: '12px',
+                      padding: '5px 12px',
+                      background: '#ffffff',
+                      borderColor: '#c084fc',
+                      color: '#7e22ce',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                    }}
+                  >
+                    <Sparkles size={13} color="#9333ea" /> समंदर सिंह जी वाली 25 जातियां
+                  </button>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => {
+                      setOrgCastesList(DEFAULT_RAJASTHAN_CASTES);
+                      showToast('info', 'सामान्य राजस्थान जातियां लोड कर दी गईं। सेव करने के लिए नीचे सेव बटन दबाएं।');
+                    }}
+                    style={{
+                      fontSize: '12px',
+                      padding: '5px 12px',
+                      background: '#ffffff',
+                      borderColor: '#cbd5e1',
+                      color: '#475569',
+                      fontWeight: 600,
+                    }}
+                  >
+                    सामान्य राजस्थान जातियां
+                  </button>
+                  <button
+                    type="button"
+                    className="button-quiet"
+                    onClick={() => {
+                      if (window.confirm('क्या आप सचमुच सभी जातियों को हटाना चाहते हैं?')) {
+                        setOrgCastesList([]);
+                      }
+                    }}
+                    style={{ fontSize: '12px', color: '#dc2626', borderColor: '#fca5a5' }}
+                  >
+                    <Trash2 size={13} /> सूची खाली करें
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '12px', color: '#6b21a8', fontWeight: 700 }}>
+                    कुल जातियां: {orgCastesList.length}
+                  </span>
+                </div>
+              </div>
+
+              {/* Add New Caste Form */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '10px',
+                  alignItems: 'center',
+                  marginBottom: '20px',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ flex: '1', minWidth: '280px', position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={newCasteInput}
+                    onChange={(e) => setNewCasteInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCaste();
+                      }
+                    }}
+                    placeholder="नयी जाति जोड़ें (उदा: चारण, सोनी, घांची या कॉमा लगाकर एक साथ कई लिखें)..."
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      borderRadius: '8px',
+                      border: '1.5px solid #cbd5e1',
+                      padding: '0 14px',
+                      fontSize: '13.5px',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="button-primary"
+                  onClick={handleAddCaste}
+                  style={{
+                    height: '42px',
+                    padding: '0 18px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <Plus size={16} /> + जाति जोड़ें (Add)
+                </button>
+              </div>
+
+              {/* Active Caste Chips */}
+              <div
+                style={{
+                  padding: '16px',
+                  background: '#f8fafc',
+                  border: '1.5px solid #e2e8f0',
+                  borderRadius: '12px',
+                  marginBottom: '24px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
+                    सक्रिय जातियां ({orgCastesList.length}):
+                  </span>
+                  <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                    हटाने के लिए किसी भी जाति के ✕ पर क्लिक करें
+                  </span>
+                </div>
+
+                {orgCastesList.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '30px 20px', color: '#64748b' }}>
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>अभी कोई जाति नहीं जोड़ी गई है।</p>
+                    <p style={{ margin: '6px 0 0', fontSize: '12.5px' }}>ऊपर दिए गए प्रीसेट बटन से या टेक्स्ट बॉक्स में लिखकर जातियां जोड़ें।</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '340px', overflowY: 'auto', padding: '2px' }}>
+                    {orgCastesList.map((caste, index) => (
+                      <div
+                        key={`${caste}-${index}`}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 12px',
+                          background: '#ffffff',
+                          border: '1.5px solid #d8b4fe',
+                          borderRadius: '20px',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          color: '#581c87',
+                          boxShadow: '0 1px 3px rgba(124, 58, 237, 0.08)',
+                        }}
+                      >
+                        <span>{caste}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCaste(caste)}
+                          style={{
+                            background: '#f3e8ff',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '18px',
+                            height: '18px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            color: '#7e22ce',
+                            fontSize: '11px',
+                            padding: 0,
+                            lineHeight: 1,
+                          }}
+                          title="हटाएं"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Always Active 'अन्य / Other' Badge */}
+                    <div
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 14px',
+                        background: '#f0fdf4',
+                        border: '1.5px dashed #16a34a',
+                        borderRadius: '20px',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        color: '#15803d',
+                      }}
+                      title="यह विकल्प हमेशा वोटर टैग स्क्रीन में उपलब्ध रहेगा ताकि कस्टम जाति भी लिखी जा सके"
+                    >
+                      <Sparkles size={13} color="#16a34a" />
+                      <span>✨ अन्य / Other (कस्टम जाति - हमेशा उपलब्ध)</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Save Button */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="button-primary"
+                  onClick={handleSaveCastes}
+                  disabled={savingCastes || !casteSelectedOrgId}
+                  style={{
+                    padding: '10px 24px',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    background: 'linear-gradient(135deg, #16a34a, #15803d)',
+                    boxShadow: '0 4px 12px rgba(22, 163, 74, 0.25)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  {savingCastes ? <LoaderCircle size={16} className="spin" /> : <Check size={16} />}
+                  {savingCastes ? 'सेव हो रहा है...' : `💾 ${organizations.find((o) => o.id === casteSelectedOrgId)?.name || 'संगठन'} के लिए जाति सूची सेव करें`}
+                </button>
+                <span style={{ fontSize: '12.5px', color: '#64748b' }}>
+                  सेव करने के बाद यह सूची तुरंत इस प्रत्याशी के सभी कार्यकर्ताओं के ऐप व पोर्टल पर लाइव हो जाएगी।
+                </span>
+              </div>
             </section>
           </>
         )}

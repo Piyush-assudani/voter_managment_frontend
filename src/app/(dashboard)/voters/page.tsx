@@ -23,6 +23,7 @@ import {
   Wrench,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
 } from 'lucide-react';
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
@@ -63,8 +64,71 @@ interface Voter {
   voted: boolean;
 }
 
+const DEFAULT_CASTE_PRESETS: string[] = [
+  'जंज राजपूत',
+  'फ़िटक राजपूत',
+  'खालत राजपूत',
+  'तंवर राजपूत',
+  'अन्य राजपूत',
+  'रावना राजपूत',
+  'मेघवाल जयपाल',
+  'मेघवाल वानर',
+  'मेघवाल पंवार',
+  'मेघवाल बडल',
+  'भील',
+  'भील सिंध',
+  'बेलदार',
+  'सुथार',
+  'कुंभार',
+  'दर्जी',
+  'मुसलमान',
+  'जाट',
+  'बिश्नोई',
+  'गवारिया',
+  'भाट',
+  'ब्राह्मण',
+  'शर्मा',
+  'पालीवाल',
+  'जोगी',
+  'कुष्ठ कॉलोनी',
+  'खत्री',
+  'गर्ग',
+  'माली',
+  'साध',
+  'सोनी',
+  'लोहार',
+  'सांसी',
+  'गोस्वामी',
+  'नाई',
+  'दिशांत्री',
+  'अन्य',
+];
+
 export default function VoterDirectoryPage() {
   const [voters, setVoters] = useState<Voter[]>([]);
+  const [orgCustomCastes, setOrgCustomCastes] = useState<string[]>(() => {
+    try {
+      const cached = typeof window !== 'undefined' ? localStorage.getItem('org_custom_castes') : null;
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [];
+  });
+  const [isCustomCasteOpen, setIsCustomCasteOpen] = useState(false);
+  const [casteFilter, setCasteFilter] = useState('');
+  const customCasteInputRef = useRef<HTMLInputElement | null>(null);
+
+  const activeCastePresets = useMemo(() => {
+    return orgCustomCastes.length > 0 ? orgCustomCastes : DEFAULT_CASTE_PRESETS;
+  }, [orgCustomCastes]);
+
+  const filteredCastes = useMemo(() => {
+    const q = casteFilter.trim().toLowerCase();
+    if (!q) return activeCastePresets;
+    return activeCastePresets.filter((chip) => chip.toLowerCase().includes(q));
+  }, [casteFilter, activeCastePresets]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [relativeNameQuery, setRelativeNameQuery] = useState('');
@@ -192,6 +256,22 @@ export default function VoterDirectoryPage() {
             if (matched.settings?.hidePartNo !== undefined) {
               setHidePartNo(matched.settings.hidePartNo);
               if (typeof window !== 'undefined') localStorage.setItem('sys_hide_part_no', String(matched.settings.hidePartNo));
+            }
+            const orgCastes = Array.isArray(matched.customCastes) && matched.customCastes.length > 0
+              ? matched.customCastes
+              : Array.isArray(matched.settings?.customCastes) && matched.settings.customCastes.length > 0
+              ? matched.settings.customCastes
+              : [];
+            if (orgCastes.length > 0) {
+              setOrgCustomCastes(orgCastes);
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('org_custom_castes', JSON.stringify(orgCastes));
+              }
+            } else {
+              setOrgCustomCastes([]);
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem('org_custom_castes');
+              }
             }
             return;
           } else if (!selectedOrgId || selectedOrgId === 'all') {
@@ -485,8 +565,13 @@ export default function VoterDirectoryPage() {
         ? 'विरोधी'
         : 'सामान्य');
 
+    const rawCaste = (voter.caste || '').trim();
+    const isPreset = activeCastePresets.includes(rawCaste);
+    setIsCustomCasteOpen(Boolean(rawCaste && !isPreset));
+    setCasteFilter('');
+
     setTagFormData({
-      caste: voter.caste || '',
+      caste: rawCaste,
       surety: defaultSurety,
       supportStatus: voter.supportStatus || 'unmarked',
       assignedWorker: voter.assignedWorker || '',
@@ -1953,77 +2038,276 @@ export default function VoterDirectoryPage() {
                   </button>
                 </div>
 
-                {/* 2. Community Tag Input & Chips (ss2) */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
-                    <label style={{ margin: 0, fontSize: '12.5px', fontWeight: 700, color: '#1e293b' }}>
-                      समुदाय / उपनाम टैग (COMMUNITY TAG):
+                {/* 2. Community / Caste Tag Selection & Custom Caste (ss2) */}
+                <div style={{ background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <label style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Tag size={14} color="#7c3aed" /> जाति / समुदाय टैग (COMMUNITY / CASTE TAG):
                     </label>
-                    <span style={{ fontSize: '11.5px', color: '#64748b' }}>
-                      सुझाव चिप पर टैप करें
+                    <span style={{ fontSize: '11px', color: '#64748b' }}>
+                      सुझाव चिप चुनें या 'अन्य' पर टैप करें
                     </span>
                   </div>
 
-                  <input
-                    value={tagFormData.caste}
-                    onChange={(e) => setTagFormData({ ...tagFormData, caste: e.target.value })}
-                    placeholder="उदा: जाट, गुर्जर, भील, कुम्हार, खाती, राजपूत..."
-                    style={{
-                      width: '100%',
-                      height: '42px',
-                      borderRadius: '8px',
-                      border: '1.5px solid #cbd5e1',
-                      padding: '0 14px',
-                      fontSize: '13.5px',
-                      marginBottom: '10px',
-                      outline: 'none',
-                    }}
-                  />
+                  {/* Active Selected Caste Banner */}
+                  {tagFormData.caste ? (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '6px 12px',
+                        background: '#f3e8ff',
+                        border: '1.5px solid #d8b4fe',
+                        borderRadius: '8px',
+                        marginBottom: '10px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px' }}>
+                        <span style={{ color: '#6b21a8', fontWeight: 600 }}>चयनित जाति:</span>
+                        <span
+                          style={{
+                            fontWeight: 700,
+                            color: '#581c87',
+                            background: '#ffffff',
+                            padding: '2px 10px',
+                            borderRadius: '12px',
+                            border: '1px solid #c084fc',
+                            fontSize: '13px',
+                          }}
+                        >
+                          {tagFormData.caste}
+                        </span>
+                        {isCustomCasteOpen && (
+                          <span style={{ fontSize: '11px', color: '#9333ea', fontStyle: 'italic', fontWeight: 600 }}>
+                            (कस्टम जाति)
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTagFormData({ ...tagFormData, caste: '' });
+                          setIsCustomCasteOpen(false);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#9333ea',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          padding: '2px 6px',
+                        }}
+                        title="जाति हटाएं"
+                      >
+                        ✕ हटाएं
+                      </button>
+                    </div>
+                  ) : null}
 
-                  {/* Suggestion Chips */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {[
-                      'चौधरी (Choudhary)',
-                      'भील (Bheel)',
-                      'Aggarwal / Bania',
-                      'राजपूत (Rajput)',
-                      'ब्राह्मण (Brahmin)',
-                      'राव',
-                      'लोहार (Lohar)',
-                      'देवासी (Dewasi/Rabari)',
-                      'Maheshwari',
-                      'जाट (Jat)',
-                      'बिश्नोई (Bishnoi)',
-                    ].map((chip) => {
-                      const isSelected = tagFormData.caste === chip || (tagFormData.caste && tagFormData.caste.includes(chip.split(' ')[0]));
+                  {/* Quick Search / Filter Input */}
+                  <div style={{ position: 'relative', marginBottom: '8px' }}>
+                    <Search
+                      size={14}
+                      color="#94a3b8"
+                      style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }}
+                    />
+                    <input
+                      type="text"
+                      value={casteFilter}
+                      onChange={(e) => setCasteFilter(e.target.value)}
+                      placeholder="जाति खोजें / फ़िल्टर करें (उदा: राजपूत, मेघवाल, भील, सुथार...)"
+                      style={{
+                        width: '100%',
+                        height: '34px',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        padding: '0 30px 0 30px',
+                        fontSize: '12px',
+                        outline: 'none',
+                        background: '#f8fafc',
+                      }}
+                    />
+                    {casteFilter && (
+                      <button
+                        type="button"
+                        onClick={() => setCasteFilter('')}
+                        style={{
+                          position: 'absolute',
+                          right: '8px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          color: '#94a3b8',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          padding: '2px',
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Caste Chips Container */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '6px',
+                      maxHeight: '160px',
+                      overflowY: 'auto',
+                      padding: '2px',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    {filteredCastes.map((chip) => {
+                      const isSelected = tagFormData.caste === chip && !isCustomCasteOpen;
                       return (
                         <button
                           key={chip}
                           type="button"
                           onClick={() => {
-                            if (tagFormData.caste === chip) {
+                            if (tagFormData.caste === chip && !isCustomCasteOpen) {
                               setTagFormData({ ...tagFormData, caste: '' });
                             } else {
                               setTagFormData({ ...tagFormData, caste: chip });
+                              setIsCustomCasteOpen(false);
                             }
                           }}
                           style={{
-                            padding: '6px 12px',
-                            borderRadius: '20px',
+                            padding: '5px 11px',
+                            borderRadius: '16px',
                             fontSize: '12px',
-                            fontWeight: 600,
-                            border: isSelected ? '1.5px solid #a855f7' : '1px solid #e2e8f0',
+                            fontWeight: isSelected ? 700 : 500,
+                            border: isSelected ? '1.5px solid #9333ea' : '1px solid #e2e8f0',
                             background: isSelected ? '#f3e8ff' : '#f8fafc',
                             color: isSelected ? '#6b21a8' : '#334155',
                             cursor: 'pointer',
                             transition: 'all 0.15s ease',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
                           }}
                         >
+                          {isSelected && <Check size={12} strokeWidth={3} />}
                           {chip}
                         </button>
                       );
                     })}
+
+                    {/* "अन्य / Other (कस्टम जाति)" button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextState = !isCustomCasteOpen;
+                        setIsCustomCasteOpen(nextState);
+                        if (nextState) {
+                          if (activeCastePresets.includes(tagFormData.caste)) {
+                            setTagFormData({ ...tagFormData, caste: '' });
+                          } else if (!tagFormData.caste && casteFilter.trim()) {
+                            setTagFormData({ ...tagFormData, caste: casteFilter.trim() });
+                          }
+                          setTimeout(() => customCasteInputRef.current?.focus(), 60);
+                        }
+                      }}
+                      style={{
+                        padding: '5px 12px',
+                        borderRadius: '16px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        border: isCustomCasteOpen ? '1.5px solid #9333ea' : '1.5px dashed #a855f7',
+                        background: isCustomCasteOpen ? '#7e22ce' : '#faf5ff',
+                        color: isCustomCasteOpen ? '#ffffff' : '#7e22ce',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                      }}
+                    >
+                      <Sparkles size={12} />
+                      {isCustomCasteOpen ? '✓ अन्य (कस्टम सक्रिय)' : '+ अन्य / Other (कस्टम जाति)'}
+                    </button>
                   </div>
+
+                  {filteredCastes.length === 0 && (
+                    <div style={{ fontSize: '11.5px', color: '#64748b', marginBottom: '8px', padding: '4px' }}>
+                      '{casteFilter}' सूची में नहीं मिली। कस्टम जाति लिखने के लिए ऊपर '+ अन्य / Other' बटन दबाएं।
+                    </div>
+                  )}
+
+                  {/* Dedicated Custom Caste Input Box when Other is selected */}
+                  {isCustomCasteOpen && (
+                    <div
+                      style={{
+                        padding: '10px 12px',
+                        background: '#faf5ff',
+                        border: '1.5px solid #c084fc',
+                        borderRadius: '8px',
+                        marginTop: '4px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <label
+                          style={{
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            color: '#6b21a8',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            margin: 0,
+                          }}
+                        >
+                          <Pencil size={12} color="#9333ea" /> कस्टम जाति का नाम लिखें (CUSTOM CASTE):
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCustomCasteOpen(false);
+                            if (!activeCastePresets.includes(tagFormData.caste)) {
+                              setTagFormData({ ...tagFormData, caste: '' });
+                            }
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#9333ea',
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                            fontWeight: 600,
+                          }}
+                        >
+                          बंद करें (Close)
+                        </button>
+                      </div>
+                      <input
+                        ref={customCasteInputRef}
+                        type="text"
+                        value={tagFormData.caste}
+                        onChange={(e) => setTagFormData({ ...tagFormData, caste: e.target.value })}
+                        placeholder="यहाँ अपनी कस्टम जाति टाइप करें (उदा: चारण, सोनी, घांची, गोस्वामी...)"
+                        style={{
+                          width: '100%',
+                          height: '38px',
+                          borderRadius: '6px',
+                          border: '1.5px solid #a855f7',
+                          padding: '0 12px',
+                          fontSize: '13px',
+                          background: '#ffffff',
+                          outline: 'none',
+                          color: '#0f172a',
+                        }}
+                      />
+                      <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#7e22ce' }}>
+                        यह कस्टम जाति इस मतदाता के प्रोफाइल पर टैग के रूप में सेव होगी।
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* 3. Assigned Worker Dropdown (ss3) */}
