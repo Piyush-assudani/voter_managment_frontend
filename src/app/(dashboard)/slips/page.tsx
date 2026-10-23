@@ -20,7 +20,7 @@ import {
   UsersRound,
 } from 'lucide-react';
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
-import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
+import { VoterSlipTemplate, SlipConfig, SlipFormat, defaultSlipConfig } from '@/components/VoterSlipTemplate';
 import { FamilyVoterSlipTemplate } from '@/components/FamilyVoterSlipTemplate';
 import { WardPollingStationEditor } from '@/components/WardPollingStationEditor';
 import { ImageCropModal } from '@/components/ImageCropModal';
@@ -273,7 +273,8 @@ export default function SlipsPage() {
   // Modes: 'single' | 'family' | 'bulk'
   const [slipMode, setSlipMode] = useState<'single' | 'family' | 'bulk'>('single');
   const [bulkMode, setBulkMode] = useState(false);
-  const [perA4, setPerA4] = useState<4 | 8 | 12>(4);
+  const [perA4, setPerA4] = useState<4 | 8 | 12 | 16>(4);
+  const [selectedSlipFormat, setSelectedSlipFormat] = useState<SlipFormat>('full');
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDownloadingBulkZip, setIsDownloadingBulkZip] = useState(false);
   const [bulkZipProgress, setBulkZipProgress] = useState({ current: 0, total: 0 });
@@ -399,7 +400,11 @@ export default function SlipsPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.slipConfig) {
-          setSlipConfig({ ...defaultSlipConfig, ...data.slipConfig });
+          const loadedCfg = { ...defaultSlipConfig, ...data.slipConfig };
+          setSlipConfig(loadedCfg);
+          if (loadedCfg.slipFormat) {
+            setSelectedSlipFormat(loadedCfg.slipFormat);
+          }
         }
         if (data.organizationName) {
           setOrgName(data.organizationName);
@@ -642,7 +647,11 @@ export default function SlipsPage() {
     };
     const handleSlipConfigChange = (e: any) => {
       if (e.detail) {
-        setSlipConfig({ ...defaultSlipConfig, ...e.detail });
+        const updated = { ...defaultSlipConfig, ...e.detail };
+        setSlipConfig(updated);
+        if (updated.slipFormat) {
+          setSelectedSlipFormat(updated.slipFormat);
+        }
       } else {
         void loadSlipConfig();
       }
@@ -747,6 +756,9 @@ export default function SlipsPage() {
       }
 
       setSlipConfig(editingConfig);
+      if (editingConfig.slipFormat) {
+        setSelectedSlipFormat(editingConfig.slipFormat);
+      }
       if (typeof window !== 'undefined') {
         localStorage.setItem('cachedSlipConfig', JSON.stringify(editingConfig));
         window.dispatchEvent(new CustomEvent('slip-config-changed', { detail: editingConfig }));
@@ -809,10 +821,14 @@ export default function SlipsPage() {
         setTimeout(() => setIsWpModalOpen(false), 2000);
       } else {
         if (!selectedVoter) return;
+        const effectiveConfig: SlipConfig = {
+          ...slipConfig,
+          slipFormat: selectedSlipFormat,
+        };
         let slipImageDataUrl = cachedSlipImageDataUrl || undefined;
         if (!slipImageDataUrl) {
           try {
-            slipImageDataUrl = await generateSlipImage(selectedVoter, slipConfig, printContainerRef.current);
+            slipImageDataUrl = await generateSlipImage(selectedVoter, effectiveConfig, printContainerRef.current);
           } catch (imgErr) {
             console.warn('Failed to pre-render slip image for Meta API:', imgErr);
           }
@@ -890,9 +906,13 @@ export default function SlipsPage() {
         }
       } else {
         if (!selectedVoter) return;
+        const effectiveConfig: SlipConfig = {
+          ...slipConfig,
+          slipFormat: selectedSlipFormat,
+        };
         const result = await shareVoterSlipToWhatsApp({
           voter: selectedVoter,
-          slipConfig,
+          slipConfig: effectiveConfig,
           phoneNumber: wpPhone || selectedVoter.phone || '',
           preGeneratedImageDataUrl: cachedSlipImageDataUrl || undefined,
           existingElement: printContainerRef.current,
@@ -950,7 +970,11 @@ export default function SlipsPage() {
     } else if (selectedVoter) {
       setIsDownloading(true);
       try {
-        await downloadSlip(selectedVoter, slipConfig, printContainerRef.current);
+        const effectiveConfig: SlipConfig = {
+          ...slipConfig,
+          slipFormat: selectedSlipFormat,
+        };
+        await downloadSlip(selectedVoter, effectiveConfig, printContainerRef.current);
       } catch {
         alert('पर्ची इमेज डाउनलोड नहीं हो सकी');
       } finally {
@@ -994,7 +1018,11 @@ export default function SlipsPage() {
       }
 
       setBulkZipProgress({ current: 0, total: allVoters.length });
-      await downloadBulkSlipsAsZip(allVoters, slipConfig, (current, total) => {
+      const effectiveConfig: SlipConfig = {
+        ...slipConfig,
+        slipFormat: selectedSlipFormat,
+      };
+      await downloadBulkSlipsAsZip(allVoters, effectiveConfig, (current, total) => {
         setBulkZipProgress({ current, total });
       });
     } catch {
@@ -1005,7 +1033,7 @@ export default function SlipsPage() {
   };
 
   return (
-    <div className={`work-page slips-studio-page ${bulkMode ? `slips-bulk-print-mode slips-per-a4-${perA4}` : 'slips-single-print-mode'}`}>
+    <div className={`work-page slips-studio-page ${bulkMode ? `slips-bulk-print-mode slips-per-a4-${perA4} slips-format-${selectedSlipFormat}` : 'slips-single-print-mode'}`}>
       {/* Print & Screen CSS styling */}
       <style
         dangerouslySetInnerHTML={{
@@ -1039,6 +1067,11 @@ export default function SlipsPage() {
             margin-bottom: 16px;
             border: 1px solid #e2e8f0;
           }
+          .slips-per-a4-16 .a4-sheet-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+          }
           .slips-per-a4-12 .a4-sheet-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -1069,6 +1102,11 @@ export default function SlipsPage() {
             zoom: 0.54;
             width: 560px !important;
             max-width: 560px !important;
+          }
+          .slips-per-a4-16 .slips-bulk-print-item .voter-slip-printable-card {
+            zoom: 0.44;
+            width: 530px !important;
+            max-width: 530px !important;
           }
         }
 
@@ -1447,6 +1485,70 @@ export default function SlipsPage() {
           }
           .slips-per-a4-12 .voter-slip-footer-appeal div:last-child {
             font-size: 9px !important;
+          }
+
+          /* 16 in 1 A4: 4 columns × 4 rows (16 per sheet, ultra-compact) */
+          .slips-per-a4-16 .a4-sheet-grid {
+            display: grid !important;
+            grid-template-columns: repeat(4, 48mm) !important;
+            grid-template-rows: repeat(4, 67mm) !important;
+            gap: 2mm 2mm !important;
+            width: 200mm !important;
+            height: 280mm !important;
+            max-height: 280mm !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+          }
+          .slips-per-a4-16 .slips-bulk-print-item {
+            width: 48mm !important;
+            height: 67mm !important;
+            max-height: 67mm !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            overflow: hidden !important;
+            background: transparent !important;
+          }
+          .slips-per-a4-16 .slips-bulk-print-item .voter-slip-printable-card {
+            zoom: 0.44 !important;
+            width: 530px !important;
+            max-width: 530px !important;
+          }
+          .slips-per-a4-16.slips-format-compact .slips-bulk-print-item .voter-slip-printable-card {
+            zoom: 0.50 !important;
+          }
+          .slips-per-a4-16 .voter-slip-inner-card {
+            padding: 5px 8px !important;
+            gap: 3px !important;
+            border-width: 1.5px !important;
+            border-radius: 6px !important;
+          }
+          .slips-per-a4-16 .voter-slip-metric-num {
+            font-size: 18px !important;
+          }
+          .slips-per-a4-16 .voter-slip-metric-label {
+            font-size: 8.5px !important;
+          }
+          .slips-per-a4-16 .voter-slip-voter-row {
+            padding: 1px 2px !important;
+            font-size: 10px !important;
+            line-height: 1.15 !important;
+          }
+
+          /* Compact Format Specific Print Rules (No header/footer, voter details only) */
+          .slips-format-compact.slips-per-a4-4 .slips-bulk-print-item .voter-slip-printable-card {
+            zoom: 0.85 !important;
+          }
+          .slips-format-compact.slips-per-a4-8 .slips-bulk-print-item .voter-slip-printable-card {
+            zoom: 0.68 !important;
+          }
+          .slips-format-compact.slips-per-a4-12 .slips-bulk-print-item .voter-slip-printable-card {
+            zoom: 0.60 !important;
+          }
+          .slips-format-compact .voter-slip-inner-card {
+            box-shadow: none !important;
           }
 
           /* ================= SINGLE SLIP PRINT MODE ================= */
@@ -1884,88 +1986,171 @@ export default function SlipsPage() {
                 border: '1.5px solid #e2e8f0',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#334155' }}>
-                  एक A4 शीट में कितनी पर्ची चाहिए?
-                </span>
-
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    background: '#e2e8f0',
-                    padding: '3px',
-                    borderRadius: '8px',
-                    gap: '4px',
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setPerA4(4)}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                {/* 1. Format Toggle: Full vs Compact */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#334155' }}>
+                    पर्ची प्रारूप:
+                  </span>
+                  <div
                     style={{
-                      padding: '6px 14px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      background: perA4 === 4 ? '#ffffff' : 'transparent',
-                      color: perA4 === 4 ? '#0f172a' : '#64748b',
-                      fontWeight: perA4 === 4 ? 800 : 600,
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      boxShadow: perA4 === 4 ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
-                      transition: 'all 0.15s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
+                      display: 'inline-flex',
+                      background: '#e2e8f0',
+                      padding: '3px',
+                      borderRadius: '8px',
+                      gap: '4px',
                     }}
                   >
-                    <span>📄 4 पर्ची / A4</span>
-                    <span style={{ fontSize: '10.5px', color: perA4 === 4 ? '#2563eb' : '#94a3b8', fontWeight: 700 }}>(2×2 बड़ी पर्ची)</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedSlipFormat('full');
+                        setCachedSlipImageDataUrl(null);
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: selectedSlipFormat === 'full' ? '#ffffff' : 'transparent',
+                        color: selectedSlipFormat === 'full' ? '#0f172a' : '#64748b',
+                        fontWeight: selectedSlipFormat === 'full' ? 800 : 600,
+                        fontSize: '12.5px',
+                        cursor: 'pointer',
+                        boxShadow: selectedSlipFormat === 'full' ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                      }}
+                    >
+                      🏷️ पूर्ण प्रचार पर्ची
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedSlipFormat('compact');
+                        setCachedSlipImageDataUrl(null);
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: selectedSlipFormat === 'compact' ? '#ffffff' : 'transparent',
+                        color: selectedSlipFormat === 'compact' ? '#166534' : '#64748b',
+                        fontWeight: selectedSlipFormat === 'compact' ? 800 : 600,
+                        fontSize: '12.5px',
+                        cursor: 'pointer',
+                        boxShadow: selectedSlipFormat === 'compact' ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                      }}
+                    >
+                      📄 सादी / केवल विवरण पर्ची
+                    </button>
+                  </div>
+                </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setPerA4(8)}
+                {/* 2. Number of Slips per A4 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#334155' }}>
+                    A4 शीट पर संख्या:
+                  </span>
+
+                  <div
                     style={{
-                      padding: '6px 14px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      background: perA4 === 8 ? '#ffffff' : 'transparent',
-                      color: perA4 === 8 ? '#0f172a' : '#64748b',
-                      fontWeight: perA4 === 8 ? 800 : 600,
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      boxShadow: perA4 === 8 ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
-                      transition: 'all 0.15s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
+                      display: 'inline-flex',
+                      background: '#e2e8f0',
+                      padding: '3px',
+                      borderRadius: '8px',
+                      gap: '4px',
                     }}
                   >
-                    <span>📑 8 पर्ची / A4</span>
-                    <span style={{ fontSize: '10.5px', color: perA4 === 8 ? '#2563eb' : '#94a3b8', fontWeight: 700 }}>(2×4 मध्यम पर्ची)</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setPerA4(4)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: perA4 === 4 ? '#ffffff' : 'transparent',
+                        color: perA4 === 4 ? '#0f172a' : '#64748b',
+                        fontWeight: perA4 === 4 ? 800 : 600,
+                        fontSize: '12.5px',
+                        cursor: 'pointer',
+                        boxShadow: perA4 === 4 ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                        transition: 'all 0.15s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <span>4 / A4</span>
+                      <span style={{ fontSize: '10px', color: perA4 === 4 ? '#2563eb' : '#94a3b8', fontWeight: 700 }}>(2×2)</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setPerA4(12)}
-                    style={{
-                      padding: '6px 14px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      background: perA4 === 12 ? '#ffffff' : 'transparent',
-                      color: perA4 === 12 ? '#ea580c' : '#64748b',
-                      fontWeight: perA4 === 12 ? 900 : 600,
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      boxShadow: perA4 === 12 ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
-                      transition: 'all 0.15s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    <span>⚡ 12 पर्ची / A4</span>
-                    <span style={{ fontSize: '10.5px', color: perA4 === 12 ? '#ea580c' : '#94a3b8', fontWeight: 700 }}>(3×4 मानक चुनाव पर्ची)</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setPerA4(8)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: perA4 === 8 ? '#ffffff' : 'transparent',
+                        color: perA4 === 8 ? '#0f172a' : '#64748b',
+                        fontWeight: perA4 === 8 ? 800 : 600,
+                        fontSize: '12.5px',
+                        cursor: 'pointer',
+                        boxShadow: perA4 === 8 ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                        transition: 'all 0.15s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <span>8 / A4</span>
+                      <span style={{ fontSize: '10px', color: perA4 === 8 ? '#2563eb' : '#94a3b8', fontWeight: 700 }}>(2×4)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPerA4(12)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: perA4 === 12 ? '#ffffff' : 'transparent',
+                        color: perA4 === 12 ? '#ea580c' : '#64748b',
+                        fontWeight: perA4 === 12 ? 900 : 600,
+                        fontSize: '12.5px',
+                        cursor: 'pointer',
+                        boxShadow: perA4 === 12 ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                        transition: 'all 0.15s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <span>12 / A4</span>
+                      <span style={{ fontSize: '10px', color: perA4 === 12 ? '#ea580c' : '#94a3b8', fontWeight: 700 }}>(3×4)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPerA4(16)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: perA4 === 16 ? '#ffffff' : 'transparent',
+                        color: perA4 === 16 ? '#16a34a' : '#64748b',
+                        fontWeight: perA4 === 16 ? 900 : 600,
+                        fontSize: '12.5px',
+                        cursor: 'pointer',
+                        boxShadow: perA4 === 16 ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                        transition: 'all 0.15s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <span>16 / A4</span>
+                      <span style={{ fontSize: '10px', color: perA4 === 16 ? '#16a34a' : '#94a3b8', fontWeight: 700 }}>(4×4)</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -2021,7 +2206,13 @@ export default function SlipsPage() {
                           alignItems: 'center',
                         }}
                       >
-                        <VoterSlipTemplate voter={voter} config={slipConfig} isInline={true} perA4={perA4} />
+                        <VoterSlipTemplate
+                          voter={voter}
+                          config={{ ...slipConfig, slipFormat: selectedSlipFormat }}
+                          format={selectedSlipFormat}
+                          isInline={true}
+                          perA4={perA4}
+                        />
                       </div>
                     ))}
                   </div>
@@ -2432,11 +2623,82 @@ export default function SlipsPage() {
               </div>
             </div>
 
+            {/* Slip Format Switcher Bar */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '10px',
+                background: '#f8fafc',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                marginBottom: '16px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                  पर्ची प्रारूप (Slip Format):
+                </span>
+                <div style={{ display: 'inline-flex', background: '#e2e8f0', padding: '2px', borderRadius: '6px', gap: '3px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedSlipFormat('full');
+                      setCachedSlipImageDataUrl(null);
+                    }}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '5px',
+                      border: 'none',
+                      background: selectedSlipFormat === 'full' ? '#ffffff' : 'transparent',
+                      color: selectedSlipFormat === 'full' ? '#0f172a' : '#64748b',
+                      fontWeight: selectedSlipFormat === 'full' ? 800 : 600,
+                      fontSize: '11.5px',
+                      cursor: 'pointer',
+                      boxShadow: selectedSlipFormat === 'full' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                    }}
+                  >
+                    🏷️ पूर्ण प्रचार पर्ची
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedSlipFormat('compact');
+                      setCachedSlipImageDataUrl(null);
+                    }}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '5px',
+                      border: 'none',
+                      background: selectedSlipFormat === 'compact' ? '#ffffff' : 'transparent',
+                      color: selectedSlipFormat === 'compact' ? '#166534' : '#64748b',
+                      fontWeight: selectedSlipFormat === 'compact' ? 800 : 600,
+                      fontSize: '11.5px',
+                      cursor: 'pointer',
+                      boxShadow: selectedSlipFormat === 'compact' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                    }}
+                  >
+                    📄 सादी / केवल विवरण पर्ची
+                  </button>
+                </div>
+              </div>
+
+              <span style={{ fontSize: '11px', color: '#64748b' }}>
+                {selectedSlipFormat === 'compact'
+                  ? '⚡ केवल वार्ड/भाग, क्रम व विवरण — डाउनलोड/प्रिंट हेतु कॉम्पैक्ट साइज़'
+                  : '🏷️ सम्पूर्ण प्रचार हेडर, प्रत्याशी फ़ोटो व अपील सहित'}
+              </span>
+            </div>
+
             {/* The Actual Voter Slip Card */}
             <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
               <VoterSlipTemplate
                 voter={selectedVoter || undefined}
-                config={slipConfig}
+                config={{ ...slipConfig, slipFormat: selectedSlipFormat }}
+                format={selectedSlipFormat}
                 isInline={true}
                 forwardedRef={printContainerRef}
               />
@@ -2667,6 +2929,51 @@ export default function SlipsPage() {
                       <span style={{ color: '#7c3aed', fontWeight: 700 }}>560 × 120 px</span> (14:3 अनुपात, Banner Graphic)
                     </div>
                   </div>
+                </div>
+
+                {/* 0. Slip Format Selector (Full Campaign vs Compact Details-only) */}
+                <div
+                  style={{
+                    border: '1.5px solid #93c5fd',
+                    background: '#f0f9ff',
+                    borderRadius: '12px',
+                    padding: '12px 14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 800, color: '#0369a1' }}>
+                      📋 पर्ची प्रारूप (Default Slip Format):
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#0284c7', background: '#e0f2fe', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>
+                      नया फ़ीचर
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12.5px', color: '#0f172a', fontWeight: 600 }}>
+                      <input
+                        type="radio"
+                        name="slipFormat"
+                        checked={editingConfig.slipFormat !== 'compact'}
+                        onChange={() => setEditingConfig((prev) => ({ ...prev, slipFormat: 'full' }))}
+                      />
+                      <span>🏷️ पूर्ण प्रचार पर्ची (Full Campaign)</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12.5px', color: '#0f172a', fontWeight: 600 }}>
+                      <input
+                        type="radio"
+                        name="slipFormat"
+                        checked={editingConfig.slipFormat === 'compact'}
+                        onChange={() => setEditingConfig((prev) => ({ ...prev, slipFormat: 'compact' }))}
+                      />
+                      <span>📄 सादी / केवल विवरण पर्ची (Compact Details Only)</span>
+                    </label>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#64748b', lineHeight: 1.4 }}>
+                    सादी पर्ची में केवल वार्ड/भाग संख्या, क्रम संख्या और मतदाता विवरण रहता है (अभियान हेडर/अपील नहीं)।
+                  </p>
                 </div>
 
                 {/* 1. Photos & Symbol Upload (Both Sides) */}
@@ -3112,6 +3419,7 @@ export default function SlipsPage() {
                       boothName: '', // Dynamically resolves to wardPollingStations[previewWard]!
                     }}
                     config={editingConfig}
+                    format={editingConfig.slipFormat || 'full'}
                     isInline={true}
                   />
                 </div>

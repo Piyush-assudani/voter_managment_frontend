@@ -29,7 +29,7 @@ import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
 import { downloadSlip, downloadBulkSlipsAsZip, generateSlipImage, downloadFamilySlip, generateFamilySlipImage } from '@/lib/downloadSlip';
 import { shareVoterSlipToWhatsApp, shareFamilySlipToWhatsApp } from '@/lib/whatsappShare';
-import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/VoterSlipTemplate';
+import { VoterSlipTemplate, SlipConfig, SlipFormat, defaultSlipConfig } from '@/components/VoterSlipTemplate';
 import { FamilyVoterSlipTemplate } from '@/components/FamilyVoterSlipTemplate';
 import { WhatsAppLogo } from '@/components/WhatsAppLogo';
 import { WhatsAppWebHelperModal } from '@/components/WhatsAppWebHelperModal';
@@ -191,6 +191,7 @@ export default function VoterDirectoryPage() {
 
   // Slip modal state
   const [slipVoter, setSlipVoter] = useState<Voter | null>(null);
+  const [modalSlipFormat, setModalSlipFormat] = useState<SlipFormat>('full');
   const [cachedSlipImageDataUrl, setCachedSlipImageDataUrl] = useState<string | null>(null);
   const modalSlipRef = useRef<HTMLDivElement>(null);
   const [isDownloadingSingleSlip, setIsDownloadingSingleSlip] = useState(false);
@@ -303,7 +304,13 @@ export default function VoterDirectoryPage() {
       const res = await apiFetch('/features/slip-config');
       if (res.ok) {
         const data = await res.json();
-        if (data.slipConfig) setSlipConfig({ ...defaultSlipConfig, ...data.slipConfig });
+        if (data.slipConfig) {
+          const loadedCfg = { ...defaultSlipConfig, ...data.slipConfig };
+          setSlipConfig(loadedCfg);
+          if (loadedCfg.slipFormat) {
+            setModalSlipFormat(loadedCfg.slipFormat);
+          }
+        }
         if (data.organizationName && data.organizationName !== 'Default Organization') {
           setOrganizationName((prev) => prev || data.organizationName);
         }
@@ -732,7 +739,8 @@ export default function VoterDirectoryPage() {
     let active = true;
     if (slipVoter) {
       setCachedSlipImageDataUrl(null);
-      generateSlipImage(slipVoter, slipConfig, modalSlipRef.current)
+      const effective = { ...slipConfig, slipFormat: modalSlipFormat };
+      generateSlipImage(slipVoter, effective, modalSlipRef.current)
         .then((dataUrl) => {
           if (active) setCachedSlipImageDataUrl(dataUrl);
         })
@@ -745,7 +753,7 @@ export default function VoterDirectoryPage() {
     return () => {
       active = false;
     };
-  }, [slipVoter, slipConfig]);
+  }, [slipVoter, slipConfig, modalSlipFormat]);
 
   // Pre-generate family slip image as soon as family slip modal is opened
   useEffect(() => {
@@ -912,7 +920,8 @@ export default function VoterDirectoryPage() {
       let slipImageDataUrl = cachedSlipImageDataUrl || undefined;
       if (!slipImageDataUrl) {
         try {
-          slipImageDataUrl = await generateSlipImage(slipVoter, slipConfig, modalSlipRef.current);
+          const effective = { ...slipConfig, slipFormat: modalSlipFormat };
+          slipImageDataUrl = await generateSlipImage(slipVoter, effective, modalSlipRef.current);
         } catch (imgErr) {
           console.warn('Failed to pre-render slip image for Meta API:', imgErr);
         }
@@ -947,9 +956,10 @@ export default function VoterDirectoryPage() {
     if (!slipVoter) return;
     setSending(true);
     try {
+      const effective = { ...slipConfig, slipFormat: modalSlipFormat };
       const result = await shareVoterSlipToWhatsApp({
         voter: slipVoter,
-        slipConfig,
+        slipConfig: effective,
         phoneNumber: slipPhone,
         preGeneratedImageDataUrl: cachedSlipImageDataUrl || undefined,
         existingElement: modalSlipRef.current,
@@ -1799,9 +1809,63 @@ export default function VoterDirectoryPage() {
               </div>
             )}
 
+            {/* Slip Format Switcher */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', background: '#f8fafc', padding: '6px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', margin: '4px 0 8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                पर्ची प्रारूप:
+              </span>
+              <div style={{ display: 'inline-flex', background: '#e2e8f0', padding: '2px', borderRadius: '6px', gap: '3px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalSlipFormat('full');
+                    setCachedSlipImageDataUrl(null);
+                  }}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '5px',
+                    border: 'none',
+                    background: modalSlipFormat === 'full' ? '#ffffff' : 'transparent',
+                    color: modalSlipFormat === 'full' ? '#0f172a' : '#64748b',
+                    fontWeight: modalSlipFormat === 'full' ? 800 : 600,
+                    fontSize: '11.5px',
+                    cursor: 'pointer',
+                    boxShadow: modalSlipFormat === 'full' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                  }}
+                >
+                  🏷️ पूर्ण प्रचार पर्ची
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalSlipFormat('compact');
+                    setCachedSlipImageDataUrl(null);
+                  }}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '5px',
+                    border: 'none',
+                    background: modalSlipFormat === 'compact' ? '#ffffff' : 'transparent',
+                    color: modalSlipFormat === 'compact' ? '#166534' : '#64748b',
+                    fontWeight: modalSlipFormat === 'compact' ? 800 : 600,
+                    fontSize: '11.5px',
+                    cursor: 'pointer',
+                    boxShadow: modalSlipFormat === 'compact' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                  }}
+                >
+                  📄 सादी / केवल विवरण पर्ची
+                </button>
+              </div>
+            </div>
+
             {/* Voter Slip Preview */}
             <div ref={modalSlipRef} style={{ margin: '8px 0', width: '100%', display: 'flex', justifyContent: 'center' }}>
-              <VoterSlipTemplate voter={slipVoter} config={slipConfig} isInline={true} />
+              <VoterSlipTemplate
+                voter={slipVoter}
+                config={{ ...slipConfig, slipFormat: modalSlipFormat }}
+                format={modalSlipFormat}
+                isInline={true}
+              />
             </div>
 
             <form onSubmit={sendSlip} className="modal-form">
@@ -1842,7 +1906,8 @@ export default function VoterDirectoryPage() {
                   onClick={async () => {
                     setIsDownloadingSingleSlip(true);
                     try {
-                      await downloadSlip(slipVoter, slipConfig, modalSlipRef.current);
+                      const effective = { ...slipConfig, slipFormat: modalSlipFormat };
+                      await downloadSlip(slipVoter, effective, modalSlipRef.current);
                     } finally {
                       setIsDownloadingSingleSlip(false);
                     }

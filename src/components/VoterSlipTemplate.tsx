@@ -1,6 +1,8 @@
 import React from 'react';
 import { ImageCropModal } from './ImageCropModal';
 
+export type SlipFormat = 'full' | 'compact';
+
 export interface SlipConfig {
   candidateName?: string;
   candidateNameEn?: string;
@@ -21,6 +23,7 @@ export interface SlipConfig {
   metricType?: 'ward' | 'part';
   showWardInsteadOfPart?: boolean;
   metricLabel?: string;
+  slipFormat?: SlipFormat;
 }
 
 export const defaultSlipConfig: SlipConfig = {
@@ -42,6 +45,7 @@ export const defaultSlipConfig: SlipConfig = {
   hideEvmRibbon: false,
   metricType: 'ward',
   showWardInsteadOfPart: true,
+  slipFormat: 'full',
 };
 
 
@@ -67,10 +71,11 @@ export interface VoterSlipData {
 export interface VoterSlipTemplateProps {
   voter?: VoterSlipData;
   config?: SlipConfig;
+  format?: SlipFormat;
   forwardedRef?: React.Ref<HTMLDivElement>;
   isInline?: boolean;
   isEditable?: boolean;
-  perA4?: 4 | 8 | 12;
+  perA4?: 4 | 8 | 12 | 16;
   onConfigChange?: (newConfig: SlipConfig) => void;
   onImageUpload?: (file: File | string, field: 'partySymbolImage' | 'candidateImage' | 'headerGraphicImage') => void;
   onRemoveImage?: (field: 'partySymbolImage' | 'candidateImage' | 'headerGraphicImage') => void;
@@ -200,6 +205,7 @@ const InlineText: React.FC<InlineTextProps> = ({
 export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
   voter = {},
   config = {},
+  format,
   forwardedRef,
   isInline = false,
   isEditable = false,
@@ -209,6 +215,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
   onRemoveImage,
 }) => {
   const merged: SlipConfig = { ...defaultSlipConfig, ...config };
+  const isCompact = (format || merged.slipFormat) === 'compact';
   const isRibbonHidden = Boolean(merged.hideEvmRibbon);
   const symbolFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const candidateFileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -317,16 +324,16 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
   const containerStyle: React.CSSProperties = isInline
     ? {
         width: '100%',
-        maxWidth: '560px',
+        maxWidth: isCompact ? '520px' : '560px',
         margin: '0 auto',
         fontFamily: 'var(--font-noto-sans-devanagari), var(--font-anek-devanagari), "Noto Sans Devanagari", "Anek Devanagari", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         color: '#0f172a',
         boxSizing: 'border-box',
       }
     : {
-        width: '600px',
-        maxWidth: '600px',
-        padding: '16px',
+        width: isCompact ? '540px' : '600px',
+        maxWidth: isCompact ? '540px' : '600px',
+        padding: isCompact ? '12px' : '16px',
         background: '#ffffff',
         fontFamily: 'var(--font-noto-sans-devanagari), var(--font-anek-devanagari), "Noto Sans Devanagari", "Anek Devanagari", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         color: '#0f172a',
@@ -377,13 +384,13 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
       {/* Direct Editor Informative Banner & Mode Switcher */}
       {isEditable && (
         <div style={{
-          background: 'linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%)',
-          border: '1.5px solid #7dd3fc',
+          background: isCompact ? '#f0fdf4' : 'linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%)',
+          border: isCompact ? '1.5px solid #86efac' : '1.5px solid #7dd3fc',
           borderRadius: '12px',
           padding: '10px 14px',
           marginBottom: '12px',
           fontSize: '12px',
-          color: '#0369a1',
+          color: isCompact ? '#166534' : '#0369a1',
           display: 'flex',
           flexDirection: 'column',
           gap: '8px',
@@ -392,85 +399,130 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div>
-                <strong style={{ color: '#0c4a6e' }}>प्रत्यक्ष पर्ची संपादन सक्रिय:</strong>{' '}
-                किसी भी नाम, पार्टी, EVM नंबर पर क्लिक करके टाइप करें, या पूरा हेडर ग्राफ़िक अपलोड करें।
+                <strong style={{ color: isCompact ? '#14532d' : '#0c4a6e' }}>प्रत्यक्ष पर्ची संपादन सक्रिय:</strong>{' '}
+                {isCompact
+                  ? 'सादी पर्ची मोड: इसमें केवल वार्ड/भाग संख्या, क्रम संख्या और मतदाता विवरण प्रदर्शित होगा।'
+                  : 'किसी भी नाम, पार्टी, EVM नंबर पर क्लिक करके टाइप करें, या पूरा हेडर ग्राफ़िक अपलोड करें।'}
               </div>
             </div>
             <span style={{
               fontSize: '11px',
               fontWeight: 700,
-              background: '#0284c7',
+              background: isCompact ? '#16a34a' : '#0284c7',
               color: '#ffffff',
               padding: '2px 8px',
               borderRadius: '12px',
             }}>
-              WYSIWYG Mode
+              {isCompact ? 'Compact Slip Mode' : 'Full Campaign Mode'}
             </span>
           </div>
 
-          {/* Mode Switcher Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingTop: '6px', borderTop: '1px solid #bae6fd' }}>
-            <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#075985' }}>
-              हेडर डिज़ाइन मोड चुनें:
+          {/* Format Switcher Buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingTop: '6px', borderTop: isCompact ? '1px solid #bbf7d0' : '1px solid #bae6fd' }}>
+            <span style={{ fontSize: '11.5px', fontWeight: 700, color: isCompact ? '#14532d' : '#075985' }}>
+              पर्ची का प्रकार (Slip Format):
             </span>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               <button
                 type="button"
-                onClick={() => updateField('useHeaderGraphic', false)}
+                onClick={() => updateField('slipFormat', 'full')}
                 style={{
                   padding: '4px 10px',
                   borderRadius: '6px',
                   fontSize: '11px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  background: !merged.useHeaderGraphic ? '#0284c7' : '#ffffff',
-                  color: !merged.useHeaderGraphic ? '#ffffff' : '#0369a1',
+                  background: !isCompact ? '#0284c7' : '#ffffff',
+                  color: !isCompact ? '#ffffff' : '#0369a1',
                   border: '1.5px solid #0284c7',
                   transition: 'all 0.15s ease',
                 }}
               >
-                अलग-अलग घटक (Symbol + Text + Photo)
+                🏷️ पूर्ण प्रचार पर्ची
               </button>
               <button
                 type="button"
-                onClick={() => updateField('useHeaderGraphic', true)}
+                onClick={() => updateField('slipFormat', 'compact')}
                 style={{
                   padding: '4px 10px',
                   borderRadius: '6px',
                   fontSize: '11px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  background: merged.useHeaderGraphic ? '#0284c7' : '#ffffff',
-                  color: merged.useHeaderGraphic ? '#ffffff' : '#0369a1',
-                  border: '1.5px solid #0284c7',
+                  background: isCompact ? '#16a34a' : '#ffffff',
+                  color: isCompact ? '#ffffff' : '#15803d',
+                  border: '1.5px solid #16a34a',
                   transition: 'all 0.15s ease',
                 }}
               >
-                पूरा हेडर ग्राफ़िक (Single Custom Banner)
+                📄 सादी / केवल विवरण पर्ची
               </button>
             </div>
           </div>
+
+          {/* Header Graphic Switcher when in Full mode */}
+          {!isCompact && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingTop: '6px', borderTop: '1px dashed #bae6fd' }}>
+              <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#075985' }}>
+                हेडर डिज़ाइन मोड:
+              </span>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => updateField('useHeaderGraphic', false)}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '5px',
+                    fontSize: '10.5px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    background: !merged.useHeaderGraphic ? '#0284c7' : '#ffffff',
+                    color: !merged.useHeaderGraphic ? '#ffffff' : '#0369a1',
+                    border: '1px solid #0284c7',
+                  }}
+                >
+                  घटक (Symbol + Photo)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateField('useHeaderGraphic', true)}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '5px',
+                    fontSize: '10.5px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    background: merged.useHeaderGraphic ? '#0284c7' : '#ffffff',
+                    color: merged.useHeaderGraphic ? '#ffffff' : '#0369a1',
+                    border: '1px solid #0284c7',
+                  }}
+                >
+                  सिंगल कस्टम बैनर
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       <div
-        className="voter-slip-inner-card"
+        className={`voter-slip-inner-card ${isCompact ? 'voter-slip-compact' : 'voter-slip-full'}`}
         style={{
           background: '#ffffff',
-          borderRadius: '16px',
+          borderRadius: isCompact ? '12px' : '16px',
           border: isEditable ? '3px dashed #16a34a' : '3px solid #16a34a',
-          padding: '18px 20px 22px 20px',
+          padding: isCompact ? '14px 16px 14px 16px' : '18px 20px 22px 20px',
           boxShadow: '0 4px 20px -2px rgba(0,0,0,0.06)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '14px',
+          gap: isCompact ? '10px' : '14px',
           boxSizing: 'border-box',
           position: 'relative',
           overflow: 'visible',
         }}
       >
         {/* ================= 1. TOP HEADER SECTION ================= */}
-        {merged.useHeaderGraphic ? (
+        {!isCompact && (merged.useHeaderGraphic ? (
           <div
             className="voter-slip-header-banner-card"
             style={{
@@ -1132,10 +1184,10 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               )}
             </div>
           </div>
-        )}
+        ))}
 
         {/* ================= 2. MIDDLE EVM / RIBBON STRIPE ================= */}
-        {!isRibbonHidden ? (
+        {!isCompact && (!isRibbonHidden ? (
           <div
             className="voter-slip-ribbon"
             style={{
@@ -1359,7 +1411,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             <span style={{ fontSize: '15px', fontWeight: 900 }}>+</span>
             <span>ईवीएम / मतपत्र क्रम संख्या पट्टी पुनः जोड़ें (Show EVM Ribbon)</span>
           </div>
-        ) : null}
+        ) : null)}
 
         {/* ================= 3. TWO BIG HIGHLIGHT METRIC CARDS ================= */}
         <div className="voter-slip-metric-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
@@ -1555,104 +1607,108 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
         </div>
 
         {/* ================= 5. POLLING STATION CARD ================= */}
-        <div
-          className="voter-slip-polling-box"
-          style={{
-            background: '#ffffff',
-            border: '1.5px solid #93c5fd',
-            borderRadius: '10px',
-            padding: '10px 14px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '3px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ea580c', fontSize: '12.5px', fontWeight: 700 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
-              <span>मतदान केंद्र (Polling Station):</span>
+        {!isCompact && (
+          <div
+            className="voter-slip-polling-box"
+            style={{
+              background: '#ffffff',
+              border: '1.5px solid #93c5fd',
+              borderRadius: '10px',
+              padding: '10px 14px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '3px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ea580c', fontSize: '12.5px', fontWeight: 700 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                <span>मतदान केंद्र (Polling Station):</span>
+              </div>
+              {wardStation && (
+                <span
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    color: '#0369a1',
+                    background: '#e0f2fe',
+                    border: '1px solid #bae6fd',
+                    padding: '1px 6px',
+                    borderRadius: '4px',
+                  }}
+                >
+                  वार्ड {ward} विशेष केंद्र
+                </span>
+              )}
             </div>
-            {wardStation && (
-              <span
+            <div style={{ paddingLeft: isEditable ? '0' : '20px' }}>
+              <InlineText
+                value={isEditable ? (wardStation || merged.pollingStationFallback) : pollingStation}
+                fallback={pollingStation}
+                placeholder="मतदान केंद्र पता / नाम"
+                isEditable={isEditable}
+                onChange={(v) => {
+                  if (ward) {
+                    const updatedWardStations = {
+                      ...(merged.wardPollingStations || {}),
+                      [ward]: v,
+                    };
+                    if (onConfigChange) {
+                      onConfigChange({
+                        ...merged,
+                        wardPollingStations: updatedWardStations,
+                      });
+                    }
+                  } else {
+                    updateField('pollingStationFallback', v);
+                  }
+                }}
+                title={ward ? `वार्ड ${ward} का मतदान केंद्र बदलें` : 'मतदान केंद्र विवरण बदलें'}
                 style={{
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  color: '#0369a1',
-                  background: '#e0f2fe',
-                  border: '1px solid #bae6fd',
-                  padding: '1px 6px',
+                  color: '#0f172a',
+                  fontSize: '13.5px',
+                  fontWeight: 800,
+                  background: isEditable ? '#eff6ff' : 'transparent',
+                  border: isEditable ? '1px dashed #60a5fa' : 'none',
+                  padding: isEditable ? '4px 8px' : '0',
                   borderRadius: '4px',
                 }}
-              >
-                वार्ड {ward} विशेष केंद्र
-              </span>
-            )}
+              />
+            </div>
           </div>
-          <div style={{ paddingLeft: isEditable ? '0' : '20px' }}>
-            <InlineText
-              value={isEditable ? (wardStation || merged.pollingStationFallback) : pollingStation}
-              fallback={pollingStation}
-              placeholder="मतदान केंद्र पता / नाम"
-              isEditable={isEditable}
-              onChange={(v) => {
-                if (ward) {
-                  const updatedWardStations = {
-                    ...(merged.wardPollingStations || {}),
-                    [ward]: v,
-                  };
-                  if (onConfigChange) {
-                    onConfigChange({
-                      ...merged,
-                      wardPollingStations: updatedWardStations,
-                    });
-                  }
-                } else {
-                  updateField('pollingStationFallback', v);
-                }
-              }}
-              title={ward ? `वार्ड ${ward} का मतदान केंद्र बदलें` : 'मतदान केंद्र विवरण बदलें'}
-              style={{
-                color: '#0f172a',
-                fontSize: '13.5px',
-                fontWeight: 800,
-                background: isEditable ? '#eff6ff' : 'transparent',
-                border: isEditable ? '1px dashed #60a5fa' : 'none',
-                padding: isEditable ? '4px 8px' : '0',
-                borderRadius: '4px',
-              }}
-            />
-          </div>
-        </div>
+        )}
 
         {/* ================= 6. BOTTOM APPEAL FOOTER ================= */}
-        <div className="voter-slip-footer-appeal" style={{ textAlign: 'center', marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div style={{ color: '#ea580c', fontSize: '13px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            <InlineText
-              value={merged.footerAppeal}
-              fallback={`${merged.partySymbolName || 'कमल'} का बटन दबाएं और भारी मतों से विजयी बनाएं`}
-              placeholder="बॉटम अपील (Footer Banner)"
-              isEditable={isEditable}
-              onChange={(v) => updateField('footerAppeal', v)}
-              title="बॉटम अपील बदलें"
-              style={{
-                color: '#ea580c',
-                fontSize: '13px',
-                fontWeight: 800,
-                textAlign: 'center',
-                background: isEditable ? '#fff7ed' : 'transparent',
-                border: isEditable ? '1px dashed #f97316' : 'none',
-                padding: isEditable ? '3px 8px' : '0',
-                borderRadius: '4px',
-              }}
-            />
+        {!isCompact && (
+          <div className="voter-slip-footer-appeal" style={{ textAlign: 'center', marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ color: '#ea580c', fontSize: '13px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              <InlineText
+                value={merged.footerAppeal}
+                fallback={`${merged.partySymbolName || 'कमल'} का बटन दबाएं और भारी मतों से विजयी बनाएं`}
+                placeholder="बॉटम अपील (Footer Banner)"
+                isEditable={isEditable}
+                onChange={(v) => updateField('footerAppeal', v)}
+                title="बॉटम अपील बदलें"
+                style={{
+                  color: '#ea580c',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  textAlign: 'center',
+                  background: isEditable ? '#fff7ed' : 'transparent',
+                  border: isEditable ? '1px dashed #f97316' : 'none',
+                  padding: isEditable ? '3px 8px' : '0',
+                  borderRadius: '4px',
+                }}
+              />
+            </div>
+            <div style={{ color: '#475569', fontSize: '11px', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+              <span>कृपया मतदान के दिन अपना पहचान पत्र (Voter ID / आधार कार्ड) साथ लाएं।</span>
+            </div>
           </div>
-          <div style={{ color: '#475569', fontSize: '11px', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-            <span>कृपया मतदान के दिन अपना पहचान पत्र (Voter ID / आधार कार्ड) साथ लाएं।</span>
-          </div>
-        </div>
+        )}
 
       </div>
 

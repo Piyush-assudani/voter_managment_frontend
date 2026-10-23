@@ -4377,6 +4377,33 @@ export default function AdminPanel() {
                       <span>उम्मीदवार व पार्टी विवरण</span>
                     </div>
 
+                    {/* Default Slip Format */}
+                    <div style={{ background: '#f0f9ff', padding: '10px 12px', borderRadius: '8px', border: '1px solid #bae6fd', marginBottom: '14px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1', display: 'block', marginBottom: '6px' }}>
+                        डिफ़ॉल्ट पर्ची प्रारूप (Default Slip Format):
+                      </span>
+                      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px', color: '#0f172a', fontWeight: 600 }}>
+                          <input
+                            type="radio"
+                            name="adminSlipFormat"
+                            checked={targetSlipConfig.slipFormat !== 'compact'}
+                            onChange={() => setTargetSlipConfig({ ...targetSlipConfig, slipFormat: 'full' })}
+                          />
+                          <span>🏷️ पूर्ण प्रचार पर्ची</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px', color: '#0f172a', fontWeight: 600 }}>
+                          <input
+                            type="radio"
+                            name="adminSlipFormat"
+                            checked={targetSlipConfig.slipFormat === 'compact'}
+                            onChange={() => setTargetSlipConfig({ ...targetSlipConfig, slipFormat: 'compact' })}
+                          />
+                          <span>📄 सादी / केवल विवरण पर्ची</span>
+                        </label>
+                      </div>
+                    </div>
+
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '12px' }}>
                       <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
                         प्रत्याशी नाम (हिंदी) *
