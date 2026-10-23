@@ -15,6 +15,8 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '100mb',
     },
+    // @ts-ignore Next.js security agent upgrade flag
+    agentUpgrade: 'security',
   },
   async rewrites() {
     const liveDestination = 'https://vijaysetu.piyushassudani.in/api/:path*';
