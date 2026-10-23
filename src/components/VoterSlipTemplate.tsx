@@ -268,7 +268,25 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
     return cleanEn || fallback;
   };
 
-  const voterName = formatName(voter.nameEn, voter.nameHi, 'जबरा राम');
+  // Check if this is a real voter record vs unpopulated template preview
+  const isRealVoter = Boolean(
+    voter && (
+      voter._id ||
+      voter.epic ||
+      voter.nameHi ||
+      voter.nameEn ||
+      (voter.serialNo !== undefined && voter.serialNo !== null && voter.serialNo !== '') ||
+      (voter.houseNo && voter.houseNo !== '—')
+    )
+  );
+
+  const fallbackName = isRealVoter ? '—' : 'जबरा राम';
+  const fallbackRelative = isRealVoter ? '—' : 'नरिगा राम';
+  const fallbackHouse = isRealVoter ? '—' : '279';
+  const fallbackEpic = isRealVoter ? '—' : 'RLJ1213180';
+  const fallbackSerial = isRealVoter ? '—' : '1';
+
+  const voterName = formatName(voter.nameEn, voter.nameHi, fallbackName);
 
   const relLabel = voter.relationType === 'husband' || voter.relationType === 'पति' 
     ? 'पति' 
@@ -276,12 +294,14 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
     ? 'माता'
     : 'पिता';
 
-  const relativeName = formatName(voter.relativeNameEn, voter.relativeNameHi, 'नरिगा राम');
+  const relativeName = formatName(voter.relativeNameEn, voter.relativeNameHi, fallbackRelative);
 
   const rawWard = (voter.wardNo || (isEditable ? '1' : '')).toString().trim();
   const ward = rawWard.replace(/^(वार्ड|Ward)\s*/i, '').trim() || (isEditable ? '1' : '—');
-  const part = (voter.partNo || '1').toString().replace(/^(भाग|Part)\s*/i, '').trim();
-  const serial = voter.serialNo ?? '1';
+  const part = (voter.partNo || (isRealVoter ? '—' : '1')).toString().replace(/^(भाग|Part)\s*/i, '').trim();
+  const serial = (voter.serialNo !== undefined && voter.serialNo !== null && voter.serialNo !== '' && voter.serialNo !== '0' && voter.serialNo !== 0)
+    ? voter.serialNo
+    : fallbackSerial;
 
   // Determine whether to display Ward Number or Part Number in the highlight metric card
   const shouldShowWard = React.useMemo(() => {
@@ -295,9 +315,21 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
     return true; // Default to Ward No. for local elections
   }, [merged.metricType, merged.showWardInsteadOfPart]);
 
-  const house = voter.houseNo || '279';
-  const ageGender = `${voter.age || '28'} वर्ष | ${voter.gender || 'पुरुष'}`;
-  const epic = voter.epic || 'RLJ1213180';
+  const rawHouse = (voter.houseNo || '').toString().trim();
+  const house = (rawHouse && rawHouse !== '0') ? rawHouse : fallbackHouse;
+
+  let ageGender = '';
+  if (voter.age && voter.gender) {
+    ageGender = `${voter.age} वर्ष | ${voter.gender}`;
+  } else if (voter.age) {
+    ageGender = `${voter.age} वर्ष`;
+  } else if (voter.gender) {
+    ageGender = voter.gender;
+  } else {
+    ageGender = isRealVoter ? '—' : '28 वर्ष | पुरुष';
+  }
+
+  const epic = (voter.epic && voter.epic.trim() && voter.epic.trim() !== '0') ? voter.epic.trim() : fallbackEpic;
 
   // Helper to find ward polling station with resilient key normalization
   const getMappedStation = () => {
@@ -317,7 +349,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
   const pollingStation = wardStation 
     || (voter.boothName && voter.boothName.trim()) 
     || merged.pollingStationFallback 
-    || `${part} - सामुदायिक भवन, जाटा बास, महामंदिर, जोधपुर`;
+    || (isRealVoter ? `भाग संख्या ${part}` : `${part} - सामुदायिक भवन, जाटा बास, महामंदिर, जोधपुर`);
 
 
 
@@ -1538,7 +1570,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             }}
           >
             <span className="voter-slip-voter-label" style={{ width: '165px', minWidth: '165px', flexShrink: 0, color: '#334155', fontWeight: 600 }}>मतदाता का नाम:</span>
-            <strong className="voter-slip-voter-value" style={{ flex: 1, color: '#0f172a', fontWeight: 800 }}>{voterName}</strong>
+            <strong className="voter-slip-voter-value" style={{ flex: 1, color: '#0f172a', fontWeight: 800, minWidth: 0, wordBreak: 'break-word', overflowWrap: 'break-word' }}>{voterName}</strong>
           </div>
 
           {/* Row 2: Relative Name */}
@@ -1554,7 +1586,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             }}
           >
             <span className="voter-slip-voter-label" style={{ width: '165px', minWidth: '165px', flexShrink: 0, color: '#334155', fontWeight: 600 }}>{relLabel}:</span>
-            <strong className="voter-slip-voter-value" style={{ flex: 1, color: '#0f172a', fontWeight: 700 }}>{relativeName}</strong>
+            <strong className="voter-slip-voter-value" style={{ flex: 1, color: '#0f172a', fontWeight: 700, minWidth: 0, wordBreak: 'break-word', overflowWrap: 'break-word' }}>{relativeName}</strong>
           </div>
 
           {/* Row 3: House No */}
@@ -1570,7 +1602,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             }}
           >
             <span className="voter-slip-voter-label" style={{ width: '165px', minWidth: '165px', flexShrink: 0, color: '#334155', fontWeight: 600 }}>मकान संख्या:</span>
-            <strong className="voter-slip-voter-value" style={{ flex: 1, color: '#0f172a', fontWeight: 800 }}>{house}</strong>
+            <strong className="voter-slip-voter-value" style={{ flex: 1, color: '#0f172a', fontWeight: 800, minWidth: 0, wordBreak: 'break-word', overflowWrap: 'break-word' }}>{house}</strong>
           </div>
 
           {/* Row 4: Age & Gender */}
@@ -1586,7 +1618,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             }}
           >
             <span className="voter-slip-voter-label" style={{ width: '165px', minWidth: '165px', flexShrink: 0, color: '#334155', fontWeight: 600 }}>आयु / लिंग:</span>
-            <strong className="voter-slip-voter-value" style={{ flex: 1, color: '#0f172a', fontWeight: 700 }}>{ageGender}</strong>
+            <strong className="voter-slip-voter-value" style={{ flex: 1, color: '#0f172a', fontWeight: 700, minWidth: 0, wordBreak: 'break-word', overflowWrap: 'break-word' }}>{ageGender}</strong>
           </div>
 
           {/* Row 5: EPIC ID */}
@@ -1602,7 +1634,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             }}
           >
             <span className="voter-slip-voter-label" style={{ width: '165px', minWidth: '165px', flexShrink: 0, color: '#334155', fontWeight: 600 }}>पहचान पत्र (EPIC):</span>
-            <strong className="voter-slip-voter-value" style={{ flex: 1, color: '#1d4ed8', fontWeight: 900, fontSize: '15px', letterSpacing: '0.6px' }}>{epic}</strong>
+            <strong className="voter-slip-voter-value" style={{ flex: 1, color: '#1d4ed8', fontWeight: 900, fontSize: '15px', letterSpacing: '0.6px', minWidth: 0, wordBreak: 'break-word', overflowWrap: 'break-word' }}>{epic}</strong>
           </div>
         </div>
 

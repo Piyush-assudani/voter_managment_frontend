@@ -468,7 +468,7 @@ export default function SlipsPage() {
   const searchAbortControllerRef = useRef<AbortController | null>(null);
 
   // Load Voters with Server-side Pagination
-  const loadVoters = useCallback(async (targetPage = 1) => {
+  const loadVoters = useCallback(async (targetPage = 1, customPageSize?: number) => {
     const requestId = ++latestSearchRequestIdRef.current;
     if (searchAbortControllerRef.current) {
       try {
@@ -478,12 +478,14 @@ export default function SlipsPage() {
     const controller = new AbortController();
     searchAbortControllerRef.current = controller;
 
+    const sizeToUse = customPageSize || voterPageSize;
+
     setLoading(true);
     setError('');
     try {
       const params = new URLSearchParams({
         page: String(targetPage),
-        pageSize: String(voterPageSize),
+        pageSize: String(sizeToUse),
       });
       if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
       if (wardFilter) params.set('ward', wardFilter);
@@ -513,6 +515,8 @@ export default function SlipsPage() {
           const exists = list.find((v) => v._id === prev._id);
           return exists || list[0];
         });
+      } else {
+        setSelectedVoter(null);
       }
     } catch (err: any) {
       if (err?.name === 'AbortError') return;
@@ -1320,6 +1324,14 @@ export default function SlipsPage() {
           .slips-per-a4-8 .voter-slip-metric-num {
             font-size: 22px !important;
           }
+          .slips-per-a4-8 .voter-slip-voter-label {
+            width: 95px !important;
+            min-width: 95px !important;
+            font-size: 11px !important;
+          }
+          .slips-per-a4-8 .voter-slip-voter-value {
+            font-size: 11.5px !important;
+          }
 
           /* 12 in 1 A4: 3 columns × 4 rows (strictly 12 per sheet, 4mm scissor cutting gap, NO cut-off, perfectly centered) */
           .slips-per-a4-12 .a4-sheet-grid {
@@ -1535,6 +1547,43 @@ export default function SlipsPage() {
             padding: 1px 2px !important;
             font-size: 10px !important;
             line-height: 1.15 !important;
+          }
+          .slips-per-a4-16 .voter-slip-voter-label {
+            width: 72px !important;
+            min-width: 72px !important;
+            font-size: 9px !important;
+          }
+          .slips-per-a4-16 .voter-slip-voter-value {
+            font-size: 9.5px !important;
+          }
+          .slips-per-a4-16 .voter-slip-symbol-box,
+          .slips-per-a4-16 .voter-slip-photo-box {
+            width: 65px !important;
+            min-width: 65px !important;
+            max-width: 65px !important;
+            height: 80px !important;
+            min-height: 80px !important;
+            max-height: 80px !important;
+            border-radius: 5px !important;
+            border-width: 1px !important;
+          }
+          .slips-per-a4-16 .voter-slip-ribbon {
+            min-height: 32px !important;
+            padding: 2px 6px !important;
+            gap: 4px !important;
+            border-radius: 5px !important;
+          }
+          .slips-per-a4-16 .voter-slip-ribbon-evm-badge {
+            width: 22px !important;
+            height: 22px !important;
+            font-size: 13px !important;
+          }
+          .slips-per-a4-16 .voter-slip-candidate-name {
+            font-size: 14px !important;
+            line-height: 1.15 !important;
+          }
+          .slips-per-a4-16 .voter-slip-candidate-name-en {
+            font-size: 9px !important;
           }
 
           /* Compact Format Specific Print Rules (No header/footer, voter details only) */
@@ -2168,6 +2217,104 @@ export default function SlipsPage() {
                 कुल अनुमानित कागज:{' '}
                 <strong style={{ color: '#0f172a' }}>{Math.ceil(sortedVoters.length / perA4)} A4 शीट</strong>{' '}
                 ({sortedVoters.length} पर्चियां)
+              </div>
+            </div>
+
+            {/* 3. Bulk Batch Size & Batch Pagination Strip (Ground Worker & Cyber Cafe Friendly) */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+                background: '#ffffff',
+                padding: '8px 14px',
+                borderRadius: '10px',
+                border: '1.5px solid #cbd5e1',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '12px', fontWeight: 800, color: '#334155' }}>
+                  लोडिंग बैच साइज़:
+                </span>
+                <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: '2px', borderRadius: '6px', gap: '3px' }}>
+                  {[40, 80, 160, 320].map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => {
+                        setVoterPageSize(size);
+                        setVoterPage(1);
+                        void loadVoters(1, size);
+                      }}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '5px',
+                        border: 'none',
+                        background: voterPageSize === size ? '#16a34a' : 'transparent',
+                        color: voterPageSize === size ? '#ffffff' : '#475569',
+                        fontWeight: voterPageSize === size ? 800 : 600,
+                        fontSize: '11.5px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allCount = Math.min(Math.max(totalVotersCount, 100), 1000);
+                      setVoterPageSize(allCount);
+                      setVoterPage(1);
+                      void loadVoters(1, allCount);
+                    }}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '5px',
+                      border: 'none',
+                      background: voterPageSize >= totalVotersCount && totalVotersCount > 0 ? '#16a34a' : 'transparent',
+                      color: voterPageSize >= totalVotersCount && totalVotersCount > 0 ? '#ffffff' : '#475569',
+                      fontWeight: voterPageSize >= totalVotersCount && totalVotersCount > 0 ? 800 : 600,
+                      fontSize: '11.5px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    सभी ({totalVotersCount || 'All'})
+                  </button>
+                </div>
+              </div>
+
+              {/* Batch Pagination Navigator */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  disabled={voterPage <= 1 || loading}
+                  onClick={() => loadVoters(Math.max(1, voterPage - 1))}
+                  style={{ padding: '4px 10px', fontSize: '11.5px', borderRadius: '6px', fontWeight: 600 }}
+                >
+                  ◀ पिछला बैच
+                </button>
+                <span style={{ fontWeight: 700, color: '#334155', fontSize: '12px' }}>
+                  बैच <strong style={{ color: '#16a34a' }}>{voterPage}</strong> / {voterTotalPages}
+                  <span style={{ color: '#64748b', fontSize: '11px', marginLeft: '6px' }}>
+                    ({totalVotersCount > 0 ? `${((voterPage - 1) * voterPageSize) + 1} - ${Math.min(voterPage * voterPageSize, totalVotersCount)}` : '0'} / {totalVotersCount})
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  disabled={voterPage >= voterTotalPages || loading}
+                  onClick={() => loadVoters(Math.min(voterTotalPages, voterPage + 1))}
+                  style={{ padding: '4px 10px', fontSize: '11.5px', borderRadius: '6px', fontWeight: 600 }}
+                >
+                  अगला बैच ▶
+                </button>
               </div>
             </div>
           </div>

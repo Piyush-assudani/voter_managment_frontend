@@ -34,6 +34,17 @@ export interface WhatsAppShareResult {
 }
 
 /**
+ * Standardize recipient phone number for WhatsApp links
+ * Handles 10-digit Indian numbers by prefixing 91
+ */
+export function cleanWaPhone(phone: string): string {
+  let digits = (phone || '').replace(/\D/g, '');
+  if (digits.startsWith('0')) digits = digits.slice(1);
+  if (digits.length === 10) digits = '91' + digits;
+  return digits;
+}
+
+/**
  * Convert data URL to PNG Blob (Required for navigator.clipboard.write on Chromium/Safari)
  */
 export async function convertToPngBlob(dataUrl: string): Promise<Blob> {
@@ -201,7 +212,10 @@ export async function shareVoterSlipToWhatsApp(
     }
 
     // C. Open WhatsApp Web chat
-    const waLink = backendData.waLink || `https://wa.me/${targetPhone.replace(/\D/g, '')}?text=${encodeURIComponent(messageText)}`;
+    const normalizedTarget = cleanWaPhone(targetPhone);
+    const waLink = backendData.waLink || (normalizedTarget
+      ? `https://wa.me/${normalizedTarget}?text=${encodeURIComponent(messageText)}`
+      : `https://wa.me/?text=${encodeURIComponent(messageText)}`);
     if (typeof window !== 'undefined') {
       window.open(waLink, '_blank');
     }
@@ -377,7 +391,10 @@ ${memberListText}
       await copySlipImageToClipboard(familyImageDataUrl);
     }
 
-    const waLink = backendData.waLink || `https://wa.me/${targetPhone.replace(/\D/g, '')}?text=${encodeURIComponent(messageText)}`;
+    const normalizedFamilyTarget = cleanWaPhone(targetPhone);
+    const waLink = backendData.waLink || (normalizedFamilyTarget
+      ? `https://wa.me/${normalizedFamilyTarget}?text=${encodeURIComponent(messageText)}`
+      : `https://wa.me/?text=${encodeURIComponent(messageText)}`);
     if (typeof window !== 'undefined') {
       window.open(waLink, '_blank');
     }
