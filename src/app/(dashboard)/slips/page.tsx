@@ -459,8 +459,20 @@ export default function SlipsPage() {
     } catch {}
   }, []);
 
+  const latestSearchRequestIdRef = useRef(0);
+  const searchAbortControllerRef = useRef<AbortController | null>(null);
+
   // Load Voters with Server-side Pagination
   const loadVoters = useCallback(async (targetPage = 1) => {
+    const requestId = ++latestSearchRequestIdRef.current;
+    if (searchAbortControllerRef.current) {
+      try {
+        searchAbortControllerRef.current.abort();
+      } catch {}
+    }
+    const controller = new AbortController();
+    searchAbortControllerRef.current = controller;
+
     setLoading(true);
     setError('');
     try {
@@ -472,9 +484,13 @@ export default function SlipsPage() {
       if (wardFilter) params.set('ward', wardFilter);
       if (partFilter) params.set('part', partFilter);
 
-      const res = await apiFetch(`/voters?${params.toString()}`, { cache: 'no-store' });
+      const res = await apiFetch(`/voters?${params.toString()}`, { cache: 'no-store', signal: controller.signal });
+      if (requestId !== latestSearchRequestIdRef.current) return;
+
       if (!res.ok) throw new Error(await getApiError(res, 'मतदाता लोड नहीं हो सके'));
       const data = await res.json();
+      if (requestId !== latestSearchRequestIdRef.current) return;
+
       const list: Voter[] = Array.isArray(data) ? data : data.data || data.voters || [];
       const total = typeof data.total === 'number' ? data.total : list.length;
       setVoters(list);
@@ -493,10 +509,14 @@ export default function SlipsPage() {
           return exists || list[0];
         });
       }
-    } catch (err) {
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return;
+      if (requestId !== latestSearchRequestIdRef.current) return;
       setError(err instanceof Error ? err.message : 'डेटा लोड करने में त्रुटि हुई');
     } finally {
-      setLoading(false);
+      if (requestId === latestSearchRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [debouncedSearch, wardFilter, partFilter, voterPageSize]);
 

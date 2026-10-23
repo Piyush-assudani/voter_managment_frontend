@@ -149,6 +149,8 @@ export default function VoterDirectoryPage() {
   const [familyHouse, setFamilyHouse] = useState('');
   const [familyWard, setFamilyWard] = useState('');
   const [familyPart, setFamilyPart] = useState('');
+  const latestSearchRequestIdRef = useRef(0);
+  const searchAbortControllerRef = useRef<AbortController | null>(null);
 
   // Wards summary from backend
   const [wardsList, setWardsList] = useState<Array<{ _id: string; count: number }>>([]);
@@ -371,10 +373,30 @@ export default function VoterDirectoryPage() {
     householdPart = '',
     relative = '',
   ) => {
+    const isSearching = Boolean((search && search.trim()) || (relative && relative.trim()));
+    // When actively searching by name/EPIC/relative, release any family/house lock
+    const effectiveHouse = isSearching ? '' : house;
+    if (isSearching) {
+      setFamilyHouse('');
+      setFamilyWard('');
+      setFamilyPart('');
+      setHouseQuery('');
+    } else {
+      setFamilyHouse(effectiveHouse);
+    }
+
+    const requestId = ++latestSearchRequestIdRef.current;
+    if (searchAbortControllerRef.current) {
+      try {
+        searchAbortControllerRef.current.abort();
+      } catch {}
+    }
+    const controller = new AbortController();
+    searchAbortControllerRef.current = controller;
+
     setLoading(true);
     setError('');
     setSelectedIds([]);
-    setFamilyHouse(house);
     setPage(nextPage);
 
     const activeWard = selectedWard !== undefined ? selectedWard : filtersRef.current.ward;
@@ -383,11 +405,11 @@ export default function VoterDirectoryPage() {
     if (activeWard) familyParams.set('ward', activeWard);
     if (householdPart) familyParams.set('part', householdPart);
 
-    const path = house
-      ? `/voters/family/${encodeURIComponent(house)}${familyParams.toString() ? `?${familyParams.toString()}` : ''}`
+    const path = effectiveHouse
+      ? `/voters/family/${encodeURIComponent(effectiveHouse)}${familyParams.toString() ? `?${familyParams.toString()}` : ''}`
       : `/voters?${new URLSearchParams({
-          ...(search ? { search } : {}),
-          ...(relative ? { relative } : {}),
+          ...(search && search.trim() ? { search: search.trim() } : {}),
+          ...(relative && relative.trim() ? { relative: relative.trim() } : {}),
           ...(activeWard ? { ward: activeWard } : {}),
           ...(filtersRef.current.supportStatus ? { supportStatus: filtersRef.current.supportStatus } : {}),
           ...(filtersRef.current.isMigrant ? { isMigrant: filtersRef.current.isMigrant } : {}),
@@ -396,11 +418,15 @@ export default function VoterDirectoryPage() {
         })}`;
 
     try {
-      const response = await apiFetch(path, { cache: 'no-store' });
+      const response = await apiFetch(path, { cache: 'no-store', signal: controller.signal });
+      if (requestId !== latestSearchRequestIdRef.current) return;
+
       if (!response.ok) {
         throw new Error(await getApiError(response, 'मतदाता सूची लोड नहीं हो सकी।'));
       }
       const result: unknown = await response.json();
+      if (requestId !== latestSearchRequestIdRef.current) return;
+
       const records = Array.isArray(result)
         ? result
         : result && typeof result === 'object' && 'data' in result && Array.isArray(result.data)
@@ -414,18 +440,23 @@ export default function VoterDirectoryPage() {
         phone: String(r.phone || r.mobileNo || ''),
         mobileNo: String(r.mobileNo || r.phone || ''),
       })) as Voter[];
+
       setVoters(normalizedRecords);
       setTotalRecords(
         result && typeof result === 'object' && 'total' in result && typeof result.total === 'number'
           ? result.total
           : records.length,
       );
-    } catch (loadError) {
+    } catch (loadError: any) {
+      if (loadError?.name === 'AbortError') return;
+      if (requestId !== latestSearchRequestIdRef.current) return;
       setVoters([]);
       setTotalRecords(0);
       setError(loadError instanceof Error ? loadError.message : 'मतदाता सूची लोड नहीं हो सकी।');
     } finally {
-      setLoading(false);
+      if (requestId === latestSearchRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -436,8 +467,11 @@ export default function VoterDirectoryPage() {
       return;
     }
     const timer = setTimeout(() => {
-      void loadVoters(searchQuery.trim(), houseQuery.trim(), 1, wardFilter, '', relativeNameQuery.trim());
-    }, 350);
+      const trimmedSearch = searchQuery.trim();
+      const trimmedRelative = relativeNameQuery.trim();
+      const effectiveHouse = trimmedSearch || trimmedRelative ? '' : houseQuery.trim();
+      void loadVoters(trimmedSearch, effectiveHouse, 1, wardFilter, '', trimmedRelative);
+    }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery, relativeNameQuery, loadVoters, houseQuery, wardFilter]);
 
@@ -1041,13 +1075,24 @@ export default function VoterDirectoryPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => {
-              setSearchQuery(e.target.value);
+              const val = e.target.value;
+              setSearchQuery(val);
               setPage(1);
+              if (familyHouse || houseQuery) {
+                setFamilyHouse('');
+                setFamilyWard('');
+                setFamilyPart('');
+                setHouseQuery('');
+              }
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
-                void loadVoters(searchQuery.trim(), houseQuery.trim(), 1, wardFilter, '', relativeNameQuery.trim());
+                setFamilyHouse('');
+                setFamilyWard('');
+                setFamilyPart('');
+                setHouseQuery('');
+                void loadVoters(e.currentTarget.value.trim(), '', 1, wardFilter, '', relativeNameQuery.trim());
               }
             }}
             placeholder="मतदाता का नाम या EPIC लिखें..."
@@ -1068,7 +1113,11 @@ export default function VoterDirectoryPage() {
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
-                  void loadVoters('', houseQuery.trim(), 1, wardFilter, '', relativeNameQuery.trim());
+                  setFamilyHouse('');
+                  setFamilyWard('');
+                  setFamilyPart('');
+                  setHouseQuery('');
+                  void loadVoters('', '', 1, wardFilter, '', relativeNameQuery.trim());
                 }}
                 className="smartbooth-icon-btn"
                 title="साफ़ करें"
@@ -1087,13 +1136,24 @@ export default function VoterDirectoryPage() {
             type="text"
             value={relativeNameQuery}
             onChange={(e) => {
-              setRelativeNameQuery(e.target.value);
+              const val = e.target.value;
+              setRelativeNameQuery(val);
               setPage(1);
+              if (familyHouse || houseQuery) {
+                setFamilyHouse('');
+                setFamilyWard('');
+                setFamilyPart('');
+                setHouseQuery('');
+              }
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
-                void loadVoters(searchQuery.trim(), houseQuery.trim(), 1, wardFilter, '', relativeNameQuery.trim());
+                setFamilyHouse('');
+                setFamilyWard('');
+                setFamilyPart('');
+                setHouseQuery('');
+                void loadVoters(searchQuery.trim(), '', 1, wardFilter, '', e.currentTarget.value.trim());
               }
             }}
             placeholder="पिता / पति का नाम (वैकल्पिक)..."
@@ -1114,7 +1174,11 @@ export default function VoterDirectoryPage() {
                 type="button"
                 onClick={() => {
                   setRelativeNameQuery('');
-                  void loadVoters(searchQuery.trim(), houseQuery.trim(), 1, wardFilter, '', '');
+                  setFamilyHouse('');
+                  setFamilyWard('');
+                  setFamilyPart('');
+                  setHouseQuery('');
+                  void loadVoters(searchQuery.trim(), '', 1, wardFilter, '', '');
                 }}
                 className="smartbooth-icon-btn"
                 title="साफ़ करें"
@@ -1197,6 +1261,28 @@ export default function VoterDirectoryPage() {
           <FileText size={32} color="#94a3b8" style={{ margin: '0 auto 10px' }} />
           <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#334155', margin: '0 0 6px' }}>कोई मतदाता नहीं मिला</h3>
           <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>खोज या वार्ड बदलकर दोबारा कोशिश करें।</p>
+          {(wardFilter || familyHouse || houseQuery) && (
+            <div style={{ marginTop: '14px', display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {wardFilter && (
+                <button
+                  type="button"
+                  className="smartbooth-pill-btn smartbooth-pill-blue"
+                  onClick={() => handleWardChange('')}
+                >
+                  सभी वार्डों में खोजें (वार्ड फ़िल्टर हटाएं)
+                </button>
+              )}
+              {(familyHouse || houseQuery) && (
+                <button
+                  type="button"
+                  className="smartbooth-pill-btn smartbooth-pill-amber"
+                  onClick={toggleFamilyFilter}
+                >
+                  परिवार मोड हटाएं
+                </button>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <>
