@@ -141,7 +141,12 @@ function transliterateToken(token: string): string {
         i++; // skip matra
       } else if (i === n - 1) {
         // Modern Hindi Schwa deletion at the end of word
-        res.push(base);
+        // If the consonant is part of a conjunct cluster ending (e.g. -न्द्र, -त्र, -ग्र, -प्र, -क्ल), retain 'a'
+        if (i >= 2 && chars[i - 1] === '्') {
+          res.push(base + 'a');
+        } else {
+          res.push(base);
+        }
       } else if (next && DEV_CONSONANTS[next]) {
         const nextNext = i + 2 < n ? chars[i + 2] : null;
         if (i > 0 && i + 1 === n - 1) {
@@ -347,6 +352,105 @@ const VOWEL_SOUNDS: Record<string, string[]> = {
 };
 
 /**
+ * Builds an advanced, fault-tolerant Devanagari regex from English transliterated text.
+ * Accurately matches modern Hindi schwa, halants, conjunct clusters (e.g. -न्द्र, -प्र, -त्र),
+ * vowels (e.g. a -> optional matra, ee/i, oo/u), and compound word spaces.
+ */
+export function buildDevanagariSearchRegex(englishQuery: string): RegExp | null {
+  if (!englishQuery || typeof englishQuery !== 'string') return null;
+  const clean = englishQuery.trim().slice(0, 100).toLowerCase().replace(/\s+/g, ' ');
+  if (!clean || /[\u0900-\u097F]/.test(clean)) return null;
+  if (/^[a-z]{2,4}\d{4,8}$/i.test(clean) || /^\d+$/.test(clean)) return null;
+
+  // Insert optional space boundary before common compound name suffixes
+  const s = clean.replace(/([a-z])(ram|lal|kumari|kumar|singh|devi|bai|prakash|prasad|chand|deen|pal|nath|das|dev|raj)\b/g, '$1 $2');
+
+  let pattern = '';
+  let i = 0;
+  while (i < s.length) {
+    if (s[i] === ' ') {
+      pattern += '\\s*';
+      i++;
+      continue;
+    }
+    // Discard any raw regex metacharacters entered by careless users
+    if (/[()\[\]{}*+?^$\\.|#@!%&]/.test(s[i])) {
+      i++;
+      continue;
+    }
+
+    // 4-char sequences
+    if (s.startsWith('shth', i)) { pattern += '[षस]्?[ठथ]'; i += 4; continue; }
+
+    // 3-char sequences
+    if (s.startsWith('ndr', i)) { pattern += '[नंण]?्?[दधड]्?[र]'; i += 3; continue; }
+    if (s.startsWith('chh', i)) { pattern += '[छच]'; i += 3; continue; }
+    if (s.startsWith('ksh', i)) { pattern += '[क्ष]'; i += 3; continue; }
+    if (s.startsWith('shr', i)) { pattern += '[श्रश]'; i += 3; continue; }
+    if (s.startsWith('shw', i) || s.startsWith('shv', i)) { pattern += '[शस]्?[वब]'; i += 3; continue; }
+
+    // 2-char sequences
+    if (s.startsWith('kh', i)) { pattern += '[खक]'; i += 2; continue; }
+    if (s.startsWith('gh', i)) { pattern += '[घग]'; i += 2; continue; }
+    if (s.startsWith('ch', i)) { pattern += '[चछ]'; i += 2; continue; }
+    if (s.startsWith('jh', i)) { pattern += '[झज]'; i += 2; continue; }
+    if (s.startsWith('th', i)) { pattern += '[थठ]'; i += 2; continue; }
+    if (s.startsWith('dh', i)) { pattern += '[धढ]'; i += 2; continue; }
+    if (s.startsWith('ph', i)) { pattern += '[फफ़]'; i += 2; continue; }
+    if (s.startsWith('bh', i)) { pattern += '[भब]'; i += 2; continue; }
+    if (s.startsWith('sh', i)) { pattern += '[शषस]'; i += 2; continue; }
+    if (s.startsWith('tr', i)) { pattern += '[त्रत]'; i += 2; continue; }
+    if (s.startsWith('gy', i)) { pattern += '[ज्ञग]'; i += 2; continue; }
+    if (s.startsWith('st', i)) { pattern += '[सष]्?[तट]'; i += 2; continue; }
+    if (s.startsWith('pr', i)) { pattern += '[प]्?[र]?'; i += 2; continue; }
+    if (s.startsWith('kr', i)) { pattern += '[क]्?[र]?'; i += 2; continue; }
+    if (s.startsWith('gr', i)) { pattern += '[ग]्?[र]?'; i += 2; continue; }
+    if (s.startsWith('br', i)) { pattern += '[ब]्?[र]?'; i += 2; continue; }
+    if (s.startsWith('mr', i)) { pattern += '[म]्?[र]?'; i += 2; continue; }
+    if (s.startsWith('dr', i)) { pattern += '[दध]्?[र]?'; i += 2; continue; }
+    if (s.startsWith('nd', i)) { pattern += '[नंण]?्?[दधड]'; i += 2; continue; }
+    if (s.startsWith('nt', i)) { pattern += '[नंण]?्?[तट]'; i += 2; continue; }
+    if (s.startsWith('nk', i)) { pattern += '[नंणङ्]?्?[क]'; i += 2; continue; }
+    if (s.startsWith('ng', i)) { pattern += '[नंणङ्ग]?्?[ग]'; i += 2; continue; }
+    if (s.startsWith('aa', i)) { pattern += '(?:[ा]|आ)?'; i += 2; continue; }
+    if (s.startsWith('ee', i)) { pattern += '(?:[िी]|ई|इ)?'; i += 2; continue; }
+    if (s.startsWith('oo', i)) { pattern += '(?:[ुू]|ऊ|उ)?'; i += 2; continue; }
+    if (s.startsWith('ai', i)) { pattern += '(?:[ैे]|ऐ|ए)?'; i += 2; continue; }
+    if (s.startsWith('au', i) || s.startsWith('ou', i)) { pattern += '(?:[ौो]|औ|ओ)?'; i += 2; continue; }
+
+    // 1-char consonants
+    const c = s[i];
+    if (c === 'k' || c === 'c') pattern += '[कक़]';
+    else if (c === 'g') pattern += '[गग़]';
+    else if (c === 'j' || c === 'z') pattern += '[जज़]';
+    else if (c === 't') pattern += '[तट]';
+    else if (c === 'd') pattern += '[दधडड़]';
+    else if (c === 'n') pattern += '[नंण]';
+    else if (c === 'p') pattern += '[प]';
+    else if (c === 'f') pattern += '[फफ़]';
+    else if (c === 'b') pattern += '[बव]';
+    else if (c === 'm') pattern += '[मं]';
+    else if (c === 'y') pattern += '[य]';
+    else if (c === 'r') pattern += '[रड़ढ़]्?';
+    else if (c === 'l') pattern += '[ल]';
+    else if (c === 'v' || c === 'w') pattern += '[वब]';
+    else if (c === 's') pattern += '[सशष]';
+    else if (c === 'h') pattern += '[ह]';
+    else if (c === 'q') pattern += '[कक़]';
+    else if (c === 'x') pattern += '[क्सक्ष]';
+    // Vowels
+    else if (c === 'a') pattern += '(?:[ा]|अ|आ)?';
+    else if (c === 'i') pattern += '(?:[िी]|इ|ई)?';
+    else if (c === 'u') pattern += '(?:[ुू]|उ|ऊ)?';
+    else if (c === 'e') pattern += '(?:[ेै]|ए|ऐ)?';
+    else if (c === 'o') pattern += '(?:[ोौ]|ओ|औ)?';
+    else pattern += c;
+    i++;
+  }
+  return pattern ? new RegExp(pattern, 'i') : null;
+}
+
+/**
  * Returns phonetic Hindi candidates for an English search query string.
  * E.g. "bu" -> ["बु", "बू", "ब"]
  * E.g. "budh" -> ["बुध", "बूध"]
@@ -369,6 +473,21 @@ export function getHindiSearchCandidates(englishQuery: string): string[] {
   if (COMMON_SEARCH_MAPPINGS[clean]) {
     return COMMON_SEARCH_MAPPINGS[clean];
   }
+
+  // Direct prefix sound for fast single letter typing
+  if (clean === 'm') return ['म', 'मा'];
+  if (clean === 'b') return ['ब', 'बा'];
+  if (clean === 'r') return ['र', 'रा'];
+  if (clean === 'k') return ['क', 'का'];
+  if (clean === 's') return ['स', 'श', 'सा'];
+  if (clean === 'p') return ['प', 'पा'];
+  if (clean === 'v' || clean === 'w') return ['व', 'वा'];
+  if (clean === 'd') return ['द', 'दा'];
+  if (clean === 't') return ['त', 'ता'];
+  if (clean === 'j') return ['ज', 'जा'];
+  if (clean === 'n') return ['न', 'ना'];
+  if (clean === 'g') return ['ग', 'गा'];
+  if (clean === 'h') return ['ह', 'हा'];
 
   // Dynamic sound assembler
   const tokens: string[] = [];
@@ -444,8 +563,21 @@ export function attachEnglishNames<T extends {
   };
 }
 
+function fuzzyEnglishMatch(query: string, target: string): boolean {
+  if (!query || !target) return false;
+  const q = query.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const t = target.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!q || !t) return false;
+  if (t.includes(q)) return true;
+  // If query drops trailing 'a' or target has extra trailing 'a' (e.g. manvendr vs manvendra, surendr vs surendra)
+  if (q.endsWith('a') && t.includes(q.slice(0, -1))) return true;
+  if (t.endsWith('a') && (t.slice(0, -1) === q || t.slice(0, -1).includes(q))) return true;
+  return false;
+}
+
 /**
  * Checks if a voter matches a user's search query (bilingual support: English or Hindi).
+ * Fault-tolerant: resilient to typos, schwa deletion, trailing vowels, and bad punctuation.
  */
 export function matchesVoterQuery(
   rawQuery: string,
@@ -461,33 +593,43 @@ export function matchesVoterQuery(
     mobileNo?: string;
   }
 ): boolean {
-  const q = (rawQuery || '').trim().toLowerCase();
-  if (!q) return true;
+  const rawClean = (rawQuery || '').trim().slice(0, 100);
+  if (!rawClean) return true;
 
-  // Direct numeric matches
-  if (voter.serialNo !== undefined && String(voter.serialNo) === q) return true;
-  if (voter.houseNo && voter.houseNo.toLowerCase() === q) return true;
-  if (voter.phone && voter.phone.includes(q)) return true;
-  if (voter.mobileNo && voter.mobileNo.includes(q)) return true;
+  const q = rawClean.toLowerCase().replace(/\s+/g, ' ');
+  const cleanAlnum = q.replace(/[^a-z0-9\u0900-\u097F]/g, '');
 
-  // Direct EPIC match
-  if (voter.epic && voter.epic.toLowerCase().includes(q)) return true;
+  // Direct numeric matches (serial number, house number, phone)
+  if (voter.serialNo !== undefined && String(voter.serialNo) === cleanAlnum) return true;
+  if (voter.houseNo && voter.houseNo.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanAlnum) return true;
+  if (voter.phone && voter.phone.replace(/\D/g, '').includes(cleanAlnum)) return true;
+  if (voter.mobileNo && voter.mobileNo.replace(/\D/g, '').includes(cleanAlnum)) return true;
+
+  // Direct EPIC match (e.g. RLJ1234567)
+  if (voter.epic && voter.epic.toLowerCase().replace(/[^a-z0-9]/g, '').includes(cleanAlnum)) return true;
 
   const nameHi = (voter.nameHi || '').toLowerCase();
   const relHi = (voter.relativeNameHi || '').toLowerCase();
   const nameEn = (voter.nameEn || transliterateHindiToEnglish(voter.nameHi)).toLowerCase();
   const relEn = (voter.relativeNameEn || transliterateHindiToEnglish(voter.relativeNameHi)).toLowerCase();
 
-  // If query is Latin English
-  if (/^[a-z0-9\s]+$/i.test(q)) {
-    // Check English names directly
-    if (nameEn.includes(q) || relEn.includes(q)) return true;
-    // Prefix sound match (e.g. typing "bu" matches "budha ram")
-    const words = nameEn.split(/\s+/);
-    if (words.some((w) => w.startsWith(q))) return true;
+  // If query contains Latin English letters
+  if (/[a-z]/.test(cleanAlnum)) {
+    // 1. Direct or fuzzy English string match (e.g. "manvendr" matches "Manvendra")
+    if (fuzzyEnglishMatch(cleanAlnum, nameEn) || fuzzyEnglishMatch(cleanAlnum, relEn)) return true;
 
-    // Check Hindi phonetic candidates
-    const candidates = getHindiSearchCandidates(q);
+    // 2. Word prefix match (e.g. typing "bu" matches "budha ram")
+    const words = nameEn.split(/\s+/);
+    if (words.some((w) => w.startsWith(cleanAlnum))) return true;
+
+    // 3. Devanagari phonetic regex match directly against Hindi name records
+    const devRegex = buildDevanagariSearchRegex(cleanAlnum);
+    if (devRegex) {
+      if (devRegex.test(nameHi) || devRegex.test(relHi)) return true;
+    }
+
+    // 4. Phonetic candidates matching
+    const candidates = getHindiSearchCandidates(cleanAlnum);
     for (const cand of candidates) {
       if (cand && (nameHi.includes(cand) || relHi.includes(cand))) {
         return true;
@@ -497,5 +639,5 @@ export function matchesVoterQuery(
   }
 
   // If query is Hindi Devanagari
-  return nameHi.includes(q) || relHi.includes(q) || nameEn.includes(q);
+  return nameHi.includes(rawClean) || relHi.includes(rawClean) || nameEn.includes(cleanAlnum);
 }
