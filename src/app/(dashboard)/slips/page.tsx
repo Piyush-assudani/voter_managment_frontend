@@ -29,6 +29,7 @@ import { shareVoterSlipToWhatsApp, shareFamilySlipToWhatsApp } from '@/lib/whats
 import { SortButton, SortState } from '@/components/SortButton';
 import { WhatsAppLogo } from '@/components/WhatsAppLogo';
 import { WhatsAppWebHelperModal } from '@/components/WhatsAppWebHelperModal';
+import { attachEnglishNames, matchesVoterQuery } from '@/lib/transliteration';
 
 interface Voter {
   _id: string;
@@ -133,8 +134,13 @@ const VoterCardItem = React.memo(function VoterCardItem({
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <strong style={{ color: isSelected ? '#1e40af' : '#0f172a', fontSize: '14px' }}>
-          {voter.nameHi || voter.nameEn || 'मतदाता'}
+        <strong style={{ color: isSelected ? '#1e40af' : '#0f172a', fontSize: '14px', display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '4px' }}>
+          <span>{voter.nameHi || voter.nameEn || 'मतदाता'}</span>
+          {voter.nameEn && voter.nameEn !== voter.nameHi && (
+            <span style={{ fontSize: '11px', color: isSelected ? '#3b82f6' : '#64748b', fontWeight: 600 }}>
+              ({voter.nameEn})
+            </span>
+          )}
         </strong>
         <span
           style={{
@@ -153,6 +159,11 @@ const VoterCardItem = React.memo(function VoterCardItem({
 
       <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
         {voter.relationType === 'husband' ? 'पति' : 'पिता'}: {voter.relativeNameHi || voter.relativeNameEn || '-'}
+        {voter.relativeNameEn && voter.relativeNameEn !== voter.relativeNameHi && (
+          <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '4px' }}>
+            ({voter.relativeNameEn})
+          </span>
+        )}
       </div>
 
       <div
@@ -344,6 +355,12 @@ export default function SlipsPage() {
     return list;
   }, [voters, sort]);
 
+  const visibleVotersList = useMemo(() => {
+    const q = searchQuery.trim();
+    if (!q) return sortedVoters;
+    return sortedVoters.filter((v) => matchesVoterQuery(q, v));
+  }, [sortedVoters, searchQuery]);
+
   const selectedHousehold = useMemo(() => {
     if (selectedHouseholdData) return selectedHouseholdData;
     if (householdsList.length > 0) return householdsList[0];
@@ -498,7 +515,8 @@ export default function SlipsPage() {
       const data = await res.json();
       if (requestId !== latestSearchRequestIdRef.current) return;
 
-      const list: Voter[] = Array.isArray(data) ? data : data.data || data.voters || [];
+      const rawList: Voter[] = Array.isArray(data) ? data : data.data || data.voters || [];
+      const list = rawList.map((v) => attachEnglishNames(v));
       const total = typeof data.total === 'number' ? data.total : list.length;
       setVoters(list);
       setTotalVotersCount(total);
@@ -2639,12 +2657,12 @@ export default function SlipsPage() {
                   <LoaderCircle size={20} className="spin" style={{ margin: '0 auto 8px' }} />
                   मतदाता लोड हो रहे हैं...
                 </div>
-              ) : voters.length === 0 ? (
+              ) : visibleVotersList.length === 0 ? (
                 <div style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
                   कोई मतदाता नहीं मिला
                 </div>
               ) : (
-                sortedVoters.map((voter) => (
+                visibleVotersList.map((voter) => (
                   <VoterCardItem
                     key={voter._id}
                     voter={voter}

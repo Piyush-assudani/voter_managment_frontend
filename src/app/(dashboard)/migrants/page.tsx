@@ -5,6 +5,7 @@ import { Download, ChevronLeft, ChevronRight, LoaderCircle, MapPin, Phone, Refre
 import { apiFetch, decodeJwtPayload, getApiError } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
 import { SortButton, SortState } from '@/components/SortButton';
+import { attachEnglishNames } from '@/lib/transliteration';
 
 interface Migrant {
   _id: string;
@@ -12,6 +13,7 @@ interface Migrant {
   nameHi: string;
   nameEn: string;
   relativeNameHi: string;
+  relativeNameEn?: string;
   age: number;
   gender: string;
   wardNo: string;
@@ -94,7 +96,8 @@ export default function MigrantsPage() {
       if (selectedWard.trim()) params.set('ward', selectedWard.trim());
       const response = await apiFetch(`/features/migrants?${params}`, { cache: 'no-store' });
       if (!response.ok) throw new Error(await getApiError(response, 'प्रवासी मतदाता सूची लोड नहीं हुई।'));
-      const result = await response.json() as Migrant[];
+      const rawResult = (await response.json()) as Migrant[];
+      const result = Array.isArray(rawResult) ? rawResult.map(attachEnglishNames) : [];
       setVoters(result);
       setLocations(Object.fromEntries(result.map((voter) => [voter._id, voter.migrantLocation || ''])));
     } catch (loadError) {
@@ -194,7 +197,17 @@ export default function MigrantsPage() {
               </thead>
               <tbody>
                 {paginatedVoters.map((voter) => <tr key={voter._id}>
-                  <td><div className="voter-name">{voter.nameHi || voter.nameEn || '—'}</div><div className="voter-subline">{voter.relativeNameHi || '—'}</div></td>
+                  <td>
+                    <div className="voter-name" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '4px' }}>
+                      <span>{voter.nameHi || voter.nameEn || '—'}</span>
+                      {voter.nameEn && voter.nameEn !== voter.nameHi && (
+                        <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+                          ({voter.nameEn})
+                        </span>
+                      )}
+                    </div>
+                    <div className="voter-subline">{voter.relativeNameHi || '—'}</div>
+                  </td>
                   <td>{voter.wardNo} · {voter.partNo} · मकान {voter.houseNo || '—'}<div className="voter-subline">क्रम {voter.serialNo || '—'} · परिवार में {voter.householdCount || 1}</div></td>
                   <td>{voter.phone ? <div className="feature-actions"><a className="button-quiet" href={`tel:${voter.phone}`} aria-label={`${voter.nameHi || voter.nameEn} को कॉल करें`}><Phone size={14} /> कॉल</a><a className="button-quiet" href={`https://wa.me/${voter.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">WhatsApp</a></div> : 'फोन दर्ज नहीं'}</td>
                   <td><input className="feature-inline-input" aria-label={`${voter.nameHi || voter.nameEn} का वर्तमान स्थान`} placeholder="स्थान दर्ज करें" value={locations[voter._id] || ''} onChange={(event) => setLocations((current) => ({ ...current, [voter._id]: event.target.value }))} /></td>

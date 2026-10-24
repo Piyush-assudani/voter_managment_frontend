@@ -27,6 +27,7 @@ import Link from 'next/link';
 import { apiFetch, decodeJwtPayload, getApiError } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
+import { attachEnglishNames } from '@/lib/transliteration';
 
 interface Voter {
   _id: string;
@@ -34,6 +35,7 @@ interface Voter {
   nameEn: string;
   epic: string;
   relativeNameHi: string;
+  relativeNameEn?: string;
   relationType: string;
   gender?: string;
   age?: number;
@@ -149,7 +151,7 @@ export default function CommunityPage() {
       const response = await apiFetch(`/features/community?${params}`, { cache: 'no-store' });
       if (!response.ok) throw new Error(await getApiError(response, 'समुदाय खोज पूरी नहीं हो सकी।'));
       const data = (await response.json()) as Voter[];
-      setVoters(Array.isArray(data) ? data : []);
+      setVoters(Array.isArray(data) ? data.map(attachEnglishNames) : []);
       rememberSearch(searchTerm.trim());
     } catch (searchError) {
       setVoters([]);
@@ -223,7 +225,8 @@ export default function CommunityPage() {
       if (voter.partNo) params.set('part', voter.partNo);
       const response = await apiFetch(`/voters/family/${encodeURIComponent(house)}?${params}`, { cache: 'no-store' });
       if (!response.ok) throw new Error(await getApiError(response, 'घर के अन्य रिकॉर्ड नहीं मिले।'));
-      setFamily((await response.json()) as Voter[]);
+      const famData = (await response.json()) as Voter[];
+      setFamily(Array.isArray(famData) ? famData.map(attachEnglishNames) : []);
     } catch (familyError) {
       setError(familyError instanceof Error ? familyError.message : 'घर के अन्य रिकॉर्ड नहीं मिले।');
     } finally {
@@ -887,12 +890,22 @@ export default function CommunityPage() {
                     </td>
 
                     <td style={{ padding: '10px 14px' }}>
-                      <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '13.5px' }}>
-                        {voter.nameHi || voter.nameEn || '—'}
+                      <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '13.5px', display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '4px' }}>
+                        <span>{voter.nameHi || voter.nameEn || '—'}</span>
+                        {voter.nameEn && voter.nameEn !== voter.nameHi && (
+                          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+                            ({voter.nameEn})
+                          </span>
+                        )}
                       </div>
                       <div style={{ fontSize: '11.5px', color: '#64748b' }}>
                         {voter.relationType ? `${voter.relationType}: ` : 'पिता/पति: '}
                         {voter.relativeNameHi || '—'}
+                        {voter.relativeNameEn && voter.relativeNameEn !== voter.relativeNameHi && (
+                          <span style={{ color: '#94a3b8', marginLeft: '4px' }}>
+                            ({voter.relativeNameEn})
+                          </span>
+                        )}
                         {voter.gender && ` · ${voter.gender}`}
                         {voter.age && ` (${voter.age} वर्ष)`}
                       </div>
@@ -1168,10 +1181,20 @@ export default function CommunityPage() {
                           {member.serialNo || idx + 1}
                         </td>
                         <td style={{ padding: '8px 12px', fontWeight: 600, color: '#0f172a' }}>
-                          {member.nameHi || member.nameEn}
+                          <span>{member.nameHi || member.nameEn}</span>
+                          {member.nameEn && member.nameEn !== member.nameHi && (
+                            <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '5px', fontWeight: 500 }}>
+                              ({member.nameEn})
+                            </span>
+                          )}
                         </td>
                         <td style={{ padding: '8px 12px', fontSize: '12px', color: '#475569' }}>
-                          {member.relativeNameHi || '—'}
+                          <span>{member.relativeNameHi || '—'}</span>
+                          {member.relativeNameEn && member.relativeNameEn !== member.relativeNameHi && (
+                            <span style={{ color: '#94a3b8', marginLeft: '4px' }}>
+                              ({member.relativeNameEn})
+                            </span>
+                          )}
                         </td>
                         <td style={{ padding: '8px 12px', fontSize: '12px', color: '#2563eb', fontWeight: 600 }}>
                           {member.epic || '—'}

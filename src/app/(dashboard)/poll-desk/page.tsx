@@ -4,6 +4,7 @@ import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'rea
 import { Check, ChevronLeft, ChevronRight, Circle, LoaderCircle, Printer, RefreshCw, Search, Vote, X } from 'lucide-react';
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { SortButton, SortState } from '@/components/SortButton';
+import { attachEnglishNames, matchesVoterQuery } from '@/lib/transliteration';
 
 interface Voter {
   _id: string;
@@ -52,7 +53,17 @@ VoterGridButton.displayName = 'VoterGridButton';
 const VoterTableRow = React.memo(({ voter, toggleVote, savingId }: { voter: Voter, toggleVote: (voter: Voter) => void, savingId: string }) => (
   <tr>
     <td className="voter-code">{voter.serialNo || '—'}</td>
-    <td><div className="voter-name">{voter.nameHi || voter.nameEn || '—'}</div><div className="voter-subline">{voter.relativeNameHi || voter.nameEn || ''}</div></td>
+    <td>
+      <div className="voter-name" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '4px' }}>
+        <span>{voter.nameHi || voter.nameEn || '—'}</span>
+        {voter.nameEn && voter.nameEn !== voter.nameHi && (
+          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+            ({voter.nameEn})
+          </span>
+        )}
+      </div>
+      <div className="voter-subline">{voter.relativeNameHi || voter.nameEn || ''}</div>
+    </td>
     <td className="voter-code">{voter.houseNo || '—'}</td>
     <td className="voter-code">{voter.age || '—'}{voter.gender ? ` · ${voter.gender}` : ''}</td>
     <td><span className={`record-status ${voter.voted ? 'status-voted' : 'status-pending'}`}>{voter.voted ? 'दर्ज' : 'शेष'}</span></td>
@@ -100,7 +111,7 @@ export default function PollDeskPage() {
       if (!response.ok) throw new Error(await getApiError(response, 'इस वार्ड के रिकॉर्ड लोड नहीं हो सके।'));
       const result: unknown = await response.json();
       if (!Array.isArray(result)) throw new Error('सर्वर से सूची का सही उत्तर नहीं मिला।');
-      setVoters(result as Voter[]);
+      setVoters((result as Voter[]).map(attachEnglishNames));
       setUpdatedAt(new Date());
     } catch (loadError) {
       setVoters([]);
@@ -115,7 +126,7 @@ export default function PollDeskPage() {
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(search);
-    }, 300); // 300ms debounce
+    }, 200); // 200ms responsive debounce
     return () => clearTimeout(handler);
   }, [search]);
 
@@ -142,11 +153,8 @@ export default function PollDeskPage() {
   const visibleVoters = useMemo(() => voters.filter((voter) => {
     const matchesPart = !selectedPart || voter.partNo === selectedPart;
     const matchesStatus = filter === 'all' || (filter === 'voted' ? voter.voted : !voter.voted);
-    const query = debouncedSearch.trim().toLowerCase();
-    const matchesSearch = !query
-      || String(voter.serialNo).includes(query)
-      || (voter.nameHi || '').toLowerCase().includes(query)
-      || (voter.nameEn || '').toLowerCase().includes(query);
+    const query = debouncedSearch.trim();
+    const matchesSearch = !query || matchesVoterQuery(query, voter);
     return matchesPart && matchesStatus && matchesSearch;
   }), [filter, debouncedSearch, selectedPart, voters]);
 

@@ -14,6 +14,7 @@ import { VoterSlipTemplate, SlipConfig, defaultSlipConfig } from '@/components/V
 import { WardPollingStationEditor } from '@/components/WardPollingStationEditor';
 import { ImageCropModal } from '@/components/ImageCropModal';
 import { SortButton, SortState } from '@/components/SortButton';
+import { attachEnglishNames, matchesVoterQuery } from '@/lib/transliteration';
 
 const partyPresets: Record<string, { label: string; config: Partial<SlipConfig> }> = {
   bjp: {
@@ -1043,7 +1044,7 @@ export default function AdminPanel() {
       
       if (!result.voters) throw new Error('सर्वर से रिकॉर्ड का सही उत्तर नहीं मिला।');
       
-      setVoters(result.voters);
+      setVoters(Array.isArray(result.voters) ? result.voters.map(attachEnglishNames) : []);
       if (Array.isArray(result.wards) && result.wards.length > 0) {
         setMasterDataWards(result.wards);
       }
@@ -1486,15 +1487,8 @@ export default function AdminPanel() {
   const filteredVoters = useMemo(() => {
     let list = wardFilter ? voters.filter((voter) => voter.wardNo === wardFilter) : voters;
     if (recordsSearchQuery.trim()) {
-      const q = recordsSearchQuery.trim().toLowerCase();
-      list = list.filter((v) => {
-        const nameH = (v.nameHi || '').toLowerCase();
-        const nameE = (v.nameEn || '').toLowerCase();
-        const epic = (v.epic || '').toLowerCase();
-        const house = String(v.houseNo || '').toLowerCase();
-        const part = String(v.partNo || '').toLowerCase();
-        return nameH.includes(q) || nameE.includes(q) || epic.includes(q) || house.includes(q) || part.includes(q);
-      });
+      const q = recordsSearchQuery.trim();
+      list = list.filter((v) => matchesVoterQuery(q, v));
     }
     return list;
   }, [voters, wardFilter, recordsSearchQuery]);
@@ -5857,12 +5851,22 @@ export default function AdminPanel() {
                                 {(voter.nameHi || voter.nameEn || '?').charAt(0)}
                               </div>
                               <div>
-                                <strong className="voter-name" style={{ fontSize: '14px', color: '#1a2620', display: 'block' }}>
-                                  {voter.nameHi || voter.nameEn || '—'}
+                                <strong className="voter-name" style={{ fontSize: '14px', color: '#1a2620', display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '4px' }}>
+                                  <span>{voter.nameHi || voter.nameEn || '—'}</span>
+                                  {voter.nameEn && voter.nameEn !== voter.nameHi && (
+                                    <span style={{ fontSize: '11px', color: '#5f6368', fontWeight: 600 }}>
+                                      ({voter.nameEn})
+                                    </span>
+                                  )}
                                 </strong>
                                 {voter.relativeNameHi && (
                                   <span style={{ fontSize: '11px', color: '#7d8981' }}>
                                     {voter.relationType || 'संबंधी'}: {voter.relativeNameHi}
+                                    {voter.relativeNameEn && voter.relativeNameEn !== voter.relativeNameHi && (
+                                      <span style={{ marginLeft: '4px' }}>
+                                        ({voter.relativeNameEn})
+                                      </span>
+                                    )}
                                   </span>
                                 )}
                               </div>

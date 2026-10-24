@@ -33,6 +33,7 @@ import { VoterSlipTemplate, SlipConfig, SlipFormat, defaultSlipConfig } from '@/
 import { FamilyVoterSlipTemplate } from '@/components/FamilyVoterSlipTemplate';
 import { WhatsAppLogo } from '@/components/WhatsAppLogo';
 import { WhatsAppWebHelperModal } from '@/components/WhatsAppWebHelperModal';
+import { attachEnglishNames, transliterateHindiToEnglish, matchesVoterQuery } from '@/lib/transliteration';
 
 interface Voter {
   _id: string;
@@ -132,6 +133,19 @@ export default function VoterDirectoryPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [relativeNameQuery, setRelativeNameQuery] = useState('');
+
+  // Real-time instant bilingual search filter (English and Hindi)
+  const displayedVoters = useMemo(() => {
+    const q = searchQuery.trim();
+    const relQ = relativeNameQuery.trim();
+    if (!q && !relQ) return voters;
+    return voters.filter((v) => {
+      if (q && !matchesVoterQuery(q, v)) return false;
+      if (relQ && !matchesVoterQuery(relQ, { nameHi: v.relativeNameHi, nameEn: v.relativeNameEn })) return false;
+      return true;
+    });
+  }, [voters, searchQuery, relativeNameQuery]);
+
   const [voiceError, setVoiceError] = useState('');
   const [voiceActiveField, setVoiceActiveField] = useState<'search' | 'relative' | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -442,11 +456,14 @@ export default function VoterDirectoryPage() {
       if (!records) {
         throw new Error('सर्वर से सूची का सही उत्तर नहीं मिला।');
       }
-      const normalizedRecords = (records as Array<Record<string, unknown>>).map((r) => ({
-        ...r,
-        phone: String(r.phone || r.mobileNo || ''),
-        mobileNo: String(r.mobileNo || r.phone || ''),
-      })) as Voter[];
+      const normalizedRecords = (records as Array<Record<string, unknown>>).map((r) => {
+        const voterObj = {
+          ...r,
+          phone: String(r.phone || r.mobileNo || ''),
+          mobileNo: String(r.mobileNo || r.phone || ''),
+        } as Voter;
+        return attachEnglishNames(voterObj);
+      });
 
       setVoters(normalizedRecords);
       setTotalRecords(
@@ -478,7 +495,7 @@ export default function VoterDirectoryPage() {
       const trimmedRelative = relativeNameQuery.trim();
       const effectiveHouse = trimmedSearch || trimmedRelative ? '' : houseQuery.trim();
       void loadVoters(trimmedSearch, effectiveHouse, 1, wardFilter, '', trimmedRelative);
-    }, 300);
+    }, 200);
     return () => clearTimeout(timer);
   }, [searchQuery, relativeNameQuery, loadVoters, houseQuery, wardFilter]);
 
@@ -662,10 +679,16 @@ export default function VoterDirectoryPage() {
   // ===================== SEPARATE EDIT MODAL =====================
   const openEditModal = (voter: Voter) => {
     setActionMessage('');
+    const cleanEn = voter.nameEn && !/[\u0900-\u097F]/.test(voter.nameEn)
+      ? voter.nameEn
+      : transliterateHindiToEnglish(voter.nameHi);
+    const cleanRelEn = voter.relativeNameEn && !/[\u0900-\u097F]/.test(voter.relativeNameEn)
+      ? voter.relativeNameEn
+      : transliterateHindiToEnglish(voter.relativeNameHi);
     setEditFormData({
-      nameEn: voter.nameEn || '',
+      nameEn: cleanEn,
       nameHi: voter.nameHi || '',
-      relativeNameEn: voter.relativeNameEn || '',
+      relativeNameEn: cleanRelEn,
       relativeNameHi: voter.relativeNameHi || '',
       relationType: voter.relationType || 'पिता',
       age: voter.age?.toString() || '',
@@ -1266,13 +1289,22 @@ export default function VoterDirectoryPage() {
             फिर से कोशिश करें
           </button>
         </div>
-      ) : voters.length === 0 ? (
+      ) : displayedVoters.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', background: '#f8fafc', borderRadius: '12px' }}>
           <FileText size={32} color="#94a3b8" style={{ margin: '0 auto 10px' }} />
           <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#334155', margin: '0 0 6px' }}>कोई मतदाता नहीं मिला</h3>
           <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>खोज या वार्ड बदलकर दोबारा कोशिश करें।</p>
-          {(wardFilter || familyHouse || houseQuery) && (
+          {(wardFilter || familyHouse || houseQuery || searchQuery) && (
             <div style={{ marginTop: '14px', display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="smartbooth-pill-btn smartbooth-pill-blue"
+                  onClick={() => setSearchQuery('')}
+                >
+                  खोज फ़िल्टर साफ़ करें
+                </button>
+              )}
               {wardFilter && (
                 <button
                   type="button"
@@ -1332,7 +1364,7 @@ export default function VoterDirectoryPage() {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {voters.filter((v) => v.houseNo === familyHouse).length || voters.length} सदस्य
+                      {displayedVoters.filter((v) => v.houseNo === familyHouse).length || displayedVoters.length} सदस्य
                     </span>
                   </div>
                   <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
@@ -1390,7 +1422,7 @@ export default function VoterDirectoryPage() {
                     whiteSpace: 'nowrap',
                   }}
                   onClick={() => {
-                    setSelectedIds(voters.map((v) => v._id));
+                    setSelectedIds(displayedVoters.map((v) => v._id));
                   }}
                 >
                   <Check size={14} /> सभी परिवार चुनें
@@ -1421,9 +1453,9 @@ export default function VoterDirectoryPage() {
           )}
 
           <div className="smartbooth-voter-grid">
-            {voters.map((voter, idx) => {
+            {displayedVoters.map((voter, idx) => {
               const isSelected = selectedIds.includes(voter._id);
-              const isFirstProbable = Boolean(familyHouse && voter.houseNo !== familyHouse && (idx === 0 || voters[idx - 1]?.houseNo === familyHouse));
+              const isFirstProbable = Boolean(familyHouse && voter.houseNo !== familyHouse && (idx === 0 || displayedVoters[idx - 1]?.houseNo === familyHouse));
               return (
                 <React.Fragment key={voter._id}>
                   {isFirstProbable && (
@@ -1440,7 +1472,7 @@ export default function VoterDirectoryPage() {
                     >
                       <span style={{ fontSize: '15px' }}>🔗</span>
                       <h3 style={{ fontSize: '14.5px', fontWeight: 700, color: '#334155', margin: 0 }}>
-                        संभावित संबंधी / नजदीकी सदस्य ({voters.filter((v) => v.houseNo !== familyHouse).length})
+                        संभावित संबंधी / नजदीकी सदस्य ({displayedVoters.filter((v) => v.houseNo !== familyHouse).length})
                       </h3>
                     </div>
                   )}
@@ -1475,15 +1507,25 @@ export default function VoterDirectoryPage() {
                       </div>
                     </div>
 
-                    {/* Middle Info (shows En / Hi format as in ss5) */}
+                    {/* Middle Info (shows En / Hi format as requested) */}
                     <div className="sb-card-info">
-                      <h3 className="sb-voter-name">
-                        {voter.nameHi || voter.nameEn || '—'}
+                      <h3 className="sb-voter-name" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '4px' }}>
+                        <span>{voter.nameHi || voter.nameEn || '—'}</span>
+                        {voter.nameEn && voter.nameEn !== voter.nameHi && (
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                            ({voter.nameEn})
+                          </span>
+                        )}
                       </h3>
                       <p className="sb-voter-relative">
                         <span className="sb-relative-label">{voter.relationType || 'पिता'}: </span>
                         <span className="sb-relative-val">
-                          {voter.relativeNameHi || voter.relativeNameEn || '—'}
+                          <span>{voter.relativeNameHi || voter.relativeNameEn || '—'}</span>
+                          {voter.relativeNameEn && voter.relativeNameEn !== voter.relativeNameHi && (
+                            <span style={{ fontSize: '11.5px', fontWeight: 500, color: '#64748b', marginLeft: '4px' }}>
+                              ({voter.relativeNameEn})
+                            </span>
+                          )}
                         </span>
                       </p>
                     </div>
@@ -2119,7 +2161,12 @@ export default function VoterDirectoryPage() {
                   <Tag size={18} color="#047857" /> मतदाता चुनाव टैग व प्रबंधन
                 </h2>
                 <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
-                  {tagVoter.nameHi || tagVoter.nameEn} • EPIC: {tagVoter.epic || 'N/A'} • भाग: {tagVoter.partNo || '-'} / क्र.: {tagVoter.serialNo || '-'}
+                  {tagVoter.nameHi || tagVoter.nameEn}
+                  {tagVoter.nameEn && tagVoter.nameEn !== tagVoter.nameHi && (
+                    <span style={{ fontWeight: 600, color: '#475569', marginLeft: '4px' }}>
+                      ({tagVoter.nameEn})
+                    </span>
+                  )} • EPIC: {tagVoter.epic || 'N/A'} • भाग: {tagVoter.partNo || '-'} / क्र.: {tagVoter.serialNo || '-'}
                 </p>
               </div>
               <button className="icon-button" onClick={() => setTagVoter(null)} aria-label="बंद करें">
@@ -2749,7 +2796,12 @@ export default function VoterDirectoryPage() {
                   <Pencil size={18} color="#334155" /> मतदाता विवरण संपादित करें
                 </h2>
                 <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
-                  {editVoter.nameHi || editVoter.nameEn} • EPIC: {editVoter.epic}
+                  {editVoter.nameHi || editVoter.nameEn}
+                  {editVoter.nameEn && editVoter.nameEn !== editVoter.nameHi && (
+                    <span style={{ fontWeight: 600, color: '#475569', marginLeft: '4px' }}>
+                      ({editVoter.nameEn})
+                    </span>
+                  )} • EPIC: {editVoter.epic}
                 </p>
               </div>
               <button className="icon-button" onClick={() => setEditVoter(null)} aria-label="बंद करें">
