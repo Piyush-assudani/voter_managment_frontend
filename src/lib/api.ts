@@ -30,35 +30,49 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
     headers.set('x-organization-id', selectedOrgId);
   }
 
-  const res = await fetch(apiUrl(path), { ...options, headers });
+  try {
+    const res = await fetch(apiUrl(path), { ...options, headers });
 
-  if (res.status === 403) {
-    try {
-      const clone = res.clone();
-      const data = await clone.json();
-      if (
-        data?.code === 'ACCOUNT_SUSPENDED' ||
-        (typeof data?.message === 'string' && (data.message.includes('बंद') || data.message.includes('disabled') || data.message.includes('Suspend')))
-      ) {
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem('account_suspended', 'true');
-          window.dispatchEvent(
-            new CustomEvent('account-suspended', {
-              detail: {
-                name: 'Roots Reach Media',
-                phone: '7231077770',
-                message: data.message,
-              },
-            })
-          );
+    if (res.status === 403) {
+      try {
+        const clone = res.clone();
+        const data = await clone.json();
+        if (
+          data?.code === 'ACCOUNT_SUSPENDED' ||
+          (typeof data?.message === 'string' && (data.message.includes('बंद') || data.message.includes('disabled') || data.message.includes('Suspend')))
+        ) {
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem('account_suspended', 'true');
+            window.dispatchEvent(
+              new CustomEvent('account-suspended', {
+                detail: {
+                  name: 'Roots Reach Media',
+                  phone: '7231077770',
+                  message: data.message,
+                },
+              })
+            );
+          }
         }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
     }
-  }
 
-  return res;
+    return res;
+  } catch (err: any) {
+    console.warn('[Network] Connection failed to API:', err?.message || err);
+    return new Response(
+      JSON.stringify({
+        message: 'नेटवर्क कनेक्शन अनुपलब्ध है या धीमा है (Network connection error)। कृपया अपना इंटरनेट चेक करें और पुनः प्रयास करें।',
+        error: err?.message || 'NetworkError',
+      }),
+      {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
 }
 
 export async function getApiError(response: Response, fallback: string) {
