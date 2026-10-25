@@ -93,6 +93,7 @@ export default function CommunityPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [dbCastes, setDbCastes] = useState<string[]>([]);
   const pageSize = 50;
 
   useEffect(() => {
@@ -103,6 +104,21 @@ export default function CommunityPage() {
         setIsAdmin(payload?.user?.role === 'admin');
       } catch {}
     }
+
+    const loadCastes = async () => {
+      try {
+        const res = await apiFetch('/voters/castes');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.castes) && data.castes.length > 0) {
+            setDbCastes(data.castes);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+    void loadCastes();
   }, []);
 
   useEffect(() => {
@@ -585,6 +601,34 @@ export default function CommunityPage() {
             </div>
 
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {/* Dynamic Database Castes */}
+              {dbCastes.length > 0 &&
+                dbCastes.map((casteName) => {
+                  const isActive = query === casteName;
+                  return (
+                    <button
+                      key={`db-${casteName}`}
+                      type="button"
+                      onClick={() => handlePresetClick(casteName, casteName)}
+                      style={{
+                        fontSize: '12px',
+                        padding: '4px 11px',
+                        borderRadius: '8px',
+                        border: '1.5px solid',
+                        cursor: 'pointer',
+                        fontWeight: isActive ? 800 : 600,
+                        background: isActive ? '#059669' : '#ecfdf5',
+                        color: isActive ? '#ffffff' : '#065f46',
+                        borderColor: isActive ? '#047857' : '#a7f3d0',
+                        transition: 'all 120ms ease',
+                      }}
+                      title="डेटाबेस से सक्रिय जाति"
+                    >
+                      ⚡ {casteName}
+                    </button>
+                  );
+                })}
+
               {POPULAR_COMMUNITIES.map((p) => {
                 const isActive = query === p.query;
                 return (

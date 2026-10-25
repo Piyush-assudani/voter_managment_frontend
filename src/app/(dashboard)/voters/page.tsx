@@ -24,6 +24,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  UserCheck,
 } from 'lucide-react';
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
@@ -53,6 +54,8 @@ interface Voter {
   mobileNo?: string;
   boothName?: string;
   villageName?: string;
+  villageNameHi?: string;
+  occupation?: string;
   caste: string;
   surety: string;
   supportStatus: string;
@@ -63,6 +66,16 @@ interface Voter {
   familyHead?: string;
   notes: string;
   voted: boolean;
+}
+
+interface Household {
+  key: string;
+  houseNo: string;
+  wardNo: string;
+  partNo: string;
+  members: Voter[];
+  memberCount: number;
+  headName: string;
 }
 
 const DEFAULT_CASTE_PRESETS: string[] = [
@@ -151,6 +164,31 @@ export default function VoterDirectoryPage() {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const [houseQuery, setHouseQuery] = useState('');
   const [wardFilter, setWardFilter] = useState('');
+  const [selectedCaste, setSelectedCaste] = useState('');
+  const [selectedGender, setSelectedGender] = useState('');
+  const [totalFamilies, setTotalFamilies] = useState<number>(0);
+  const [isFamilyMode, setIsFamilyMode] = useState<boolean>(false);
+  const [households, setHouseholds] = useState<Household[]>([]);
+  const [householdLoading, setHouseholdLoading] = useState<boolean>(false);
+  const [householdPage, setHouseholdPage] = useState<number>(1);
+  const [householdTotalPages, setHouseholdTotalPages] = useState<number>(1);
+  const [householdTotal, setHouseholdTotal] = useState<number>(0);
+
+  // Bulk Tag and Bulk Caste modal states
+  const [isBulkTagOpen, setIsBulkTagOpen] = useState(false);
+  const [isBulkCasteOpen, setIsBulkCasteOpen] = useState(false);
+  const [bulkTagFormData, setBulkTagFormData] = useState({
+    supportStatus: '',
+    surety: '',
+    assignedWorker: '',
+    notes: '',
+    isMigrant: false,
+    migrantLocation: '',
+  });
+  const [bulkCasteInput, setBulkCasteInput] = useState('');
+  const [bulkCasteSearch, setBulkCasteSearch] = useState('');
+  const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
+
   const [supportFilter, setSupportFilter] = useState('');
   const [migrantFilter, setMigrantFilter] = useState('');
   const [page, setPage] = useState(1);
@@ -355,13 +393,61 @@ export default function VoterDirectoryPage() {
         if (typeof data.total === 'number') {
           setTotalOrgVoters(data.total);
         }
+        if (typeof data.totalFamilies === 'number') {
+          setTotalFamilies(data.totalFamilies);
+        }
       }
     } catch {}
   }, []);
 
+  // Load dynamic castes from backend database
+  const loadCastes = useCallback(async () => {
+    try {
+      const res = await apiFetch('/voters/castes', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.castes) && data.castes.length > 0) {
+          setOrgCustomCastes(data.castes);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('org_custom_castes', JSON.stringify(data.castes));
+          }
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Load paginated households for family directory mode
+  const loadHouseholds = useCallback(async (targetPage = 1, ward = '', search = '') => {
+    setHouseholdLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: String(targetPage),
+        limit: '30',
+        ...(ward ? { ward } : {}),
+        ...(search ? { search } : {}),
+      });
+      const res = await apiFetch(`/voters/households?${params.toString()}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setHouseholds(data.households || []);
+        setHouseholdPage(data.pagination?.page || 1);
+        setHouseholdTotalPages(data.pagination?.totalPages || 1);
+        setHouseholdTotal(data.pagination?.total || (data.households || []).length);
+        if (data.pagination?.total && (!totalFamilies || totalFamilies === 0)) {
+          setTotalFamilies(data.pagination.total);
+        }
+      }
+    } catch {
+      setHouseholds([]);
+    } finally {
+      setHouseholdLoading(false);
+    }
+  }, [totalFamilies]);
+
   useEffect(() => {
     void loadOrgDetails();
     void loadWardsSummary();
+    void loadCastes();
     void loadSlipConfig();
 
     try {
@@ -383,7 +469,7 @@ export default function VoterDirectoryPage() {
         setIsAdmin(payload?.user?.role === 'admin');
       } catch {}
     }
-  }, [loadOrgDetails, loadWardsSummary, loadSlipConfig]);
+  }, [loadOrgDetails, loadWardsSummary, loadCastes, loadSlipConfig]);
 
   // Load voter records
   const loadVoters = useCallback(async (
@@ -393,6 +479,8 @@ export default function VoterDirectoryPage() {
     selectedWard = '',
     householdPart = '',
     relative = '',
+    casteParam?: string,
+    genderParam?: string,
   ) => {
     const isSearching = Boolean((search && search.trim()) || (relative && relative.trim()));
     // When actively searching by name/EPIC/relative, release any family/house lock
@@ -421,6 +509,8 @@ export default function VoterDirectoryPage() {
     setPage(nextPage);
 
     const activeWard = selectedWard !== undefined ? selectedWard : filtersRef.current.ward;
+    const activeCaste = casteParam !== undefined ? casteParam : selectedCaste;
+    const activeGender = genderParam !== undefined ? genderParam : selectedGender;
 
     const familyParams = new URLSearchParams();
     if (activeWard) familyParams.set('ward', activeWard);
@@ -432,6 +522,8 @@ export default function VoterDirectoryPage() {
           ...(search && search.trim() ? { search: search.trim() } : {}),
           ...(relative && relative.trim() ? { relative: relative.trim() } : {}),
           ...(activeWard ? { ward: activeWard } : {}),
+          ...(activeCaste ? { caste: activeCaste } : {}),
+          ...(activeGender ? { gender: activeGender } : {}),
           ...(filtersRef.current.supportStatus ? { supportStatus: filtersRef.current.supportStatus } : {}),
           ...(filtersRef.current.isMigrant ? { isMigrant: filtersRef.current.isMigrant } : {}),
           page: String(nextPage),
@@ -482,7 +574,7 @@ export default function VoterDirectoryPage() {
         setLoading(false);
       }
     }
-  }, []);
+  }, [selectedCaste, selectedGender]);
 
   const isInitialSearchMount = useRef(true);
   useEffect(() => {
@@ -494,10 +586,10 @@ export default function VoterDirectoryPage() {
       const trimmedSearch = searchQuery.trim();
       const trimmedRelative = relativeNameQuery.trim();
       const effectiveHouse = trimmedSearch || trimmedRelative ? '' : houseQuery.trim();
-      void loadVoters(trimmedSearch, effectiveHouse, 1, wardFilter, '', trimmedRelative);
+      void loadVoters(trimmedSearch, effectiveHouse, 1, wardFilter, '', trimmedRelative, selectedCaste, selectedGender);
     }, 200);
     return () => clearTimeout(timer);
-  }, [searchQuery, relativeNameQuery, loadVoters, houseQuery, wardFilter]);
+  }, [searchQuery, relativeNameQuery, loadVoters, houseQuery, wardFilter, selectedCaste, selectedGender]);
 
   useEffect(() => {
     void Promise.resolve().then(() => loadVoters());
@@ -508,12 +600,13 @@ export default function VoterDirectoryPage() {
     const handleClientChange = () => {
       void loadOrgDetails();
       void loadWardsSummary();
+      void loadCastes();
       void loadSlipConfig();
       void loadVoters();
     };
     window.addEventListener('client-changed', handleClientChange);
     return () => window.removeEventListener('client-changed', handleClientChange);
-  }, [loadOrgDetails, loadWardsSummary, loadSlipConfig, loadVoters]);
+  }, [loadOrgDetails, loadWardsSummary, loadCastes, loadSlipConfig, loadVoters]);
 
   useEffect(() => () => recognitionRef.current?.stop(), []);
 
@@ -558,7 +651,53 @@ export default function VoterDirectoryPage() {
     setWardFilter(newWard);
     filtersRef.current.ward = newWard;
     setPage(1);
-    void loadVoters(searchQuery.trim(), houseQuery.trim(), 1, newWard, '', relativeNameQuery.trim());
+    if (isFamilyMode) {
+      void loadHouseholds(1, newWard, searchQuery || houseQuery);
+    } else {
+      void loadVoters(searchQuery.trim(), houseQuery.trim(), 1, newWard, '', relativeNameQuery.trim(), selectedCaste, selectedGender);
+    }
+  };
+
+  // Handle Caste filter change
+  const handleCasteChange = (newCaste: string) => {
+    setSelectedCaste(newCaste);
+    setPage(1);
+    setIsFamilyMode(false);
+    void loadVoters(searchQuery.trim(), houseQuery.trim(), 1, wardFilter, '', relativeNameQuery.trim(), newCaste, selectedGender);
+  };
+
+  // Handle Gender filter change
+  const handleGenderChange = (newGender: string) => {
+    setSelectedGender(newGender);
+    setPage(1);
+    setIsFamilyMode(false);
+    void loadVoters(searchQuery.trim(), houseQuery.trim(), 1, wardFilter, '', relativeNameQuery.trim(), selectedCaste, newGender);
+  };
+
+  // Toggle Family Directory View mode
+  const toggleFamilyViewMode = () => {
+    if (isFamilyMode) {
+      setIsFamilyMode(false);
+      setFamilyHouse('');
+      setFamilyWard('');
+      setFamilyPart('');
+      void loadVoters(searchQuery.trim(), '', 1, wardFilter, '', relativeNameQuery.trim(), selectedCaste, selectedGender);
+    } else {
+      setIsFamilyMode(true);
+      void loadHouseholds(1, wardFilter, searchQuery || houseQuery);
+    }
+  };
+
+  // Click on a family card in family mode
+  const handleSelectFamily = (household: Household) => {
+    setIsFamilyMode(false);
+    setFamilyHouse(household.houseNo);
+    setFamilyWard(household.wardNo);
+    setFamilyPart(household.partNo);
+    setHouseQuery(household.houseNo);
+    setSearchQuery('');
+    setRelativeNameQuery('');
+    void loadVoters('', household.houseNo, 1, household.wardNo, household.partNo, '', '', '');
   };
 
   // Handle Voice Search
@@ -910,13 +1049,14 @@ export default function VoterDirectoryPage() {
   // Filter by family / houseNo
   const filterByFamily = (houseNo: string, wardNo = '', partNo = '') => {
     if (!houseNo) return;
+    setIsFamilyMode(false);
     setFamilyHouse(houseNo);
     setFamilyWard(wardNo);
     setFamilyPart(partNo);
     setHouseQuery(houseNo);
     setSearchQuery('');
     setRelativeNameQuery('');
-    void loadVoters('', houseNo, 1, wardNo, partNo, '');
+    void loadVoters('', houseNo, 1, wardNo, partNo, '', '', '');
   };
 
   // Toggle family filter in top bar
@@ -926,10 +1066,98 @@ export default function VoterDirectoryPage() {
       setFamilyWard('');
       setFamilyPart('');
       setHouseQuery('');
-      void loadVoters(searchQuery.trim(), '', 1, wardFilter, '', relativeNameQuery.trim());
+      if (isFamilyMode) {
+        void loadHouseholds(1, wardFilter, '');
+      } else {
+        void loadVoters(searchQuery.trim(), '', 1, wardFilter, '', relativeNameQuery.trim(), selectedCaste, selectedGender);
+      }
     } else {
-      setActionMessage('परिवार देखने के लिए किसी मतदाता कार्ड पर "👥" बटन दबाएं।');
-      setTimeout(() => setActionMessage(''), 4000);
+      toggleFamilyViewMode();
+    }
+  };
+
+  // Bulk Tag Submit
+  const handleBulkTagSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedIds.length === 0) return;
+    setIsBulkSubmitting(true);
+    try {
+      const updates: any = {};
+      if (bulkTagFormData.supportStatus) updates.supportStatus = bulkTagFormData.supportStatus;
+      if (bulkTagFormData.surety) updates.surety = bulkTagFormData.surety;
+      if (bulkTagFormData.assignedWorker !== undefined && bulkTagFormData.assignedWorker !== '') {
+        updates.assignedWorker = bulkTagFormData.assignedWorker;
+      }
+      if (bulkTagFormData.notes) updates.notes = bulkTagFormData.notes;
+      if (bulkTagFormData.isMigrant) {
+        updates.isMigrant = true;
+        if (bulkTagFormData.migrantLocation) updates.migrantLocation = bulkTagFormData.migrantLocation;
+      }
+
+      const res = await apiFetch('/voters/bulk-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds, updates }),
+      });
+
+      if (!res.ok) {
+        throw new Error(await getApiError(res, 'बल्क टैग अपडेट नहीं हो सके।'));
+      }
+
+      const data = await res.json();
+      setActionMessage(data.message || `${selectedIds.length} मतदाताओं का विवरण अपडेट हो गया।`);
+      setVoters((prev) =>
+        prev.map((v) => (selectedIds.includes(v._id) ? { ...v, ...updates } : v))
+      );
+      setIsBulkTagOpen(false);
+      setBulkTagFormData({
+        supportStatus: '',
+        surety: '',
+        assignedWorker: '',
+        notes: '',
+        isMigrant: false,
+        migrantLocation: '',
+      });
+      setTimeout(() => setActionMessage(''), 5000);
+    } catch (err: any) {
+      alert(err.message || 'बल्क टैग अपडेट में त्रुटि आई।');
+    } finally {
+      setIsBulkSubmitting(false);
+    }
+  };
+
+  // Bulk Caste Assign
+  const handleBulkCasteAssign = async (casteToAssign: string) => {
+    const finalCaste = casteToAssign.trim();
+    if (!finalCaste || selectedIds.length === 0) return;
+    setIsBulkSubmitting(true);
+    try {
+      const res = await apiFetch('/voters/bulk-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds, updates: { caste: finalCaste } }),
+      });
+
+      if (!res.ok) {
+        throw new Error(await getApiError(res, 'जाति असाइन नहीं हो सकी।'));
+      }
+
+      const data = await res.json();
+      setActionMessage(`${selectedIds.length} मतदाताओं को जाति "${finalCaste}" सफलतापूर्वक असाइन कर दी गई।`);
+      setVoters((prev) =>
+        prev.map((v) => (selectedIds.includes(v._id) ? { ...v, caste: finalCaste } : v))
+      );
+      setIsBulkCasteOpen(false);
+      setBulkCasteInput('');
+      setBulkCasteSearch('');
+      if (!activeCastePresets.includes(finalCaste)) {
+        setOrgCustomCastes((prev) => [finalCaste, ...prev]);
+      }
+      setTimeout(() => setActionMessage(''), 5000);
+    } catch (err: any) {
+      alert(err.message || 'जाति असाइन करने में त्रुटि आई।');
+    } finally {
+      setIsBulkSubmitting(false);
     }
   };
 
@@ -1084,14 +1312,17 @@ export default function VoterDirectoryPage() {
           <button
             type="button"
             onClick={toggleFamilyFilter}
-            className={`smartbooth-pill-btn smartbooth-pill-amber ${familyHouse ? 'is-active' : ''}`}
-            title={familyHouse ? 'परिवार फ़िल्टर हटाएं' : 'परिवार मोड'}
+            className={`smartbooth-pill-btn smartbooth-pill-amber ${familyHouse || isFamilyMode ? 'is-active' : ''}`}
+            title={familyHouse ? 'परिवार फ़िल्टर हटाएं' : isFamilyMode ? 'मतदाता सूची पर वापस जाएं' : 'सभी परिवार देखें'}
+            style={{ fontWeight: 700 }}
           >
-            <span>🏛️</span> परिवार {familyHouse ? `(${familyHouse} ✕)` : ''}
+            <span>👨‍👩‍👧‍👦</span> कुल परिवार {totalFamilies > 0 ? `(${totalFamilies.toLocaleString('hi-IN')})` : ''} {familyHouse ? `[#${familyHouse} ✕]` : ''}
           </button>
           <div className="smartbooth-count-pill">
             {loading ? (
               'लोड हो रहा है...'
+            ) : isFamilyMode ? (
+              `कुल ${householdTotal.toLocaleString('en-IN')} परिवार मिले`
             ) : (
               `${totalRecords.toLocaleString('en-IN')} मतदाता मिले • पृष्ठ ${page}/${totalPages} (${startRecord}-${endRecord})`
             )}
@@ -1230,11 +1461,12 @@ export default function VoterDirectoryPage() {
         </div>
       )}
 
-      {/* 3. Full-width Ward Selector Bar */}
-      <div className="smartbooth-ward-bar">
-        <div className="smartbooth-ward-select-wrapper">
+      {/* 3. Filter Bar (Ward, Caste from Database, Gender) */}
+      <div className="smartbooth-ward-bar" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Ward Filter */}
+        <div className="smartbooth-ward-select-wrapper" style={{ flex: '1 1 200px' }}>
           <MapPin size={16} className="smartbooth-ward-icon" />
-          <span className="smartbooth-ward-label">वार्ड (Ward):</span>
+          <span className="smartbooth-ward-label">वार्ड:</span>
           <select
             value={wardFilter}
             onChange={(e) => handleWardChange(e.target.value)}
@@ -1252,6 +1484,76 @@ export default function VoterDirectoryPage() {
           </select>
           <ChevronDown size={16} className="smartbooth-ward-arrow" />
         </div>
+
+        {/* Caste Filter Dropdown (Database Castes) */}
+        <div className="smartbooth-ward-select-wrapper" style={{ flex: '1 1 180px' }}>
+          <Tag size={15} className="smartbooth-ward-icon" style={{ color: '#7c3aed' }} />
+          <span className="smartbooth-ward-label">जाति:</span>
+          <select
+            value={selectedCaste}
+            onChange={(e) => handleCasteChange(e.target.value)}
+            className="smartbooth-ward-select"
+            aria-label="जाति फ़िल्टर चुनें"
+          >
+            <option value="">सभी जातियां (All Castes)</option>
+            {activeCastePresets.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={16} className="smartbooth-ward-arrow" />
+        </div>
+
+        {/* Gender Filter Dropdown */}
+        <div className="smartbooth-ward-select-wrapper" style={{ flex: '1 1 150px' }}>
+          <UserCheck size={15} className="smartbooth-ward-icon" style={{ color: '#0284c7' }} />
+          <span className="smartbooth-ward-label">लिंग:</span>
+          <select
+            value={selectedGender}
+            onChange={(e) => handleGenderChange(e.target.value)}
+            className="smartbooth-ward-select"
+            aria-label="लिंग फ़िल्टर चुनें"
+          >
+            <option value="">सभी लिंग (All)</option>
+            <option value="पुरुष">👨 पुरुष (Male)</option>
+            <option value="महिला">👩 महिला / स्त्री (Female)</option>
+            <option value="अन्य">⚧ अन्य (Other)</option>
+          </select>
+          <ChevronDown size={16} className="smartbooth-ward-arrow" />
+        </div>
+
+        {/* Clear filters button if active */}
+        {(selectedCaste || selectedGender || wardFilter || searchQuery || relativeNameQuery) && (
+          <button
+            type="button"
+            className="button-secondary"
+            onClick={() => {
+              setSelectedCaste('');
+              setSelectedGender('');
+              setWardFilter('');
+              setSearchQuery('');
+              setRelativeNameQuery('');
+              filtersRef.current.ward = '';
+              setPage(1);
+              void loadVoters('', '', 1, '', '', '', '', '');
+            }}
+            style={{
+              padding: '6px 12px',
+              fontSize: '12px',
+              borderRadius: '8px',
+              fontWeight: 600,
+              height: '38px',
+              whiteSpace: 'nowrap',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+            title="सभी फ़िल्टर हटाएं"
+          >
+            <X size={14} /> फ़िल्टर हटाएं
+          </button>
+        )}
       </div>
 
       {/* Action Notice */}
@@ -1272,8 +1574,130 @@ export default function VoterDirectoryPage() {
         </div>
       )}
 
-      {/* 4. 3-Column Voter Cards Grid */}
-      {loading ? (
+      {/* 4. Family Directory Mode OR Voter Cards Grid */}
+      {isFamilyMode ? (
+        <div className="smartbooth-family-container" style={{ marginTop: '6px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+            <div>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>👨‍👩‍👧‍👦</span> ग्राम / वार्ड परिवार डायरेक्टरी (Family Directory)
+              </h3>
+              <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+                कुल {householdTotal || households.length} परिवार मिले • किसी भी परिवार पर क्लिक करके उनके सभी सदस्य देखें
+              </p>
+            </div>
+            <button
+              type="button"
+              className="button-secondary"
+              onClick={() => setIsFamilyMode(false)}
+              style={{ padding: '7px 14px', fontSize: '12.5px', fontWeight: 700, borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+            >
+              <X size={14} /> मतदाता सूची दृश्य पर वापस जाएं
+            </button>
+          </div>
+
+          {householdLoading ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+              <LoaderCircle size={28} className="spin" style={{ margin: '0 auto 12px' }} />
+              <p style={{ fontSize: '14px', fontWeight: 600 }}>परिवार लोड हो रहे हैं…</p>
+            </div>
+          ) : households.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '50px 20px', background: '#f8fafc', borderRadius: '12px' }}>
+              <p style={{ color: '#64748b', fontSize: '14px', fontWeight: 600 }}>कोई परिवार नहीं मिला।</p>
+            </div>
+          ) : (
+            <div className="smartbooth-family-grid">
+              {households.map((h) => (
+                <div
+                  key={h.key || `${h.wardNo}_${h.houseNo}`}
+                  className="smartbooth-family-card"
+                  onClick={() => handleSelectFamily(h)}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#2563eb', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '2px 8px', borderRadius: '6px' }}>
+                        वार्ड {h.wardNo || '—'} {h.partNo ? `• भाग ${h.partNo}` : ''}
+                      </span>
+                      <h4 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: '6px 0 0' }}>
+                        🏡 मकान #{h.houseNo}
+                      </h4>
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: 700, background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', padding: '3px 10px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+                      👨‍👩‍👧‍👦 {h.memberCount} सदस्य
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: '13px', color: '#334155' }}>
+                    <span style={{ color: '#64748b', fontSize: '12px' }}>परिवार प्रमुख / सदस्य: </span>
+                    <strong>{h.headName}</strong>
+                  </div>
+
+                  {/* Member preview names */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: 'auto' }}>
+                    {(h.members || []).slice(0, 4).map((m) => (
+                      <span
+                        key={m._id}
+                        style={{ fontSize: '11px', background: '#f1f5f9', color: '#475569', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}
+                      >
+                        {m.nameHi || m.nameEn} ({m.age || '—'})
+                      </span>
+                    ))}
+                    {(h.members || []).length > 4 && (
+                      <span style={{ fontSize: '11px', color: '#64748b', padding: '2px 4px' }}>
+                        +{h.members.length - 4} और
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid #f1f5f9', marginTop: '6px' }}>
+                    <span style={{ fontSize: '12px', color: '#2563eb', fontWeight: 700 }}>
+                      सदस्य देखें ({h.memberCount}) →
+                    </span>
+                    <button
+                      type="button"
+                      className="sb-btn-parchi"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openFamilySlipModal(h.houseNo, h.wardNo, h.partNo);
+                      }}
+                      style={{ padding: '4px 10px', fontSize: '11.5px' }}
+                    >
+                      <WhatsAppLogo size={13} color="#fff" /> परिवार पर्ची
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Household Pagination */}
+          {!householdLoading && householdTotalPages > 1 && (
+            <div className="smartbooth-pagination-bar" style={{ marginTop: '20px' }}>
+              <div style={{ fontSize: '12.5px', color: '#64748b', fontWeight: 600 }}>
+                कुल {householdTotal} परिवार • पृष्ठ {householdPage} / {householdTotalPages}
+              </div>
+              <div className="smartbooth-pagination-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="smartbooth-pill-btn smartbooth-pill-blue"
+                  onClick={() => void loadHouseholds(householdPage - 1, wardFilter, searchQuery)}
+                  disabled={householdPage <= 1}
+                >
+                  <ChevronLeft size={14} /> पिछला
+                </button>
+                <button
+                  type="button"
+                  className="smartbooth-pill-btn smartbooth-pill-blue"
+                  onClick={() => void loadHouseholds(householdPage + 1, wardFilter, searchQuery)}
+                  disabled={householdPage >= householdTotalPages}
+                >
+                  अगला <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : loading ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
           <LoaderCircle size={28} className="spin" style={{ margin: '0 auto 12px' }} />
           <p style={{ fontSize: '14px', fontWeight: 600 }}>मतदाता रिकॉर्ड लोड हो रहे हैं…</p>
@@ -1293,8 +1717,8 @@ export default function VoterDirectoryPage() {
         <div style={{ textAlign: 'center', padding: '60px 20px', background: '#f8fafc', borderRadius: '12px' }}>
           <FileText size={32} color="#94a3b8" style={{ margin: '0 auto 10px' }} />
           <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#334155', margin: '0 0 6px' }}>कोई मतदाता नहीं मिला</h3>
-          <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>खोज या वार्ड बदलकर दोबारा कोशिश करें।</p>
-          {(wardFilter || familyHouse || houseQuery || searchQuery) && (
+          <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>खोज या फ़िल्टर बदलकर दोबारा कोशिश करें।</p>
+          {(wardFilter || familyHouse || houseQuery || searchQuery || selectedCaste || selectedGender) && (
             <div style={{ marginTop: '14px', display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
               {searchQuery && (
                 <button
@@ -1311,7 +1735,25 @@ export default function VoterDirectoryPage() {
                   className="smartbooth-pill-btn smartbooth-pill-blue"
                   onClick={() => handleWardChange('')}
                 >
-                  सभी वार्डों में खोजें (वार्ड फ़िल्टर हटाएं)
+                  वार्ड फ़िल्टर हटाएं
+                </button>
+              )}
+              {selectedCaste && (
+                <button
+                  type="button"
+                  className="smartbooth-pill-btn smartbooth-pill-blue"
+                  onClick={() => handleCasteChange('')}
+                >
+                  जाति फ़िल्टर हटाएं
+                </button>
+              )}
+              {selectedGender && (
+                <button
+                  type="button"
+                  className="smartbooth-pill-btn smartbooth-pill-blue"
+                  onClick={() => handleGenderChange('')}
+                >
+                  लिंग फ़िल्टर हटाएं
                 </button>
               )}
               {(familyHouse || houseQuery) && (
@@ -1452,6 +1894,66 @@ export default function VoterDirectoryPage() {
             </div>
           )}
 
+          {/* Top Selection & Bulk Action Toolbar */}
+          <div className="smartbooth-selection-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '13px', color: '#1e293b' }}>
+                <input
+                  type="checkbox"
+                  checked={displayedVoters.length > 0 && displayedVoters.every((v) => selectedIds.includes(v._id))}
+                  onChange={() => {
+                    const allSelected = displayedVoters.length > 0 && displayedVoters.every((v) => selectedIds.includes(v._id));
+                    if (allSelected) {
+                      setSelectedIds([]);
+                    } else {
+                      setSelectedIds(displayedVoters.map((v) => v._id));
+                    }
+                  }}
+                  className="sb-checkbox"
+                  aria-label="सभी मतदाता चुनें"
+                />
+                <span>सभी चुनें (Select All • {displayedVoters.length})</span>
+              </label>
+              {selectedIds.length > 0 && (
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#2563eb', background: '#eff6ff', padding: '2px 9px', borderRadius: '12px', border: '1px solid #bfdbfe' }}>
+                  {selectedIds.length} मतदाता चुने गए
+                </span>
+              )}
+            </div>
+
+            {selectedIds.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="button-primary"
+                  style={{ background: '#7c3aed', borderColor: '#6d28d9', color: '#ffffff', padding: '6px 12px', fontSize: '12px', fontWeight: 700, borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                  onClick={() => setIsBulkTagOpen(true)}
+                  title="चुने गए सभी मतदाताओं को एक साथ समर्थन/कार्यकर्ता/प्रवासी टैग दें"
+                >
+                  <Tag size={13} /> बल्क टैग दें ({selectedIds.length})
+                </button>
+                <button
+                  type="button"
+                  className="button-primary"
+                  style={{ background: '#d97706', borderColor: '#b45309', color: '#ffffff', padding: '6px 12px', fontSize: '12px', fontWeight: 700, borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                  onClick={() => setIsBulkCasteOpen(true)}
+                  title="चुने गए सभी मतदाताओं को डेटाबेस से जाति असाइन करें"
+                >
+                  <UsersRound size={13} /> जाति असाइन करें ({selectedIds.length})
+                </button>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '8px' }}
+                  onClick={() => setSelectedIds([])}
+                  title="चयन हटाएं"
+                >
+                  चयन हटाएं
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="smartbooth-voter-grid">
             {displayedVoters.map((voter, idx) => {
               const isSelected = selectedIds.includes(voter._id);
@@ -1481,7 +1983,7 @@ export default function VoterDirectoryPage() {
                     className={`smartbooth-voter-card ${isSelected ? 'is-selected' : ''}`}
                     onClick={() => toggleSelected(voter._id)}
                   >
-                    {/* Top Header Row */}
+                    {/* Top Header Row with EPIC, Ward, Part, Serial, House, Age, Gender */}
                     <div className="sb-card-top">
                       <div className="sb-card-badges">
                         <input
@@ -1492,6 +1994,9 @@ export default function VoterDirectoryPage() {
                           className="sb-checkbox"
                           aria-label={`${voter.nameHi || voter.nameEn} चुनें`}
                         />
+                        <span className="sb-badge-epic" title="मतदाता पहचान पत्र संख्या (EPIC)">
+                          🆔 {voter.epic || '—'}
+                        </span>
                         <span className="sb-badge-ward">वार्ड {voter.wardNo || '—'}</span>
                         <span className="sb-badge-part">
                           {hidePartNo ? `क्र. ${voter.serialNo || '—'}` : `भाग ${voter.partNo || '—'} • क्र. ${voter.serialNo || '—'}`}
@@ -1503,6 +2008,22 @@ export default function VoterDirectoryPage() {
                         </span>
                         <span>
                           उम्र: <strong>{voter.age || '—'} वर्ष</strong>
+                        </span>
+                        <span
+                          className={`sb-badge-gender ${
+                            voter.gender === 'महिला' || voter.gender === 'स्त्री' || voter.gender === 'Female' || voter.gender === 'F'
+                              ? 'sb-gender-female'
+                              : voter.gender === 'अन्य' || voter.gender === 'Other'
+                              ? 'sb-gender-other'
+                              : 'sb-gender-male'
+                          }`}
+                          title={`लिंग: ${voter.gender || 'पुरुष'}`}
+                        >
+                          {voter.gender === 'महिला' || voter.gender === 'स्त्री' || voter.gender === 'Female' || voter.gender === 'F'
+                            ? '👩 महिला'
+                            : voter.gender === 'अन्य' || voter.gender === 'Other'
+                            ? '⚧ अन्य'
+                            : '👨 पुरुष'}
                         </span>
                       </div>
                     </div>
@@ -1528,6 +2049,20 @@ export default function VoterDirectoryPage() {
                           )}
                         </span>
                       </p>
+                      {(voter.boothName || voter.villageName || voter.villageNameHi) && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '3px', fontSize: '11.5px', color: '#64748b' }}>
+                          {voter.boothName && (
+                            <span title={`मतदान केंद्र: ${voter.boothName}`}>
+                              📍 केंद्र: {voter.boothName}
+                            </span>
+                          )}
+                          {(voter.villageName || voter.villageNameHi) && (
+                            <span title={`गाँव/मोहल्ला: ${voter.villageNameHi || voter.villageName}`}>
+                              🏡 {voter.villageNameHi || voter.villageName}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Tags Row */}
@@ -1537,11 +2072,20 @@ export default function VoterDirectoryPage() {
                           🔗 संबंधी · निकटवर्ती क्र. {voter.serialNo || '—'}
                         </span>
                       )}
-                      {voter.caste && <span className="sb-tag-caste">{voter.caste}</span>}
-                      {voter.phone && (
-                        <span className="sb-tag-phone">
-                          <Phone size={10} /> {voter.phone}
+                      {voter.caste && (
+                        <span className="sb-tag-caste" title={`जाति: ${voter.caste}`}>
+                          <Tag size={10} /> {voter.caste}
                         </span>
+                      )}
+                      {voter.phone && (
+                        <a
+                          href={`tel:${voter.phone}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="sb-tag-phone"
+                          title="कॉल करें"
+                        >
+                          <Phone size={10} /> {voter.phone}
+                        </a>
                       )}
                       {((voter.surety && voter.surety !== '' && voter.surety !== 'सामान्य') || (voter.supportStatus && voter.supportStatus !== 'unmarked')) && (
                         <span
@@ -1566,7 +2110,17 @@ export default function VoterDirectoryPage() {
                       )}
                       {voter.isMigrant && (
                         <span className="sb-tag-migrant">
-                          प्रवासी {voter.migrantLocation ? `(${voter.migrantLocation})` : ''}
+                          ✈️ प्रवासी {voter.migrantLocation ? `(${voter.migrantLocation})` : ''}
+                        </span>
+                      )}
+                      {voter.assignedWorker && (
+                        <span className="sb-tag-worker" title={`कार्यकर्ता: ${voter.assignedWorker}`}>
+                          👷 {voter.assignedWorker}
+                        </span>
+                      )}
+                      {voter.notes && (
+                        <span className="sb-tag-notes" title={`टिप्पणी: ${voter.notes}`}>
+                          📝 {voter.notes}
                         </span>
                       )}
                     </div>
@@ -1682,6 +2236,26 @@ export default function VoterDirectoryPage() {
           <div className="sb-floating-count">
             <span className="sb-floating-dot" /> {selectedIds.length}&nbsp;<span className="hidden sm:inline">चुना गया</span><span className="sm:hidden">चुना</span>
           </div>
+
+          <button
+            type="button"
+            className="sb-floating-btn"
+            style={{ background: '#7c3aed', color: '#ffffff', borderColor: '#6d28d9' }}
+            onClick={() => setIsBulkTagOpen(true)}
+            title="चुने गए सभी मतदाताओं को एक साथ टैग दें"
+          >
+            <Tag size={13} /> <span className="hidden sm:inline">बल्क टैग</span>
+          </button>
+
+          <button
+            type="button"
+            className="sb-floating-btn"
+            style={{ background: '#d97706', color: '#ffffff', borderColor: '#b45309' }}
+            onClick={() => setIsBulkCasteOpen(true)}
+            title="चुने गए सभी मतदाताओं को जाति असाइन करें"
+          >
+            <UsersRound size={13} /> <span className="hidden sm:inline">जाति असाइन</span>
+          </button>
 
           <button
             type="button"
@@ -3173,6 +3747,378 @@ export default function VoterDirectoryPage() {
           imageDataUrl={whatsappHelperData.imageDataUrl}
           waLink={whatsappHelperData.waLink}
         />
+      )}
+
+      {/* 10. Bulk Tag Modal */}
+      {isBulkTagOpen && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !isBulkSubmitting) setIsBulkTagOpen(false);
+          }}
+        >
+          <section
+            className="form-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bulk-tag-title"
+            style={{ maxWidth: '540px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}
+          >
+            <div className="modal-heading">
+              <div>
+                <span className="eyebrow-label" style={{ color: '#7c3aed' }}>BULK ACTIONS</span>
+                <h2 id="bulk-tag-title">बल्क टैग प्रबंधन ({selectedIds.length} मतदाता)</h2>
+                <p>चुने गए सभी {selectedIds.length} मतदाताओं को एक साथ स्थिति, कार्यकर्ता या टिप्पणी असाइन करें।</p>
+              </div>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setIsBulkTagOpen(false)}
+                disabled={isBulkSubmitting}
+                aria-label="बंद करें"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleBulkTagSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+              {/* Support Status / Surety */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>
+                  समर्थन स्थिति (Support Status / Surety):
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
+                  {[
+                    { label: '🟢 100% पक्का', surety: '100% पक्का', supportStatus: 'core', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+                    { label: '🟡 50-50', surety: '50-50', supportStatus: 'swing', color: '#d97706', bg: '#fefce8', border: '#fef08a' },
+                    { label: '🔴 विरोधी', surety: 'विरोधी', supportStatus: 'opposition', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+                    { label: '⚪ सामान्य', surety: 'सामान्य', supportStatus: 'unmarked', color: '#475569', bg: '#f8fafc', border: '#cbd5e1' },
+                  ].map((s) => {
+                    const isSelected = bulkTagFormData.surety === s.surety;
+                    return (
+                      <button
+                        key={s.surety}
+                        type="button"
+                        onClick={() =>
+                          setBulkTagFormData({
+                            ...bulkTagFormData,
+                            surety: isSelected ? '' : s.surety,
+                            supportStatus: isSelected ? '' : s.supportStatus,
+                          })
+                        }
+                        style={{
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          fontSize: '12.5px',
+                          fontWeight: isSelected ? 800 : 600,
+                          background: isSelected ? s.bg : '#ffffff',
+                          border: isSelected ? `2px solid ${s.color}` : `1px solid ${s.border}`,
+                          color: isSelected ? s.color : '#334155',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        {isSelected && <Check size={14} strokeWidth={3} />}
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Assigned Worker */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>
+                  दायित्व सौंपा गया कार्यकर्ता (Assigned Worker):
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <select
+                    value={bulkTagFormData.assignedWorker}
+                    onChange={(e) => setBulkTagFormData({ ...bulkTagFormData, assignedWorker: e.target.value })}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      borderRadius: '8px',
+                      border: '1.5px solid #cbd5e1',
+                      padding: '0 36px 0 14px',
+                      fontSize: '13.5px',
+                      background: '#ffffff',
+                      color: bulkTagFormData.assignedWorker ? '#0f172a' : '#64748b',
+                      fontWeight: bulkTagFormData.assignedWorker ? 600 : 400,
+                      cursor: 'pointer',
+                      appearance: 'none',
+                    }}
+                  >
+                    <option value="">-- कोई बदलाव नहीं / Unassigned --</option>
+                    {workersList.map((w) => (
+                      <option key={w.id} value={w.name}>
+                        {w.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={18}
+                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#64748b' }}
+                  />
+                </div>
+              </div>
+
+              {/* Migrant Status */}
+              <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
+                  <input
+                    type="checkbox"
+                    checked={bulkTagFormData.isMigrant}
+                    onChange={(e) => setBulkTagFormData({ ...bulkTagFormData, isMigrant: e.target.checked })}
+                    className="sb-checkbox"
+                  />
+                  <span>✈️ प्रवासी मतदाता मार्क करें (Mark as Migrant)</span>
+                </label>
+                {bulkTagFormData.isMigrant && (
+                  <input
+                    type="text"
+                    value={bulkTagFormData.migrantLocation}
+                    onChange={(e) => setBulkTagFormData({ ...bulkTagFormData, migrantLocation: e.target.value })}
+                    placeholder="वर्तमान शहर / स्थान (उदा: सूरत, अहमदाबाद, मुंबई...)"
+                    style={{ width: '100%', height: '38px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', marginTop: '8px', background: '#ffffff' }}
+                  />
+                )}
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>
+                  टिप्पणी / विशेष नोट (Notes):
+                </label>
+                <textarea
+                  value={bulkTagFormData.notes}
+                  onChange={(e) => setBulkTagFormData({ ...bulkTagFormData, notes: e.target.value })}
+                  placeholder="उदा: संपर्क किया गया, परिवार समर्थन में है, आदि..."
+                  rows={2}
+                  style={{ width: '100%', borderRadius: '8px', border: '1.5px solid #cbd5e1', padding: '8px 12px', fontSize: '13px', resize: 'vertical', fontFamily: 'inherit' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsBulkTagOpen(false)}
+                  disabled={isBulkSubmitting}
+                  style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#334155', padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  रद्द करें
+                </button>
+                <button
+                  type="submit"
+                  disabled={isBulkSubmitting}
+                  style={{
+                    background: '#7c3aed',
+                    border: 'none',
+                    color: '#ffffff',
+                    padding: '8px 22px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: isBulkSubmitting ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 6px rgba(124, 58, 237, 0.35)',
+                  }}
+                >
+                  {isBulkSubmitting ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
+                  {selectedIds.length} मतदाताओं पर लागू करें
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+
+      {/* 11. Bulk Caste Assign Modal */}
+      {isBulkCasteOpen && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !isBulkSubmitting) setIsBulkCasteOpen(false);
+          }}
+        >
+          <section
+            className="form-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bulk-caste-title"
+            style={{ maxWidth: '560px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}
+          >
+            <div className="modal-heading">
+              <div>
+                <span className="eyebrow-label" style={{ color: '#d97706' }}>BULK CASTE ASSIGNMENT</span>
+                <h2 id="bulk-caste-title">जाति असाइन करें ({selectedIds.length} मतदाता)</h2>
+                <p>डेटाबेस से किसी जाति को चुनें या नई जाति टाइप करके एक साथ सभी {selectedIds.length} मतदाताओं को असाइन करें।</p>
+              </div>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setIsBulkCasteOpen(false)}
+                disabled={isBulkSubmitting}
+                aria-label="बंद करें"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Dynamic Search / Custom Input */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>
+                  जाति खोजें या नई जाति दर्ज करें:
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={bulkCasteInput}
+                    onChange={(e) => {
+                      setBulkCasteInput(e.target.value);
+                      setBulkCasteSearch(e.target.value);
+                    }}
+                    placeholder="उदा: राजपूत, जाट, कुम्हार, चारण, ब्राह्मण..."
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      borderRadius: '8px',
+                      border: '1.5px solid #d97706',
+                      padding: '0 14px',
+                      fontSize: '14px',
+                      background: '#ffffff',
+                      color: '#0f172a',
+                      fontWeight: 600,
+                    }}
+                  />
+                  {bulkCasteInput && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBulkCasteInput('');
+                        setBulkCasteSearch('');
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: '#94a3b8',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Caste presets loaded dynamically from database */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>
+                    डेटाबेस से उपलब्ध जातियां ({activeCastePresets.length}):
+                  </span>
+                  {activeCastePresets.length > 0 && (
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>क्लिक करके चुनें</span>
+                  )}
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '6px',
+                    maxHeight: '180px',
+                    overflowY: 'auto',
+                    padding: '6px',
+                    background: '#f8fafc',
+                    borderRadius: '8px',
+                    border: '1px solid #e2e8f0',
+                  }}
+                >
+                  {activeCastePresets
+                    .filter((c) => !bulkCasteSearch || c.toLowerCase().includes(bulkCasteSearch.toLowerCase().trim()))
+                    .map((caste) => {
+                      const isSelected = bulkCasteInput === caste;
+                      return (
+                        <button
+                          key={caste}
+                          type="button"
+                          onClick={() => {
+                            setBulkCasteInput(caste);
+                            setBulkCasteSearch('');
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '16px',
+                            fontSize: '12.5px',
+                            fontWeight: isSelected ? 800 : 600,
+                            border: isSelected ? '1.5px solid #d97706' : '1px solid #cbd5e1',
+                            background: isSelected ? '#fef3c7' : '#ffffff',
+                            color: isSelected ? '#92400e' : '#334155',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          {isSelected && <Check size={12} strokeWidth={3} />}
+                          {caste}
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsBulkCasteOpen(false)}
+                  disabled={isBulkSubmitting}
+                  style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#334155', padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  रद्द करें
+                </button>
+                <button
+                  type="button"
+                  disabled={!bulkCasteInput.trim() || isBulkSubmitting}
+                  onClick={() => void handleBulkCasteAssign(bulkCasteInput)}
+                  style={{
+                    background: '#d97706',
+                    border: 'none',
+                    color: '#ffffff',
+                    padding: '8px 22px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: !bulkCasteInput.trim() || isBulkSubmitting ? 'not-allowed' : 'pointer',
+                    opacity: !bulkCasteInput.trim() ? 0.6 : 1,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 6px rgba(217, 119, 6, 0.35)',
+                  }}
+                >
+                  {isBulkSubmitting ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
+                  "{bulkCasteInput.trim() || 'जाति'}" असाइन करें ({selectedIds.length})
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
       )}
     </div>
   );
