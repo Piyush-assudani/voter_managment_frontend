@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { apiFetch, decodeJwtPayload } from '@/lib/api';
+import { PwaInstallHeaderBtn, PwaInstallFooterBtn } from '@/components/PwaInstall';
 
 const pageTitles = new Map([
   ['/', 'मुख्य डैशबोर्ड'],
@@ -297,9 +298,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           alignItems: 'center',
           justifyContent: 'space-between',
           minHeight: '60px',
-          background: '#ffffff',
-          borderBottom: '1px solid #e2e8f0',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+          background: 'rgba(255, 255, 255, 0.92)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderBottom: '1px solid rgba(226, 232, 240, 0.85)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
         }}
       >
         {/* Left: Back Button, Brand Identity & Subpage Title */}
@@ -404,8 +407,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           )}
         </div>
 
-        {/* Right: Live Status (Hidden on mobile) + Profile Dropdown with Logout */}
+        {/* Right: PWA App Download + Live Status + Profile Dropdown with Logout */}
         <div className="topbar-right-cluster" suppressHydrationWarning>
+          <PwaInstallHeaderBtn />
+
           <span className={`connection-pill ${health} hidden sm:inline-flex`} suppressHydrationWarning title={`सर्वर स्थिति: ${health === 'connected' ? 'लाइव कनेक्टेड' : health}`}>
             <span className={`status-dot status-${health}`} />
             <span className="hidden sm:inline">
@@ -459,7 +464,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             {/* Profile Dropdown Menu with Logout */}
             {profileMenuOpen && (
               <div
-                className="topbar-profile-dropdown"
+                className="topbar-profile-dropdown animate-pop-in"
                 role="menu"
                 style={{
                   position: 'absolute',
@@ -468,8 +473,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                   minWidth: '220px',
                   background: '#ffffff',
                   border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                  borderRadius: '14px',
+                  boxShadow: '0 12px 30px -4px rgba(15, 23, 42, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.05)',
                   zIndex: 1000,
                   padding: '8px',
                 }}
@@ -551,8 +556,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       </main>
 
       {/* Footer */}
-      <footer className="app-footer" style={{ justifyContent: 'center', textAlign: 'center', flexWrap: 'wrap', gap: '6px' }}>
+      <footer className="app-footer" style={{ justifyContent: 'center', textAlign: 'center', flexWrap: 'wrap', gap: '10px', padding: '14px 16px', display: 'flex', alignItems: 'center' }}>
         <span>&copy; 2026 VijaySetu &bull; Roots Reach Media. All Rights Reserved. &bull; <a href="https://vijaysetu-website.vercel.app" target="_blank" rel="noopener noreferrer" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>वेबसाइट</a> &bull; <a href="/privacy" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Privacy Policy</a> &bull; <a href="/terms" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Terms of Service</a> &bull; 📞 7231077770</span>
+        <PwaInstallFooterBtn />
       </footer>
 
 

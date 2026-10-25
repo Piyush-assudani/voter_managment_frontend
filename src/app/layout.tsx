@@ -34,11 +34,22 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
+  themeColor: '#047857',
 };
 
 export const metadata: Metadata = {
   title: 'VijaySetu | Field workspace',
   description: 'A clear, reliable workspace for voter and booth operations.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'VijaySetu',
+  },
+  icons: {
+    icon: '/icon-192.png',
+    apple: '/icon-192.png',
+  },
 };
 
 export default function RootLayout({

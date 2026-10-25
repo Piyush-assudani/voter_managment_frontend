@@ -943,32 +943,46 @@ export default function VoterDirectoryPage() {
 
   // Open Family Slip Modal
   const openFamilySlipModal = async (houseNo: string, wardNo = '', partNo = '') => {
-    const h = (houseNo || '').trim();
-    if (!h) {
-      alert('मकान संख्या उपलब्ध नहीं है।');
+    const h = (houseNo || '').trim().replace(/^#/, '');
+    const invalidHouses = ['-', '—', "'—", "'0", '0', '00', '000', 'NA', 'N/A', 'लागू नहीं', 'null', 'undefined'];
+    if (!h || invalidHouses.includes(h.toUpperCase())) {
+      alert('इस मतदाता के पास मान्य मकान संख्या दर्ज नहीं है।');
       return;
     }
     setFamilySlipMessage('');
     setFamilySlipSending(false);
 
-    let members = voters.filter((v) => (v.houseNo || '').trim() === h);
-    if (members.length === 0) {
-      try {
-        const params = new URLSearchParams();
-        if (wardNo) params.set('ward', wardNo);
-        if (partNo) params.set('part', partNo);
-        const res = await apiFetch(`/voters/family/${encodeURIComponent(h)}?${params}`);
-        if (res.ok) {
-          const data = await res.json();
-          members = Array.isArray(data) ? data : data.voters || [];
-        }
-      } catch (e) {
-        console.warn('Family fetch error:', e);
+    let members: Voter[] = [];
+    try {
+      const params = new URLSearchParams();
+      if (wardNo) params.set('ward', wardNo);
+      if (partNo) params.set('part', partNo);
+      const res = await apiFetch(`/voters/family/${encodeURIComponent(h)}?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        members = Array.isArray(data) ? data : data.voters || [];
       }
+    } catch (e) {
+      console.warn('Family fetch error:', e);
     }
 
     if (members.length === 0) {
-      alert(`मकान #${h} के मतदाता सदस्य नहीं मिले।`);
+      // In-memory fallback strictly for this house and this specific ward
+      members = voters.filter((v) => {
+        if ((v.houseNo || '').trim().replace(/^#/, '') !== h) return false;
+        if (wardNo && String(v.wardNo || '').trim() !== String(wardNo).trim()) return false;
+        if (partNo && String(v.partNo || '').trim() !== String(partNo).trim()) return false;
+        return true;
+      });
+    }
+
+    // Ensure strict ward isolation
+    if (wardNo && members.length > 0) {
+      members = members.filter((m) => String(m.wardNo || '').trim() === String(wardNo).trim());
+    }
+
+    if (members.length === 0) {
+      alert(`वार्ड ${wardNo || '—'} के मकान #${h} में कोई मतदाता सदस्य नहीं मिले।`);
       return;
     }
 
@@ -1048,15 +1062,20 @@ export default function VoterDirectoryPage() {
 
   // Filter by family / houseNo
   const filterByFamily = (houseNo: string, wardNo = '', partNo = '') => {
-    if (!houseNo) return;
+    const h = (houseNo || '').trim().replace(/^#/, '');
+    const invalidHouses = ['-', '—', "'—", "'0", '0', '00', '000', 'NA', 'N/A', 'लागू नहीं', 'null', 'undefined'];
+    if (!h || invalidHouses.includes(h.toUpperCase())) {
+      alert('इस मतदाता के पास मान्य मकान संख्या दर्ज नहीं है।');
+      return;
+    }
     setIsFamilyMode(false);
-    setFamilyHouse(houseNo);
+    setFamilyHouse(h);
     setFamilyWard(wardNo);
     setFamilyPart(partNo);
-    setHouseQuery(houseNo);
+    setHouseQuery(h);
     setSearchQuery('');
     setRelativeNameQuery('');
-    void loadVoters('', houseNo, 1, wardNo, partNo, '', '', '');
+    void loadVoters('', h, 1, wardNo, partNo, '', '', '');
   };
 
   // Toggle family filter in top bar

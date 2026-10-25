@@ -232,7 +232,8 @@ export default function CommunityPage() {
     setSelectedHouse(house);
     setSelectedVoterForFamily(voter);
     setFamily([]);
-    if (!house) return;
+    const invalidHouses = ['-', '—', "'—", "'0", '0', '00', '000', 'na', 'n/a', 'null', 'undefined', 'लागू नहीं', 'उपलब्ध नहीं'];
+    if (!house || invalidHouses.includes(house.trim().toLowerCase())) return;
 
     setFamilyLoading(true);
     try {

@@ -19,6 +19,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { apiFetch, decodeJwtPayload } from '@/lib/api';
+import { PwaInstallDashboardCard } from '@/components/PwaInstall';
 
 interface LauncherModule {
   id: string;
@@ -417,148 +418,49 @@ export default function DashboardHomePage() {
             <Link
               key={item.id}
               href={item.href}
-              className="dashboard-module-card"
-              style={{
-                textDecoration: 'none',
-                color: 'inherit',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                background: '#ffffff',
-                border: item.highlight ? '2px solid #059669' : '1px solid #e2e8f0',
-                borderRadius: '16px',
-                padding: '24px 22px',
-                boxShadow: item.highlight
-                  ? '0 4px 16px rgba(5, 150, 105, 0.14)'
-                  : '0 1px 4px rgba(15, 23, 42, 0.05)',
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                cursor: 'pointer',
-                minHeight: '150px',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = item.highlight
-                  ? '0 12px 28px rgba(5, 150, 105, 0.22)'
-                  : '0 12px 24px -4px rgba(0, 0, 0, 0.08), 0 4px 8px -2px rgba(0, 0, 0, 0.04)';
-                if (!item.highlight) {
-                  e.currentTarget.style.borderColor = '#93c5fd';
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = item.highlight
-                  ? '0 4px 16px rgba(5, 150, 105, 0.14)'
-                  : '0 1px 4px rgba(15, 23, 42, 0.05)';
-                if (!item.highlight) {
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                }
-              }}
+              className={`dashboard-module-card ${item.highlight ? 'is-highlighted' : ''}`}
             >
               {/* Card Header: Icon + "खोलें →" link */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '16px',
-                }}
-              >
+              <div className="card-top-row">
                 {/* Large Colorful Icon Tile */}
                 <div
-                  style={{
-                    width: '52px',
-                    height: '52px',
-                    borderRadius: '14px',
-                    background: item.iconBg,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#ffffff',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
-                    flexShrink: 0,
-                  }}
+                  className="card-icon-tile"
+                  style={{ background: item.iconBg }}
                 >
                   <Icon size={26} />
                 </div>
 
                 {/* "खोलें →" Link */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    color: item.highlight ? '#047857' : '#64748b',
-                    background: item.highlight ? '#ecfdf5' : '#f8fafc',
-                    padding: '4px 11px',
-                    borderRadius: '20px',
-                    border: item.highlight ? '1px solid #a7f3d0' : '1px solid #e2e8f0',
-                  }}
-                >
+                <div className="card-action-badge">
                   <span>खोलें</span>
-                  <ArrowRight size={13} />
+                  <ArrowRight size={13} className="card-arrow" />
                 </div>
               </div>
 
               {/* Card Body: Title & Subtitle */}
               <div>
-                <h3
-                  style={{
-                    margin: '0 0 4px 0',
-                    fontSize: '16.5px',
-                    fontWeight: 800,
-                    color: '#0f172a',
-                    letterSpacing: '-0.3px',
-                  }}
-                >
+                <h3 className="card-title">
                   {item.name}
                 </h3>
 
-                <div
-                  style={{
-                    fontSize: '12.5px',
-                    color: '#64748b',
-                    fontWeight: 500,
-                    lineHeight: 1.4,
-                  }}
-                >
+                <div className="card-subtitle">
                   {item.subtitle}
                 </div>
               </div>
 
               {/* Special Tag for Admin Only Card */}
               {item.highlight && (
-                <div
-                  style={{
-                    marginTop: '12px',
-                    paddingTop: '10px',
-                    borderTop: '1px solid #ecfdf5',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: '10.5px',
-                      fontWeight: 800,
-                      color: '#047857',
-                      background: '#d1fae5',
-                      padding: '2px 8px',
-                      borderRadius: '6px',
-                    }}
-                  >
-                    ★ केवल एडमिन (Admin Only)
-                  </span>
-                  <span style={{ fontSize: '11px', color: '#059669', fontWeight: 600 }}>
-                    कंसोल खोलें &rarr;
-                  </span>
+                <div className="card-admin-tag">
+                  <ShieldCheck size={13} className="text-emerald-700" />
+                  <span>★ केवल एडमिन (Admin Console)</span>
                 </div>
               )}
             </Link>
           );
         })}
+
+        {/* 📲 PWA App Download / Install Card */}
+        <PwaInstallDashboardCard />
       </div>
     </div>
   );
