@@ -2049,20 +2049,6 @@ export default function VoterDirectoryPage() {
                           )}
                         </span>
                       </p>
-                      {(voter.boothName || voter.villageName || voter.villageNameHi) && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '3px', fontSize: '11.5px', color: '#64748b' }}>
-                          {voter.boothName && (
-                            <span title={`मतदान केंद्र: ${voter.boothName}`}>
-                              📍 केंद्र: {voter.boothName}
-                            </span>
-                          )}
-                          {(voter.villageName || voter.villageNameHi) && (
-                            <span title={`गाँव/मोहल्ला: ${voter.villageNameHi || voter.villageName}`}>
-                              🏡 {voter.villageNameHi || voter.villageName}
-                            </span>
-                          )}
-                        </div>
-                      )}
                     </div>
 
                     {/* Tags Row */}
