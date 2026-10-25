@@ -90,10 +90,14 @@ const COMPOUND_NAME_SUFFIXES: Array<[string, string]> = [
   ['राम', ' Ram'], ['लाल', ' Lal'], ['कुमार', ' Kumar'], ['कुमारी', ' Kumari'],
   ['सिंह', ' Singh'], ['कंवर', ' Kanwar'], ['देवी', ' Devi'], ['बाई', ' Bai'],
   ['प्रसाद', ' Prasad'], ['प्रकाश', ' Prakash'], ['चंद', ' Chand'], ['चन्द', ' Chand'],
-  ['चन्द्र', ' Chandra'], ['नाथ', ' Nath'], ['दास', ' Das'], ['शंकर', ' Shankar'],
-  ['दीन', ' Deen'], ['भान', ' Bhan'], ['पाल', ' Pal'], ['देव', ' Dev'],
-  ['राज', ' Raj'], ['जीत', ' Jeet']
+  ['चन्द्र', ' Chandra'], ['नारायण', ' Narayan'], ['नाथ', ' Nath'], ['दास', ' Das'],
+  ['शंकर', ' Shankar'], ['दीन', ' Deen'], ['भान', ' Bhan'], ['जीत', ' Jeet'],
+  ['पाल', ' Pal'], ['देव', ' Dev'], ['राज', ' Raj'], ['धर', ' Dhar'],
+  ['वल्लभ', ' Vallabh'], ['दत्त', ' Dutt'], ['वती', ' Vati'], ['मती', ' Mati'],
+  ['प्रिया', ' Priya'], ['रानी', ' Rani']
 ];
+
+const CONJUNCT_RETENTION_ENDINGS = ['न्द्र', 'त्र', 'प्र', 'क्र', 'ग्र', 'श्र', 'क्ल', 'ज्ञ', 'त्य', 'र्य', 'व्य', 'ष्ठ', 'स्थ', 'द्ध'];
 
 // In-memory memoization cache for ultra-fast, zero-recalculation performance
 const translitCache = new Map<string, string>();
@@ -113,6 +117,7 @@ function transliterateToken(token: string): string {
   const n = chars.length;
   const res: string[] = [];
   let i = 0;
+  const retainsFinalA = CONJUNCT_RETENTION_ENDINGS.some(conj => token.endsWith(conj));
 
   while (i < n) {
     let c = chars[i];
@@ -124,8 +129,14 @@ function transliterateToken(token: string): string {
     if (DEV_VOWELS[c]) {
       res.push(res.length === 0 ? DEV_VOWELS[c] : DEV_VOWELS[c].toLowerCase());
     } else if (DEV_CONSONANTS[c]) {
-      const base = DEV_CONSONANTS[c];
+      let base = DEV_CONSONANTS[c];
       const next = i + 1 < n ? chars[i + 1] : null;
+      const nextNext = i + 2 < n ? chars[i + 2] : null;
+      const isConjunctMember = (i >= 2 && chars[i - 1] === '्');
+
+      if (c === 'व' && i > 0 && ['ं', 'न', 'स', 'र', 'ल', 'ई', 'त'].includes(chars[i - 1])) {
+        base = 'w';
+      }
 
       if (next === '्') {
         res.push(base);
@@ -134,7 +145,23 @@ function transliterateToken(token: string): string {
         res.push(base);
         const matra = next;
         if (matra === 'ं' || matra === 'ँ') {
-          res.push('an');
+          if (nextNext && ['प', 'फ', 'ब', 'भ', 'म'].includes(nextNext)) {
+            res.push('am');
+          } else {
+            res.push('an');
+          }
+        } else if (matra === 'ी') {
+          if (i <= 1 && (!nextNext || DEV_CONSONANTS[nextNext])) {
+            res.push('ee');
+          } else {
+            res.push('i');
+          }
+        } else if (matra === 'ू') {
+          if (i <= 1 && (!nextNext || DEV_CONSONANTS[nextNext])) {
+            res.push('oo');
+          } else {
+            res.push('u');
+          }
         } else {
           res.push(DEV_MATRAS[matra]);
         }
@@ -142,16 +169,15 @@ function transliterateToken(token: string): string {
       } else if (i === n - 1) {
         // Modern Hindi Schwa deletion at the end of word
         // If the consonant is part of a conjunct cluster ending (e.g. -न्द्र, -त्र, -ग्र, -प्र, -क्ल), retain 'a'
-        if (i >= 2 && chars[i - 1] === '्') {
+        if (retainsFinalA && i >= 2 && chars[i - 1] === '्') {
           res.push(base + 'a');
         } else {
           res.push(base);
         }
       } else if (next && DEV_CONSONANTS[next]) {
-        const nextNext = i + 2 < n ? chars[i + 2] : null;
-        if (i > 0 && i + 1 === n - 1) {
+        if (isConjunctMember) {
           res.push(base + 'a');
-        } else if (nextNext === '्' || (nextNext && DEV_MATRAS[nextNext])) {
+        } else if (i > 0 && (nextNext === '्' || (nextNext && DEV_MATRAS[nextNext]))) {
           res.push(base);
         } else {
           res.push(base + 'a');
