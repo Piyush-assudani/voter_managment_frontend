@@ -1316,7 +1316,7 @@ export default function VoterDirectoryPage() {
             title={familyHouse ? 'परिवार फ़िल्टर हटाएं' : isFamilyMode ? 'मतदाता सूची पर वापस जाएं' : 'सभी परिवार देखें'}
             style={{ fontWeight: 700 }}
           >
-            <span>👨‍👩‍👧‍👦</span> कुल परिवार {totalFamilies > 0 ? `(${totalFamilies.toLocaleString('hi-IN')})` : ''} {familyHouse ? `[#${familyHouse} ✕]` : ''}
+            <UsersRound size={14} /> कुल परिवार {totalFamilies > 0 ? `(${totalFamilies.toLocaleString('hi-IN')})` : ''} {familyHouse ? `[#${familyHouse} ✕]` : ''}
           </button>
           <div className="smartbooth-count-pill">
             {loading ? (
@@ -1516,9 +1516,9 @@ export default function VoterDirectoryPage() {
             aria-label="लिंग फ़िल्टर चुनें"
           >
             <option value="">सभी लिंग (All)</option>
-            <option value="पुरुष">👨 पुरुष (Male)</option>
-            <option value="महिला">👩 महिला / स्त्री (Female)</option>
-            <option value="अन्य">⚧ अन्य (Other)</option>
+            <option value="पुरुष">पुरुष (Male)</option>
+            <option value="महिला">महिला (Female)</option>
+            <option value="अन्य">अन्य (Other)</option>
           </select>
           <ChevronDown size={16} className="smartbooth-ward-arrow" />
         </div>
@@ -1580,7 +1580,7 @@ export default function VoterDirectoryPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
             <div>
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>👨‍👩‍👧‍👦</span> ग्राम / वार्ड परिवार डायरेक्टरी (Family Directory)
+                <UsersRound size={20} /> ग्राम / वार्ड परिवार डायरेक्टरी (Family Directory)
               </h3>
               <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
                 कुल {householdTotal || households.length} परिवार मिले • किसी भी परिवार पर क्लिक करके उनके सभी सदस्य देखें
@@ -1619,11 +1619,11 @@ export default function VoterDirectoryPage() {
                         वार्ड {h.wardNo || '—'} {h.partNo ? `• भाग ${h.partNo}` : ''}
                       </span>
                       <h4 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: '6px 0 0' }}>
-                        🏡 मकान #{h.houseNo}
+                        मकान #{h.houseNo}
                       </h4>
                     </div>
                     <span style={{ fontSize: '12px', fontWeight: 700, background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', padding: '3px 10px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
-                      👨‍👩‍👧‍👦 {h.memberCount} सदस्य
+                      {h.memberCount} सदस्य
                     </span>
                   </div>
 
@@ -1662,7 +1662,7 @@ export default function VoterDirectoryPage() {
                       }}
                       style={{ padding: '4px 10px', fontSize: '11.5px' }}
                     >
-                      <WhatsAppLogo size={13} color="#fff" /> परिवार पर्ची
+                      <Ticket size={13} color="#fff" /> परिवार पर्ची
                     </button>
                   </div>
                 </div>
@@ -1810,7 +1810,7 @@ export default function VoterDirectoryPage() {
                     </span>
                   </div>
                   <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                    <span>🏡 वार्ड {familyWard || wardFilter || 'सभी'}</span>
+                    <span>वार्ड {familyWard || wardFilter || 'सभी'}</span>
                     <span>·</span>
                     <span>मकान #{familyHouse}</span>
                     {familyPart && (
@@ -1844,7 +1844,7 @@ export default function VoterDirectoryPage() {
                   onClick={() => openFamilySlipModal(familyHouse, familyWard, familyPart)}
                   title="इस मकान के सभी सदस्यों की संयुक्त परिवार पर्ची बनाएं व WhatsApp भेजें"
                 >
-                  <Ticket size={14} /> 👨‍👩‍👧‍👦 परिवार पर्ची बनाएं
+                  <Ticket size={14} /> परिवार पर्ची बनाएं
                 </button>
 
                 <button
@@ -1983,7 +1983,7 @@ export default function VoterDirectoryPage() {
                     className={`smartbooth-voter-card ${isSelected ? 'is-selected' : ''}`}
                     onClick={() => toggleSelected(voter._id)}
                   >
-                    {/* Top Header Row with EPIC, Ward, Part, Serial, House, Age, Gender */}
+                    {/* Top Header Row with Checkbox, Ward, Part/Serial, and EPIC */}
                     <div className="sb-card-top">
                       <div className="sb-card-badges">
                         <input
@@ -1994,73 +1994,78 @@ export default function VoterDirectoryPage() {
                           className="sb-checkbox"
                           aria-label={`${voter.nameHi || voter.nameEn} चुनें`}
                         />
-                        <span className="sb-badge-epic" title="मतदाता पहचान पत्र संख्या (EPIC)">
-                          🆔 {voter.epic || '—'}
-                        </span>
                         <span className="sb-badge-ward">वार्ड {voter.wardNo || '—'}</span>
-                        <span className="sb-badge-part">
-                          {hidePartNo ? `क्र. ${voter.serialNo || '—'}` : `भाग ${voter.partNo || '—'} • क्र. ${voter.serialNo || '—'}`}
-                        </span>
+                        <span className="sb-badge-serial">क्र. {voter.serialNo || '—'}</span>
+                        {!hidePartNo && voter.partNo && (
+                          <span className="sb-badge-part">भाग {voter.partNo}</span>
+                        )}
                       </div>
-                      <div className="sb-card-meta">
-                        <span>
-                          मकान: <strong>{voter.houseNo || '—'}</strong>
-                        </span>
-                        <span>
-                          उम्र: <strong>{voter.age || '—'} वर्ष</strong>
-                        </span>
-                        <span
-                          className={`sb-badge-gender ${
-                            voter.gender === 'महिला' || voter.gender === 'स्त्री' || voter.gender === 'Female' || voter.gender === 'F'
-                              ? 'sb-gender-female'
-                              : voter.gender === 'अन्य' || voter.gender === 'Other'
-                              ? 'sb-gender-other'
-                              : 'sb-gender-male'
-                          }`}
-                          title={`लिंग: ${voter.gender || 'पुरुष'}`}
-                        >
-                          {voter.gender === 'महिला' || voter.gender === 'स्त्री' || voter.gender === 'Female' || voter.gender === 'F'
-                            ? '👩 महिला'
-                            : voter.gender === 'अन्य' || voter.gender === 'Other'
-                            ? '⚧ अन्य'
-                            : '👨 पुरुष'}
-                        </span>
-                      </div>
+                      <span className="sb-badge-epic" title="मतदाता पहचान पत्र संख्या (EPIC)">
+                        {voter.epic || '—'}
+                      </span>
                     </div>
 
-                    {/* Middle Info (shows En / Hi format as requested) */}
-                    <div className="sb-card-info">
-                      <h3 className="sb-voter-name" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '4px' }}>
-                        <span>{voter.nameHi || voter.nameEn || '—'}</span>
+                    {/* Middle Detail Rows matching reference layout */}
+                    <div className="sb-card-details">
+                      {/* Name Row */}
+                      <div className="sb-detail-row">
+                        <span className="sb-label">नाम:</span>
+                        <span className="sb-val-name">{voter.nameHi || voter.nameEn || '—'}</span>
                         {voter.nameEn && voter.nameEn !== voter.nameHi && (
-                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-                            ({voter.nameEn})
-                          </span>
+                          <span className="sb-badge-name-en">{voter.nameEn}</span>
                         )}
-                      </h3>
-                      <p className="sb-voter-relative">
-                        <span className="sb-relative-label">{voter.relationType || 'पिता'}: </span>
-                        <span className="sb-relative-val">
-                          <span>{voter.relativeNameHi || voter.relativeNameEn || '—'}</span>
-                          {voter.relativeNameEn && voter.relativeNameEn !== voter.relativeNameHi && (
-                            <span style={{ fontSize: '11.5px', fontWeight: 500, color: '#64748b', marginLeft: '4px' }}>
-                              ({voter.relativeNameEn})
-                            </span>
-                          )}
+                      </div>
+
+                      {/* Relative Row */}
+                      <div className="sb-detail-row">
+                        <span className="sb-label">
+                          {voter.relationType ? `${voter.relationType} का नाम:` : 'पिता का नाम:'}
                         </span>
-                      </p>
+                        <span className="sb-val-relative">{voter.relativeNameHi || voter.relativeNameEn || '—'}</span>
+                        {voter.relativeNameEn && voter.relativeNameEn !== voter.relativeNameHi && (
+                          <span className="sb-badge-relative-en">({voter.relativeNameEn})</span>
+                        )}
+                      </div>
+
+                      {/* House Row */}
+                      <div className="sb-detail-row">
+                        <span className="sb-label">मकान संख्या:</span>
+                        <span className="sb-val-bold">{voter.houseNo || '—'}</span>
+                      </div>
+
+                      {/* Age & Gender Row */}
+                      <div className="sb-detail-row">
+                        <span className="sb-label">आयु:</span>
+                        <span className="sb-val-bold">{voter.age || '—'} वर्ष</span>
+                        <span className="sb-label" style={{ marginLeft: '12px' }}>लिंग:</span>
+                        <span
+                          className={`sb-badge-gender-clean ${
+                            voter.gender === 'महिला' || voter.gender === 'स्त्री' || voter.gender === 'Female' || voter.gender === 'F'
+                              ? 'gender-female'
+                              : voter.gender === 'अन्य' || voter.gender === 'Other'
+                              ? 'gender-other'
+                              : 'gender-male'
+                          }`}
+                        >
+                          {voter.gender === 'महिला' || voter.gender === 'स्त्री' || voter.gender === 'Female' || voter.gender === 'F'
+                            ? '♀ महिला'
+                            : voter.gender === 'अन्य' || voter.gender === 'Other'
+                            ? 'अन्य'
+                            : '♂ पुरुष'}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Tags Row */}
                     <div className="sb-card-tags">
                       {familyHouse && voter.houseNo !== familyHouse && (
                         <span style={{ fontSize: '11px', fontWeight: 600, background: '#fef3c7', color: '#92400e', padding: '2px 7px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          🔗 संबंधी · निकटवर्ती क्र. {voter.serialNo || '—'}
+                          संबंधी · क्र. {voter.serialNo || '—'}
                         </span>
                       )}
                       {voter.caste && (
-                        <span className="sb-tag-caste" title={`जाति: ${voter.caste}`}>
-                          <Tag size={10} /> {voter.caste}
+                        <span className="sb-tag-caste-clean" title={`जाति: ${voter.caste}`}>
+                          {voter.caste}
                         </span>
                       )}
                       {voter.phone && (
@@ -2086,30 +2091,33 @@ export default function VoterDirectoryPage() {
                           }`}
                         >
                           {voter.surety === '100% पक्का' || voter.supportStatus === 'core'
-                            ? '🟢 100% पक्का'
+                            ? '100% पक्का'
                             : voter.surety === '50-50' || voter.supportStatus === 'swing'
-                            ? '🟡 50-50'
+                            ? '50-50'
                             : voter.surety === 'विरोधी' || voter.supportStatus === 'opposition'
-                            ? '🔴 विरोधी'
-                            : '⚪ सामान्य'}
+                            ? 'विरोधी'
+                            : 'सामान्य'}
                         </span>
                       )}
                       {voter.isMigrant && (
                         <span className="sb-tag-migrant">
-                          ✈️ प्रवासी {voter.migrantLocation ? `(${voter.migrantLocation})` : ''}
+                          प्रवासी {voter.migrantLocation ? `(${voter.migrantLocation})` : ''}
                         </span>
                       )}
                       {voter.assignedWorker && (
                         <span className="sb-tag-worker" title={`कार्यकर्ता: ${voter.assignedWorker}`}>
-                          👷 {voter.assignedWorker}
+                          <UserCheck size={10} /> {voter.assignedWorker}
                         </span>
                       )}
                       {voter.notes && (
                         <span className="sb-tag-notes" title={`टिप्पणी: ${voter.notes}`}>
-                          📝 {voter.notes}
+                          नोट: {voter.notes}
                         </span>
                       )}
                     </div>
+
+                    {/* Divider Line */}
+                    <div className="sb-card-divider" />
 
                     {/* Bottom Actions Row: TAG, EDIT, FAMILY, PARCHI */}
                     <div className="sb-card-bottom">
@@ -2120,10 +2128,10 @@ export default function VoterDirectoryPage() {
                             e.stopPropagation();
                             openTagModal(voter);
                           }}
-                          className="sb-btn-tag"
+                          className="sb-btn-card-action"
                           title="मतदाता चुनाव टैग व प्रबंधन"
                         >
-                          <Tag size={12} /> टैग
+                          <Tag size={13} /> टैग
                         </button>
                         <button
                           type="button"
@@ -2131,24 +2139,24 @@ export default function VoterDirectoryPage() {
                             e.stopPropagation();
                             openEditModal(voter);
                           }}
-                          className="sb-btn-edit"
+                          className="sb-btn-card-action"
                           title="मतदाता विवरण संपादित करें"
                         >
-                          <Pencil size={12} /> एडिट
+                          <Pencil size={13} /> एडिट
                         </button>
                       </div>
 
-                      <div className="sb-card-bottom-right">
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             filterByFamily(voter.houseNo, voter.wardNo, voter.partNo);
                           }}
-                          className="sb-btn-family"
+                          className="sb-btn-card-family"
                           title={`मकान ${voter.houseNo} का परिवार देखें`}
                         >
-                          <UsersRound size={15} />
+                          <UsersRound size={14} /> परिवार
                         </button>
                         <button
                           type="button"
@@ -2156,19 +2164,18 @@ export default function VoterDirectoryPage() {
                             e.stopPropagation();
                             openSlipModal(voter);
                           }}
-                          className="sb-btn-parchi"
-                          title="मतदाता पर्ची देखें व WhatsApp भेजें"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                          className="sb-btn-card-slip"
+                          title="डिजिटल मतदाता पर्ची देखें व WhatsApp भेजें"
                         >
-                          <WhatsAppLogo size={14} color="#ffffff" /> पर्ची
+                          <Ticket size={14} /> डिजिटल पर्ची
                         </button>
                       </div>
                     </div>
 
-                    {/* Selected Indicator Row (ss2) */}
+                    {/* Selected Indicator Row */}
                     {isSelected && (
                       <div className="sb-selected-row">
-                        <span className="sb-selected-status">✓ चुना गया (Selected)</span>
+                        <span className="sb-selected-status">चुना गया (Selected)</span>
                         <span className="sb-selected-hint">टैप कर हटाएं</span>
                       </div>
                     )}
@@ -3776,10 +3783,10 @@ export default function VoterDirectoryPage() {
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
                   {[
-                    { label: '🟢 100% पक्का', surety: '100% पक्का', supportStatus: 'core', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
-                    { label: '🟡 50-50', surety: '50-50', supportStatus: 'swing', color: '#d97706', bg: '#fefce8', border: '#fef08a' },
-                    { label: '🔴 विरोधी', surety: 'विरोधी', supportStatus: 'opposition', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
-                    { label: '⚪ सामान्य', surety: 'सामान्य', supportStatus: 'unmarked', color: '#475569', bg: '#f8fafc', border: '#cbd5e1' },
+                    { label: '100% पक्का', surety: '100% पक्का', supportStatus: 'core', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+                    { label: '50-50', surety: '50-50', supportStatus: 'swing', color: '#d97706', bg: '#fefce8', border: '#fef08a' },
+                    { label: 'विरोधी', surety: 'विरोधी', supportStatus: 'opposition', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+                    { label: 'सामान्य', surety: 'सामान्य', supportStatus: 'unmarked', color: '#475569', bg: '#f8fafc', border: '#cbd5e1' },
                   ].map((s) => {
                     const isSelected = bulkTagFormData.surety === s.surety;
                     return (
@@ -3863,7 +3870,7 @@ export default function VoterDirectoryPage() {
                     onChange={(e) => setBulkTagFormData({ ...bulkTagFormData, isMigrant: e.target.checked })}
                     className="sb-checkbox"
                   />
-                  <span>✈️ प्रवासी मतदाता मार्क करें (Mark as Migrant)</span>
+                  <span>प्रवासी मतदाता मार्क करें (Mark as Migrant)</span>
                 </label>
                 {bulkTagFormData.isMigrant && (
                   <input
