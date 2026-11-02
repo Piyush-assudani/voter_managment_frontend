@@ -3,6 +3,8 @@
 import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
+  AlertCircle,
+  AlertTriangle,
   Check,
   FileText,
   LoaderCircle,
@@ -66,6 +68,7 @@ interface Voter {
   familyHead?: string;
   notes: string;
   voted: boolean;
+  status?: string;
 }
 
 interface Household {
@@ -166,6 +169,20 @@ export default function VoterDirectoryPage() {
   const [wardFilter, setWardFilter] = useState('');
   const [selectedCaste, setSelectedCaste] = useState('');
   const [selectedGender, setSelectedGender] = useState('');
+  const [issueFilter, setIssueFilter] = useState('');
+  const [issuesSummary, setIssuesSummary] = useState<{
+    totalVoters: number;
+    missingEpicCount: number;
+    missingHouseCount: number;
+    deletedCount: number;
+    missingPhoneCount: number;
+    totalIssues: number;
+    hasIssues: boolean;
+  } | null>(null);
+  const [isIssuesDrawerOpen, setIsIssuesDrawerOpen] = useState(false);
+  const [issuesDrawerCategory, setIssuesDrawerCategory] = useState<'all' | 'missing_epic' | 'missing_house' | 'deleted'>('all');
+  const [issuesVoters, setIssuesVoters] = useState<Voter[]>([]);
+  const [loadingIssuesVoters, setLoadingIssuesVoters] = useState(false);
   const [totalFamilies, setTotalFamilies] = useState<number>(0);
   const [isFamilyMode, setIsFamilyMode] = useState<boolean>(false);
   const [households, setHouseholds] = useState<Household[]>([]);
@@ -416,6 +433,38 @@ export default function VoterDirectoryPage() {
     } catch {}
   }, []);
 
+  // Load issues / data quality summary for current org
+  const loadIssuesSummary = useCallback(async (targetWard = wardFilter) => {
+    try {
+      const q = targetWard ? `?ward=${encodeURIComponent(targetWard)}` : '';
+      const res = await apiFetch(`/voters/issues-summary${q}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setIssuesSummary(data);
+      }
+    } catch {}
+  }, [wardFilter]);
+
+  // Load list of voters for a specific issue category in drawer
+  const loadIssuesList = useCallback(async (category = issuesDrawerCategory, ward = wardFilter) => {
+    setLoadingIssuesVoters(true);
+    try {
+      const issueKey = category === 'all' ? 'any_issue' : category;
+      const params = new URLSearchParams({
+        issue: issueKey,
+        ...(ward ? { ward } : {}),
+        pageSize: '100'
+      });
+      const res = await apiFetch(`/voters?${params.toString()}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setIssuesVoters(Array.isArray(data.voters) ? data.voters : []);
+      }
+    } catch {} finally {
+      setLoadingIssuesVoters(false);
+    }
+  }, [issuesDrawerCategory, wardFilter]);
+
   // Load paginated households for family directory mode
   const loadHouseholds = useCallback(async (targetPage = 1, ward = '', search = '') => {
     setHouseholdLoading(true);
@@ -469,7 +518,8 @@ export default function VoterDirectoryPage() {
         setIsAdmin(payload?.user?.role === 'admin');
       } catch {}
     }
-  }, [loadOrgDetails, loadWardsSummary, loadCastes, loadSlipConfig]);
+    void loadIssuesSummary();
+  }, [loadOrgDetails, loadWardsSummary, loadCastes, loadSlipConfig, loadIssuesSummary]);
 
   // Load voter records
   const loadVoters = useCallback(async (
@@ -481,6 +531,7 @@ export default function VoterDirectoryPage() {
     relative = '',
     casteParam?: string,
     genderParam?: string,
+    issueParam?: string,
   ) => {
     const isSearching = Boolean((search && search.trim()) || (relative && relative.trim()));
     // When actively searching by name/EPIC/relative, release any family/house lock
@@ -511,6 +562,7 @@ export default function VoterDirectoryPage() {
     const activeWard = selectedWard !== undefined ? selectedWard : filtersRef.current.ward;
     const activeCaste = casteParam !== undefined ? casteParam : selectedCaste;
     const activeGender = genderParam !== undefined ? genderParam : selectedGender;
+    const activeIssue = issueParam !== undefined ? issueParam : issueFilter;
 
     const familyParams = new URLSearchParams();
     if (activeWard) familyParams.set('ward', activeWard);
@@ -524,6 +576,7 @@ export default function VoterDirectoryPage() {
           ...(activeWard ? { ward: activeWard } : {}),
           ...(activeCaste ? { caste: activeCaste } : {}),
           ...(activeGender ? { gender: activeGender } : {}),
+          ...(activeIssue ? { issue: activeIssue } : {}),
           ...(filtersRef.current.supportStatus ? { supportStatus: filtersRef.current.supportStatus } : {}),
           ...(filtersRef.current.isMigrant ? { isMigrant: filtersRef.current.isMigrant } : {}),
           page: String(nextPage),
@@ -602,11 +655,12 @@ export default function VoterDirectoryPage() {
       void loadWardsSummary();
       void loadCastes();
       void loadSlipConfig();
+      void loadIssuesSummary();
       void loadVoters();
     };
     window.addEventListener('client-changed', handleClientChange);
     return () => window.removeEventListener('client-changed', handleClientChange);
-  }, [loadOrgDetails, loadWardsSummary, loadCastes, loadSlipConfig, loadVoters]);
+  }, [loadOrgDetails, loadWardsSummary, loadCastes, loadSlipConfig, loadIssuesSummary, loadVoters]);
 
   useEffect(() => () => recognitionRef.current?.stop(), []);
 
@@ -651,11 +705,19 @@ export default function VoterDirectoryPage() {
     setWardFilter(newWard);
     filtersRef.current.ward = newWard;
     setPage(1);
+    void loadIssuesSummary(newWard);
     if (isFamilyMode) {
       void loadHouseholds(1, newWard, searchQuery || houseQuery);
     } else {
-      void loadVoters(searchQuery.trim(), houseQuery.trim(), 1, newWard, '', relativeNameQuery.trim(), selectedCaste, selectedGender);
+      void loadVoters(searchQuery.trim(), houseQuery.trim(), 1, newWard, '', relativeNameQuery.trim(), selectedCaste, selectedGender, issueFilter);
     }
+  };
+
+  // Handle Issue / Anomaly filter change
+  const handleIssueChange = (newIssue: string) => {
+    setIssueFilter(newIssue);
+    setPage(1);
+    void loadVoters(searchQuery.trim(), houseQuery.trim(), 1, wardFilter, '', relativeNameQuery.trim(), selectedCaste, selectedGender, newIssue);
   };
 
   // Handle Caste filter change
@@ -1542,8 +1604,59 @@ export default function VoterDirectoryPage() {
           <ChevronDown size={16} className="smartbooth-ward-arrow" />
         </div>
 
+        {/* Issue / Anomaly Filter Dropdown */}
+        <div className="smartbooth-ward-select-wrapper" style={{ flex: '1 1 190px' }}>
+          <AlertTriangle size={15} className="smartbooth-ward-icon" style={{ color: issueFilter ? '#dc2626' : '#d97706' }} />
+          <span className="smartbooth-ward-label">समस्या:</span>
+          <select
+            value={issueFilter}
+            onChange={(e) => handleIssueChange(e.target.value)}
+            className="smartbooth-ward-select"
+            aria-label="समस्या / विसंगति फ़िल्टर"
+            style={{ fontWeight: issueFilter ? 700 : 500, color: issueFilter ? '#dc2626' : 'inherit' }}
+          >
+            <option value="">सभी रिकॉर्ड (All Records)</option>
+            <option value="missing_epic">⚠️ बिना Voter ID ({issuesSummary?.missingEpicCount || 0})</option>
+            <option value="missing_house">🏠 बिना मकान संख्या ({issuesSummary?.missingHouseCount || 0})</option>
+            <option value="deleted">🚫 विलोपित मतदाता ({issuesSummary?.deletedCount || 0})</option>
+            <option value="missing_phone">📱 बिना मोबाइल ({issuesSummary?.missingPhoneCount || 0})</option>
+            <option value="any_issue">⚡ कोई भी समस्या ({issuesSummary?.totalIssues || 0})</option>
+          </select>
+          <ChevronDown size={16} className="smartbooth-ward-arrow" />
+        </div>
+
+        {/* Side Drawer Trigger Button */}
+        {issuesSummary && issuesSummary.hasIssues && (
+          <button
+            type="button"
+            onClick={() => {
+              setIsIssuesDrawerOpen(true);
+              void loadIssuesList(issuesDrawerCategory, wardFilter);
+            }}
+            className="button-secondary"
+            style={{
+              height: '38px',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#fffbeb',
+              borderColor: '#fde68a',
+              color: '#b45309',
+              cursor: 'pointer'
+            }}
+            title="क्लिक करके सभी विसंगतियों व समस्याओं की सूची देखें"
+          >
+            <AlertCircle size={15} color="#d97706" />
+            <span>विसंगति सूची ({issuesSummary.totalIssues})</span>
+          </button>
+        )}
+
         {/* Clear filters button if active */}
-        {(selectedCaste || selectedGender || wardFilter || searchQuery || relativeNameQuery) && (
+        {(selectedCaste || selectedGender || wardFilter || issueFilter || searchQuery || relativeNameQuery) && (
           <button
             type="button"
             className="button-secondary"
@@ -1551,11 +1664,12 @@ export default function VoterDirectoryPage() {
               setSelectedCaste('');
               setSelectedGender('');
               setWardFilter('');
+              setIssueFilter('');
               setSearchQuery('');
               setRelativeNameQuery('');
               filtersRef.current.ward = '';
               setPage(1);
-              void loadVoters('', '', 1, '', '', '', '', '');
+              void loadVoters('', '', 1, '', '', '', '', '', '');
             }}
             style={{
               padding: '6px 12px',
@@ -4153,6 +4267,223 @@ export default function VoterDirectoryPage() {
               </div>
             </div>
           </section>
+        </div>
+      )}
+
+      {/* 8. Slide-over Side Drawer for Data Issues & Anomalies */}
+      {isIssuesDrawerOpen && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsIssuesDrawerOpen(false);
+          }}
+          style={{ zIndex: 1100, display: 'flex', justifyContent: 'flex-end', alignItems: 'stretch' }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            style={{
+              width: '100%',
+              maxWidth: '460px',
+              height: '100vh',
+              background: '#ffffff',
+              boxShadow: '-8px 0 25px rgba(0,0,0,0.15)',
+              display: 'flex',
+              flexDirection: 'column',
+              animation: 'slideInRight 0.25s ease-out',
+            }}
+          >
+            {/* Drawer Header */}
+            <div
+              style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid #e2e8f0',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: '#f8fafc',
+              }}
+            >
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  DATA QUALITY AUDIT
+                </span>
+                <h3 style={{ margin: '2px 0 0 0', fontSize: '16px', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <AlertTriangle size={18} color="#d97706" />
+                  मतदाता सूची विसंगतियां व समस्याएं
+                </h3>
+              </div>
+              <button
+                className="icon-button"
+                type="button"
+                onClick={() => setIsIssuesDrawerOpen(false)}
+                aria-label="बंद करें"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Category Tabs */}
+            <div style={{ display: 'flex', gap: '6px', padding: '10px 16px', borderBottom: '1px solid #f1f5f9', background: '#ffffff', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setIssuesDrawerCategory('missing_epic');
+                  void loadIssuesList('missing_epic', wardFilter);
+                }}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  border: '1px solid',
+                  background: issuesDrawerCategory === 'missing_epic' ? '#fee2e2' : '#f8fafc',
+                  borderColor: issuesDrawerCategory === 'missing_epic' ? '#fca5a5' : '#e2e8f0',
+                  color: issuesDrawerCategory === 'missing_epic' ? '#991b1b' : '#475569',
+                }}
+              >
+                बिना Voter ID ({issuesSummary?.missingEpicCount || 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIssuesDrawerCategory('missing_house');
+                  void loadIssuesList('missing_house', wardFilter);
+                }}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  border: '1px solid',
+                  background: issuesDrawerCategory === 'missing_house' ? '#fef3c7' : '#f8fafc',
+                  borderColor: issuesDrawerCategory === 'missing_house' ? '#fde68a' : '#e2e8f0',
+                  color: issuesDrawerCategory === 'missing_house' ? '#92400e' : '#475569',
+                }}
+              >
+                बिना मकान #{issuesSummary?.missingHouseCount || 0}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIssuesDrawerCategory('deleted');
+                  void loadIssuesList('deleted', wardFilter);
+                }}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  border: '1px solid',
+                  background: issuesDrawerCategory === 'deleted' ? '#f1f5f9' : '#f8fafc',
+                  borderColor: issuesDrawerCategory === 'deleted' ? '#cbd5e1' : '#e2e8f0',
+                  color: issuesDrawerCategory === 'deleted' ? '#334155' : '#475569',
+                }}
+              >
+                विलोपित ({issuesSummary?.deletedCount || 0})
+              </button>
+            </div>
+
+            {/* Voter List in Drawer */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px' }}>
+              {loadingIssuesVoters ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
+                  <LoaderCircle size={24} className="spin" />
+                </div>
+              ) : issuesVoters.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 10px', color: '#64748b' }}>
+                  <Check size={32} color="#16a34a" style={{ margin: '0 auto 8px' }} />
+                  <p style={{ margin: 0, fontWeight: 600 }}>इस श्रेणी में कोई विसंगति नहीं मिली!</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {issuesVoters.map((v) => {
+                    const isMissingEpic = !v.epic || v.epic.startsWith('VOTER_') || v.epic.startsWith('UNREADABLE_') || v.epic === '-';
+                    const isMissingHouse = !v.houseNo || v.houseNo === '-' || v.houseNo === '0';
+                    const isDeleted = v.status === 'Deleted' || v.status === 'विलोपित';
+                    return (
+                      <div
+                        key={v._id}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid #e2e8f0',
+                          background: '#ffffff',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}
+                      >
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#1e40af', background: '#dbeafe', padding: '1px 6px', borderRadius: '4px' }}>
+                              वार्ड {v.wardNo || '—'} · क्र. {v.serialNo || '—'}
+                            </span>
+                            {isMissingEpic && (
+                              <span style={{ fontSize: '10px', fontWeight: 700, color: '#991b1b', background: '#fee2e2', padding: '1px 5px', borderRadius: '4px' }}>
+                                बिना Voter ID
+                              </span>
+                            )}
+                            {isMissingHouse && (
+                              <span style={{ fontSize: '10px', fontWeight: 700, color: '#92400e', background: '#fef3c7', padding: '1px 5px', borderRadius: '4px' }}>
+                                बिना मकान
+                              </span>
+                            )}
+                            {isDeleted && (
+                              <span style={{ fontSize: '10px', fontWeight: 700, color: '#475569', background: '#e2e8f0', padding: '1px 5px', borderRadius: '4px' }}>
+                                विलोपित
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {v.nameHi || v.nameEn}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>
+                            {v.relationType || 'पिता'}: {v.relativeNameHi || v.relativeNameEn || '—'} · मकान: #{v.houseNo || '—'}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="button-secondary"
+                          onClick={() => {
+                            setIsIssuesDrawerOpen(false);
+                            openEditModal(v);
+                          }}
+                          style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
+                          title="इस मतदाता का विवरण ठीक करें"
+                        >
+                          सुधारें ✏️
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Drawer Footer with Quick Filter Button */}
+            <div style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', color: '#64748b' }}>
+                कुल सूची: {issuesVoters.length} मतदाता
+              </span>
+              <button
+                type="button"
+                className="button-primary"
+                onClick={() => {
+                  setIsIssuesDrawerOpen(false);
+                  handleIssueChange(issuesDrawerCategory === 'all' ? 'any_issue' : issuesDrawerCategory);
+                }}
+                style={{ fontSize: '12px', padding: '6px 12px' }}
+              >
+                तालिका में फ़िल्टर करें
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
