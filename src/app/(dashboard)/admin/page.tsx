@@ -5874,7 +5874,7 @@ export default function AdminPanel() {
                           </td>
                           <td style={{ padding: '12px 16px' }}>
                             <span style={{ fontFamily: 'monospace', fontWeight: '600', color: '#1a365d', background: '#edf2f7', padding: '3px 8px', borderRadius: '4px', fontSize: '12px' }}>
-                              {voter.epic || '—'}
+                              {(voter.epic && !voter.epic.startsWith('VOTER_') && !voter.epic.startsWith('UNREADABLE_')) ? voter.epic : '—'}
                             </span>
                           </td>
                           <td style={{ padding: '12px 16px', fontSize: '13px', color: '#4a5568' }}>

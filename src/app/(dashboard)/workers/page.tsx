@@ -983,7 +983,7 @@ export default function WorkersPage() {
                           {voter.nameHi || voter.nameEn || 'मतदाता'}
                         </td>
                         <td style={{ padding: '8px 14px', fontSize: '12.5px', color: '#2563eb', fontWeight: 600 }}>
-                          {voter.epic || '—'}
+                          {(voter.epic && !voter.epic.startsWith('VOTER_') && !voter.epic.startsWith('UNREADABLE_')) ? voter.epic : '—'}
                         </td>
                         <td style={{ padding: '8px 14px', fontSize: '12px', color: '#475569' }}>
                           वार्ड {voter.wardNo || '—'} · भाग {voter.partNo || '—'}

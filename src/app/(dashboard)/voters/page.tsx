@@ -832,7 +832,7 @@ export default function VoterDirectoryPage() {
       relationType: voter.relationType || 'पिता',
       age: voter.age?.toString() || '',
       gender: voter.gender || '',
-      epic: voter.epic || '',
+      epic: (voter.epic && !voter.epic.startsWith('VOTER_') && !voter.epic.startsWith('UNREADABLE_')) ? voter.epic : '',
       houseNo: voter.houseNo || '',
       wardNo: voter.wardNo || '',
       partNo: voter.partNo || '',
@@ -2020,7 +2020,7 @@ export default function VoterDirectoryPage() {
                         )}
                       </div>
                       <span className="sb-badge-epic" title="मतदाता पहचान पत्र संख्या (EPIC)">
-                        {voter.epic || '—'}
+                        {(voter.epic && !voter.epic.startsWith('VOTER_') && !voter.epic.startsWith('UNREADABLE_')) ? voter.epic : '—'}
                       </span>
                     </div>
 

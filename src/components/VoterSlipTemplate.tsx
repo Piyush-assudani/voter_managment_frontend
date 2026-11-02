@@ -329,7 +329,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
     ageGender = isRealVoter ? '—' : '28 वर्ष | पुरुष';
   }
 
-  const epic = (voter.epic && voter.epic.trim() && voter.epic.trim() !== '0') ? voter.epic.trim() : fallbackEpic;
+  const epic = (voter.epic && voter.epic.trim() && voter.epic.trim() !== '0' && !voter.epic.startsWith('VOTER_') && !voter.epic.startsWith('UNREADABLE_')) ? voter.epic.trim() : (isRealVoter ? '—' : fallbackEpic);
 
   // Helper to find ward polling station with resilient key normalization
   const getMappedStation = () => {

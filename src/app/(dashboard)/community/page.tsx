@@ -974,7 +974,7 @@ export default function CommunityPage() {
                     </td>
 
                     <td style={{ padding: '10px 14px', fontSize: '12.5px', fontWeight: 600, color: '#2563eb' }}>
-                      {voter.epic || '—'}
+                      {(voter.epic && !voter.epic.startsWith('VOTER_') && !voter.epic.startsWith('UNREADABLE_')) ? voter.epic : '—'}
                     </td>
 
                     <td style={{ padding: '10px 14px', fontSize: '12px', color: '#475569' }}>

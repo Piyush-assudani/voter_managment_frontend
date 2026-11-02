@@ -175,7 +175,7 @@ const VoterCardItem = React.memo(function VoterCardItem({
           marginTop: '4px',
         }}
       >
-        <span style={{ color: '#2563eb', fontWeight: 600 }}>{voter.epic || 'EPIC: N/A'}</span>
+        <span style={{ color: '#2563eb', fontWeight: 600 }}>{(voter.epic && !voter.epic.startsWith('VOTER_') && !voter.epic.startsWith('UNREADABLE_')) ? voter.epic : 'EPIC: N/A'}</span>
         <span>भाग: {voter.partNo || '-'} · मकान: {voter.houseNo || '-'}</span>
       </div>
     </div>
