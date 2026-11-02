@@ -7652,12 +7652,41 @@ export default function AdminPanel() {
               className="feature-modal"
               role="dialog"
               aria-modal="true"
-              style={{ maxWidth: '780px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}
+              style={{
+                maxWidth: '800px',
+                width: '95%',
+                maxHeight: '92vh',
+                overflowY: 'auto',
+                borderRadius: '16px',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                border: '1px solid #e2e8f0',
+                background: '#ffffff',
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'relative'
+              }}
             >
-              <div className="feature-modal-heading">
+              <div
+                className="feature-modal-heading"
+                style={{
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 20,
+                  background: '#ffffff',
+                  borderBottom: '1px solid #f1f5f9',
+                  padding: '16px 20px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
                 <div>
-                  <span className="eyebrow-label"><UserPlus size={13} /> TENANT PROVISIONING</span>
-                  <h2>नया क्लाइंट खाता जोड़ें (New Client)</h2>
+                  <span className="eyebrow-label" style={{ color: '#2563eb', fontWeight: 700, letterSpacing: '0.05em' }}>
+                    <UserPlus size={13} /> TENANT PROVISIONING
+                  </span>
+                  <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: '4px 0 0 0' }}>
+                    नया क्लाइंट खाता जोड़ें (New Client)
+                  </h2>
                 </div>
                 <button
                   className="icon-button"
@@ -7665,6 +7694,7 @@ export default function AdminPanel() {
                   disabled={saving}
                   onClick={() => setIsCreateClientModalOpen(false)}
                   aria-label="बंद करें"
+                  style={{ borderRadius: '8px', padding: '6px' }}
                 >
                   <X size={18} />
                 </button>
@@ -7898,16 +7928,46 @@ export default function AdminPanel() {
                   </div>
                 )}
 
-                <div className="modal-actions" style={{ marginTop: '20px', borderTop: '1px solid #f1f5f9', paddingTop: '14px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <div
+                  className="modal-actions"
+                  style={{
+                    position: 'sticky',
+                    bottom: 0,
+                    zIndex: 20,
+                    background: '#ffffff',
+                    borderTop: '1px solid #e2e8f0',
+                    padding: '14px 20px',
+                    marginTop: '20px',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: '10px',
+                    boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.05)'
+                  }}
+                >
                   <button
                     type="button"
                     className="button-secondary"
                     disabled={saving}
                     onClick={() => setIsCreateClientModalOpen(false)}
+                    style={{ borderRadius: '8px', padding: '8px 16px', fontWeight: 600 }}
                   >
                     रद्द करें
                   </button>
-                  <button className="button-primary" type="submit" disabled={saving}>
+                  <button
+                    className="button-primary"
+                    type="submit"
+                    disabled={saving}
+                    style={{
+                      borderRadius: '8px',
+                      padding: '8px 20px',
+                      fontWeight: 700,
+                      background: '#2563eb',
+                      borderColor: '#1d4ed8',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
                     {saving ? <LoaderCircle size={15} className="spin" /> : <UserPlus size={15} />}
                     {saving ? 'क्लाइंट बन रहा है...' : 'हाँ, क्लाइंट खाता बनाएँ'}
                   </button>

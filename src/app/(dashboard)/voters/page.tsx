@@ -2509,9 +2509,32 @@ export default function VoterDirectoryPage() {
               </label>
 
               {actionMessage && (
-                <p className="form-error" role="alert" style={{ whiteSpace: 'pre-wrap' }}>
-                  {actionMessage}
-                </p>
+                <div
+                  role="alert"
+                  style={{
+                    margin: '12px 0',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    lineHeight: '1.4',
+                    background: actionMessage.includes('सफलतापूर्वक') || actionMessage.includes('सफल') || actionMessage.includes('भेज') ? '#f0fdf4' : '#fef2f2',
+                    border: `1px solid ${actionMessage.includes('सफलतापूर्वक') || actionMessage.includes('सफल') || actionMessage.includes('भेज') ? '#bbf7d0' : '#fecaca'}`,
+                    color: actionMessage.includes('सफलतापूर्वक') || actionMessage.includes('सफल') || actionMessage.includes('भेज') ? '#166534' : '#991b1b',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '8px',
+                    whiteSpace: 'pre-wrap'
+                  }}
+                >
+                  <span style={{ flexShrink: 0, marginTop: '2px' }}>
+                    {actionMessage.includes('सफलतापूर्वक') || actionMessage.includes('सफल') || actionMessage.includes('भेज') ? (
+                      <Check size={16} color="#16a34a" />
+                    ) : (
+                      <AlertCircle size={16} color="#dc2626" />
+                    )}
+                  </span>
+                  <span style={{ fontWeight: 500 }}>{actionMessage}</span>
+                </div>
               )}
 
               <div

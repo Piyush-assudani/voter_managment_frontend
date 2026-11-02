@@ -3689,9 +3689,31 @@ export default function SlipsPage() {
               </label>
 
               {wpMessage && (
-                <p className="form-error" style={{ fontSize: '12px', color: wpMessage.includes('कटा') ? '#166534' : '#dc2626' }}>
-                  {wpMessage}
-                </p>
+                <div
+                  role="alert"
+                  style={{
+                    margin: '10px 0',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    fontSize: '12.5px',
+                    lineHeight: '1.4',
+                    background: wpMessage.includes('कटा') || wpMessage.includes('सफलतापूर्वक') || wpMessage.includes('सफल') ? '#f0fdf4' : '#fef2f2',
+                    border: `1px solid ${wpMessage.includes('कटा') || wpMessage.includes('सफलतापूर्वक') || wpMessage.includes('सफल') ? '#bbf7d0' : '#fecaca'}`,
+                    color: wpMessage.includes('कटा') || wpMessage.includes('सफलतापूर्वक') || wpMessage.includes('सफल') ? '#166534' : '#991b1b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <span style={{ flexShrink: 0 }}>
+                    {wpMessage.includes('कटा') || wpMessage.includes('सफलतापूर्वक') || wpMessage.includes('सफल') ? (
+                      <Check size={15} color="#16a34a" />
+                    ) : (
+                      <AlertCircle size={15} color="#dc2626" />
+                    )}
+                  </span>
+                  <span>{wpMessage}</span>
+                </div>
               )}
 
               <div className="modal-actions" style={{ marginTop: '14px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
