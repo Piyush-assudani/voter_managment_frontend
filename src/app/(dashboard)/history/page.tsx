@@ -430,7 +430,14 @@ export default function DispatchHistoryPage() {
                             )}
                           </div>
                         ) : isFailed ? (
-                          <span className="record-status status-pending">विफल</span>
+                          <div>
+                            <span className="record-status status-pending">विफल</span>
+                            {item.errorMessage && (
+                              <div style={{ fontSize: '0.68rem', color: '#b91c1c', marginTop: '3px', maxWidth: '200px', lineHeight: '1.2' }} title={item.errorMessage}>
+                                {item.errorMessage.length > 50 ? `${item.errorMessage.slice(0, 50)}…` : item.errorMessage}
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <span className="record-status">भेजा जा रहा है</span>
                         )}
