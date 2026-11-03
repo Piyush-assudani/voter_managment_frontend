@@ -7320,3 +7320,135 @@ body.client-protected img {
   font-weight: 750;
   color: var(--card-color, #059669);
 }
+
+.grid-btn-ward {
+  display: block;
+  font-size: 8.5px;
+  font-weight: 800;
+  opacity: 0.85;
+  margin-top: -2px;
+}
+
+/* ========================================================
+   POLL DESK & VOTER REPORT PRINT STYLES
+   ======================================================== */
+.poll-desk-print-sheet {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 6mm;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+
+  .app-shell,
+  .app-main,
+  .page-content,
+  .work-page,
+  .records-panel {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Hide screen chrome & controls */
+  .topbar,
+  .app-sidebar,
+  .app-footer,
+  .page-intro,
+  .work-toolbar,
+  .metric-grid,
+  .records-toolbar,
+  .poll-number-grid,
+  .filter-tabs,
+  .table-scroll,
+  .records-footnote,
+  .empty-state,
+  .feature-actions,
+  .feature-filter-form,
+  .feature-modal-backdrop,
+  .print-control,
+  button {
+    display: none !important;
+  }
+
+  /* Display dedicated printable sheet */
+  .poll-desk-print-sheet {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .poll-print-header {
+    border-bottom: 2px solid #0f172a;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+  }
+
+  .poll-print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 11px !important;
+    line-height: 1.3 !important;
+  }
+
+  .poll-print-table thead {
+    display: table-header-group !important;
+  }
+
+  .poll-print-table th {
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    border: 1px solid #64748b !important;
+    padding: 5px 6px !important;
+    text-align: left;
+    font-size: 11px !important;
+  }
+
+  .poll-print-table td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 4px 6px !important;
+    color: #0f172a !important;
+    vertical-align: middle;
+  }
+
+  .poll-print-table tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .poll-print-footer {
+    margin-top: 18px;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
