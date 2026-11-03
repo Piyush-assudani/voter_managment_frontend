@@ -8,7 +8,7 @@ const accessModules = [
   ['voters', 'मतदाता सूची'],
   ['poll-desk', 'मतदान डेस्क'],
   ['turnout', 'टर्नआउट'],
-  ['warroom', 'वॉर रूम'],
+  ['warroom', 'इलेक्शन मैनेजमेंट'],
   ['history', 'Dispatch इतिहास'],
   ['community', 'समुदाय खोज'],
   ['workers', 'कार्यकर्ता'],
@@ -490,17 +490,17 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
                     {isPlatformAdmin && !embeddedOrganizationId && (account.organizationName || account.organizationId) && (
                       <span style={{ fontSize: '11px', fontWeight: 600, background: '#f1f5f9', color: '#475569', padding: '3px 8px', borderRadius: '6px' }}>
-                        🏢 {account.organizationName || account.organizationId}
+                        {account.organizationName || account.organizationId}
                       </span>
                     )}
                     <span style={{ fontSize: '11px', fontWeight: 600, background: '#e0f2fe', color: '#0369a1', padding: '3px 8px', borderRadius: '6px' }}>
-                      👤 {account.role}
+                      {account.role}
                     </span>
                     <span style={{ fontSize: '11px', fontWeight: 600, background: '#fef3c7', color: '#92400e', padding: '3px 8px', borderRadius: '6px' }}>
-                      📍 {account.scope}{account.scopeValue ? `: ${account.scopeValue}` : ''}
+                      {account.scope}{account.scopeValue ? `: ${account.scopeValue}` : ''}
                     </span>
                     <span style={{ fontSize: '11px', fontWeight: 600, background: '#f3e8ff', color: '#6b21a8', padding: '3px 8px', borderRadius: '6px' }}>
-                      🧩 {account.modules.length} मॉड्यूल्स
+                      {account.modules.length} मॉड्यूल्स
                     </span>
                   </div>
 
@@ -605,7 +605,7 @@ function AccountForm({
         {(mode === 'create' || mode === 'edit') && <>
           <label>पूरा नाम<input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required /></label>
           <label>Email<input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} required={mode === 'create'} disabled={mode === 'edit'} /></label>
-          <label>फोन<input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} /></label>
+          <label>फोन (10 अंक)<input type="tel" inputMode="numeric" maxLength={10} placeholder="10 अंकों का मोबाइल नंबर" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value.replace(/\D/g, '').slice(0, 10) }))} /></label>
         </>}
         {(mode === 'create' || mode === 'edit' || mode === 'password') && (
           <label>

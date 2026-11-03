@@ -281,11 +281,11 @@ export default function DashboardHomePage() {
               boxShadow: `0 4px 12px ${item.color}35`,
             }}
           >
-            <Icon size={22} strokeWidth={2.4} />
+            <Icon size={25} strokeWidth={2.3} />
           </div>
           <span className="matdata-item-card-btn">
             खोलें
-            <ArrowRight size={12} />
+            <ArrowRight size={13} />
           </span>
         </div>
 
