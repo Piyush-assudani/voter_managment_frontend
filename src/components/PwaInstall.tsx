@@ -333,7 +333,7 @@ function PwaInstallInstructionsModal({ onClose, isIOS }: { onClose: () => void; 
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="VijaySetu" style={{ width: '34px', height: '34px', objectFit: 'contain' }} />
+            <img src="/logo.webp" alt="VijaySetu" style={{ width: '34px', height: '34px', objectFit: 'contain' }} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/logo.png'; }} />
           </div>
           <div>
             <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>

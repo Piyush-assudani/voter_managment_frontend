@@ -12,7 +12,7 @@ import {
   LogOut
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 const menuItems = [
   { name: 'मतदाता खोज व पर्ची', description: 'पर्ची वितरण व त्वरित खोज', icon: Search, href: '/' },
@@ -29,12 +29,19 @@ const menuItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    window.localStorage.removeItem('token');
+    window.localStorage.removeItem('selectedClientOrgId');
+    router.push('/login');
+  };
 
   return (
     <aside className="w-80 bg-[#111827] border-r border-slate-800 flex flex-col h-full shadow-sm text-slate-100">
       <div className="p-6 border-b border-slate-800 flex items-center space-x-3">
         <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30 overflow-hidden">
-          <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+          <img src="/logo.webp" alt="Logo" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/logo.png'; }} />
         </div>
         <div>
           <h1 className="font-bold text-xl text-white tracking-tight">VijaySetu</h1>
@@ -62,7 +69,11 @@ export default function Sidebar() {
       </div>
 
       <div className="p-4 border-t border-slate-800">
-        <button className="flex items-center space-x-3 w-full p-3 rounded-xl hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors group">
+        <button
+          onClick={handleLogout}
+          type="button"
+          className="flex items-center space-x-3 w-full p-3 rounded-xl hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors group cursor-pointer"
+        >
           <div className="p-2 rounded-lg bg-slate-800 group-hover:bg-red-500/20 group-hover:shadow-sm">
              <LogOut size={18} />
           </div>

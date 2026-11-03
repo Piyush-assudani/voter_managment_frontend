@@ -3364,7 +3364,7 @@ export default function SlipsPage() {
                     प्रत्याशी का नाम (हिंदी):
                     <input
                       type="text"
-                      placeholder="उदा. प्रसन्न चंद मेहता"
+                      placeholder="उदा. प्रत्याशी का नाम"
                       value={editingConfig.candidateName || ''}
                       onChange={(e) => setEditingConfig({ ...editingConfig, candidateName: e.target.value })}
                       style={{ marginTop: '4px' }}
@@ -3375,7 +3375,7 @@ export default function SlipsPage() {
                     Candidate Name (English):
                     <input
                       type="text"
-                      placeholder="e.g. Prasann Chand Mehta"
+                      placeholder="e.g. Candidate Name"
                       value={editingConfig.candidateNameEn || ''}
                       onChange={(e) => setEditingConfig({ ...editingConfig, candidateNameEn: e.target.value })}
                       style={{ marginTop: '4px' }}
@@ -3388,7 +3388,7 @@ export default function SlipsPage() {
                     पार्टी का नाम (Party Name):
                     <input
                       type="text"
-                      placeholder="उदा. भारतीय जनता पार्टी (भाजपा) प्रत्याशी"
+                      placeholder="उदा. पार्टी या निर्दलीय प्रत्याशी"
                       value={editingConfig.partyName || ''}
                       onChange={(e) => setEditingConfig({ ...editingConfig, partyName: e.target.value })}
                       style={{ marginTop: '4px' }}
@@ -3399,7 +3399,7 @@ export default function SlipsPage() {
                     चुनाव चिन्ह (Symbol):
                     <input
                       type="text"
-                      placeholder="उदा. कमल का फूल / हाथ"
+                      placeholder="उदा. चुनाव चिन्ह का नाम"
                       value={editingConfig.partySymbolName || ''}
                       onChange={(e) => setEditingConfig({ ...editingConfig, partySymbolName: e.target.value })}
                       style={{ marginTop: '4px' }}
@@ -3424,7 +3424,7 @@ export default function SlipsPage() {
                     शीर्ष अपील (Top Headline):
                     <input
                       type="text"
-                      placeholder="(1 नंबर पर कमल का फूल का बटन दबाएं)"
+                      placeholder="उदा. बटन दबाकर भारी मतों से विजयी बनाएं"
                       value={editingConfig.appealHeadline || ''}
                       onChange={(e) => setEditingConfig({ ...editingConfig, appealHeadline: e.target.value })}
                       style={{ marginTop: '4px' }}
@@ -3500,7 +3500,7 @@ export default function SlipsPage() {
                     EVM बैनर अपील (EVM Banner Appeal Text):
                     <input
                       type="text"
-                      placeholder="वार्ड नंबर 82 से भाजपा प्रत्याशी प्रसन्न चंद मेहता को अपना अमूल्य वोट देकर भारी मतों से विजय बनाएं।"
+                      placeholder="उदा. अपने प्रत्याशी को अपना अमूल्य वोट देकर भारी मतों से विजयी बनाएं।"
                       value={editingConfig.appealText || ''}
                       onChange={(e) => setEditingConfig({ ...editingConfig, appealText: e.target.value })}
                       style={{ marginTop: '4px' }}

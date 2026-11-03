@@ -15,6 +15,22 @@
   box-sizing: border-box;
 }
 
+/* Bulletproof text wrapping & responsive containment on all screens (especially older Androids ~360px) */
+p, span, h1, h2, h3, h4, h5, h6, label, div, td, th {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+input, select, textarea, button {
+  max-width: 100%;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;

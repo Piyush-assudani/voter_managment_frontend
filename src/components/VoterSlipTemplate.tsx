@@ -27,18 +27,18 @@ export interface SlipConfig {
 }
 
 export const defaultSlipConfig: SlipConfig = {
-  candidateName: 'प्रसन्न चंद मेहता',
-  candidateNameEn: 'Prasann Chand Mehta',
-  partyName: 'भारतीय जनता पार्टी (भाजपा) प्रत्याशी',
-  partySymbolName: 'कमल का फूल',
+  candidateName: 'माननीय प्रत्याशी',
+  candidateNameEn: 'Candidate Name',
+  partyName: 'चुनाव प्रत्याशी',
+  partySymbolName: 'चुनाव चिन्ह',
   partySymbolImage: '',
   candidateImage: '',
   evmNumber: '1',
-  appealHeadline: '(1 नंबर पर कमल का फूल का बटन दबाएं)',
-  subTitle: 'मतदाता सूचना पर्ची (Voter Slip) · वार्ड नंबर 82 Jodhpur',
-  appealText: 'वार्ड नंबर 82 से भाजपा प्रत्याशी प्रसन्न चंद मेहता को अपना अमूल्य वोट देकर भारी मतों से विजय बनाएं।',
-  footerAppeal: 'कमल का बटन दबाएं और भारी मतों से विजयी बनाएं',
-  pollingStationFallback: '569 - सामुदायिक भवन, जाटा बास, महामंदिर, जोधपुर',
+  appealHeadline: '(बटन दबाकर भारी मतों से विजयी बनाएं)',
+  subTitle: 'मतदाता सूचना पर्ची (Voter Information Slip)',
+  appealText: 'लोकतंत्र के महापर्व में मतदान अवश्य करें और अपने लोकप्रिय प्रत्याशी को भारी मतों से विजयी बनाएं।',
+  footerAppeal: 'मतदान आपका अधिकार व कर्तव्य है',
+  pollingStationFallback: 'मतदान केंद्र (Polling Station)',
   wardPollingStations: {},
   useHeaderGraphic: false,
   headerGraphicImage: '',
@@ -967,7 +967,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', width: '100%', margin: isRibbonHidden ? '4px 0' : '2px 0' }}>
                     <InlineText
                       value={merged.candidateName}
-                      fallback="प्रसन्न चंद मेहता"
+                      fallback="माननीय प्रत्याशी"
                       placeholder="प्रत्याशी नाम (हिंदी)"
                       isEditable={true}
                       onChange={(v) => updateField('candidateName', v)}
@@ -989,7 +989,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                     />
                     <InlineText
                       value={merged.candidateNameEn}
-                      fallback="Prasann Chand Mehta"
+                      fallback="Candidate Name"
                       placeholder="Candidate Name (English)"
                       isEditable={true}
                       onChange={(v) => updateField('candidateNameEn', v)}

@@ -435,6 +435,7 @@ export default function AdminPanel() {
   const [demoClientName, setDemoClientName] = useState('');
   const [demoCustomEmail, setDemoCustomEmail] = useState('');
   const [demoCustomPassword, setDemoCustomPassword] = useState('');
+  const [showDemoCustomPassword, setShowDemoCustomPassword] = useState(false);
   const [latestGenerated, setLatestGenerated] = useState<DemoUserRecord | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [demoSort, setDemoSort] = useState<SortState>({ field: 'date', direction: 'desc' });
@@ -640,6 +641,7 @@ export default function AdminPanel() {
     status: string;
     category?: string;
     language?: string;
+    hasImageHeader?: boolean;
     components?: Array<{
       type: string;
       format?: string;
@@ -2619,7 +2621,7 @@ export default function AdminPanel() {
                       <input
                         value={tenantSlipConfig.candidateName || ''}
                         onChange={(e) => setTenantSlipConfig({ ...tenantSlipConfig, candidateName: e.target.value })}
-                        placeholder="उदा. प्रसन्न चंद मेहता"
+                        placeholder="उदा. प्रत्याशी का नाम"
                       />
                     </label>
                     <label style={{ fontSize: '12px', fontWeight: 600 }}>
@@ -2627,7 +2629,7 @@ export default function AdminPanel() {
                       <input
                         value={tenantSlipConfig.candidateNameEn || ''}
                         onChange={(e) => setTenantSlipConfig({ ...tenantSlipConfig, candidateNameEn: e.target.value })}
-                        placeholder="Prasann Chand Mehta"
+                        placeholder="e.g. Candidate Name"
                       />
                     </label>
                     <label style={{ fontSize: '12px', fontWeight: 600 }}>
@@ -2635,7 +2637,7 @@ export default function AdminPanel() {
                       <input
                         value={tenantSlipConfig.partyName || ''}
                         onChange={(e) => setTenantSlipConfig({ ...tenantSlipConfig, partyName: e.target.value })}
-                        placeholder="भाजपा प्रत्याशी"
+                        placeholder="उदा. पार्टी या निर्दलीय प्रत्याशी"
                       />
                     </label>
                     <label style={{ fontSize: '12px', fontWeight: 600 }}>
@@ -2643,7 +2645,7 @@ export default function AdminPanel() {
                       <input
                         value={tenantSlipConfig.partySymbolName || ''}
                         onChange={(e) => setTenantSlipConfig({ ...tenantSlipConfig, partySymbolName: e.target.value })}
-                        placeholder="कमल का फूल"
+                        placeholder="उदा. चुनाव चिन्ह का नाम"
                       />
                     </label>
                     <label style={{ fontSize: '12px', fontWeight: 600 }}>
@@ -3526,11 +3528,24 @@ export default function AdminPanel() {
 
                   <label>
                     कस्टम पासवर्ड (खाली छोड़ने पर स्वतः बनेगा)
-                    <input
-                      placeholder="उदा. Demo@2024"
-                      value={demoCustomPassword}
-                      onChange={(e) => setDemoCustomPassword(e.target.value)}
-                    />
+                    <span className="feature-password-field" style={{ marginTop: '4px' }}>
+                      <KeyRound size={14} />
+                      <input
+                        type={showDemoCustomPassword ? 'text' : 'password'}
+                        placeholder="सुरक्षित पासवर्ड दर्ज करें"
+                        value={demoCustomPassword}
+                        onChange={(e) => setDemoCustomPassword(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="password-eye-btn"
+                        onClick={() => setShowDemoCustomPassword((prev) => !prev)}
+                        title={showDemoCustomPassword ? 'पासवर्ड छिपाएं' : 'पासवर्ड देखें'}
+                        aria-label={showDemoCustomPassword ? 'पासवर्ड छिपाएं' : 'पासवर्ड देखें'}
+                      >
+                        {showDemoCustomPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </span>
                   </label>
                 </div>
 
@@ -4405,7 +4420,7 @@ export default function AdminPanel() {
                           style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px' }}
                           value={targetSlipConfig.candidateName || ''}
                           onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, candidateName: e.target.value })}
-                          placeholder="उदा. प्रसन्न चंद मेहता"
+                          placeholder="उदा. प्रत्याशी का नाम"
                         />
                       </label>
                       <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
@@ -4414,7 +4429,7 @@ export default function AdminPanel() {
                           style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px' }}
                           value={targetSlipConfig.candidateNameEn || ''}
                           onChange={(e) => setTargetSlipConfig({ ...targetSlipConfig, candidateNameEn: e.target.value })}
-                          placeholder="Prasann Chand Mehta"
+                          placeholder="e.g. Candidate Name"
                         />
                       </label>
                     </div>
@@ -7204,7 +7219,7 @@ export default function AdminPanel() {
                               ...editingTenant,
                               slipConfig: { ...(editingTenant.slipConfig || defaultSlipConfig), candidateName: e.target.value }
                             })}
-                            placeholder="प्रसन्न चंद मेहता"
+                            placeholder="उदा. प्रत्याशी का नाम"
                           />
                         </label>
                         <label style={{ fontSize: '12px', fontWeight: 600 }}>
@@ -7215,7 +7230,7 @@ export default function AdminPanel() {
                               ...editingTenant,
                               slipConfig: { ...(editingTenant.slipConfig || defaultSlipConfig), candidateNameEn: e.target.value }
                             })}
-                            placeholder="Prasann Chand Mehta"
+                            placeholder="e.g. Candidate Name"
                           />
                         </label>
                       </div>

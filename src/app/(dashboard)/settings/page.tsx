@@ -11,6 +11,7 @@ export default function SettingsPage() {
   
   const [showOld, setShowOld] = useState(false);
   const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -123,14 +124,19 @@ export default function SettingsPage() {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">नए पासवर्ड की पुष्टि करें</label>
-            <input
-              type={showNew ? "text" : "password"}
-              required
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
-              placeholder="नया पासवर्ड दोबारा दर्ज करें"
-            />
+            <div className="relative flex items-center">
+              <input
+                type={showConfirm ? "text" : "password"}
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm pr-10"
+                placeholder="नया पासवर्ड दोबारा दर्ज करें"
+              />
+              <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 text-gray-400 hover:text-gray-600">
+                {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           <div className="pt-2">

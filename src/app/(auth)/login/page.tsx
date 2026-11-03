@@ -49,7 +49,7 @@ export default function LoginPage() {
       <section className="auth-card">
         <div className="auth-brand">
           <span className="auth-mark" style={{ padding: '6px', overflow: 'hidden' }}>
-            <img src="/logo.png" alt="VijaySetu Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            <img src="/logo.webp" alt="VijaySetu Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/logo.png'; }} />
           </span>
           <span><strong style={{ fontFamily: 'inherit' }}>VijaySetu</strong><small>FIELD OPERATIONS</small></span>
         </div>
