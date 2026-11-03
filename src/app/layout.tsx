@@ -38,8 +38,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'VijaySetu | Field workspace',
-  description: 'A clear, reliable workspace for voter and booth operations.',
+  title: 'VijaySetu (विजयसेतु) | चुनाव प्रबंधन प्रणाली',
+  description: 'विजयसेतु - आधुनिक मतदाता खोज, लाइव पोलिंग डेस्क, और इलेक्शन मैनेजमेंट प्लेटफॉर्म।',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
