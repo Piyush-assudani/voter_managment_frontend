@@ -1,139 +1,158 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import {
-  Ticket,
   CheckSquare,
   Activity,
   TrendingUp,
-  Send,
   Tag,
-  UsersRound,
   ContactRound,
   Plane,
+  Send,
   UserCog,
   Database,
-  ArrowRight,
   ShieldCheck,
-  Building2,
+  Ticket,
+  Users,
+  ArrowRight,
+  Vote,
+  Sparkles,
 } from 'lucide-react';
 import { apiFetch, decodeJwtPayload } from '@/lib/api';
 import { PwaInstallDashboardCard } from '@/components/PwaInstall';
 
-interface LauncherModule {
+interface NavModule {
   id: string;
   name: string;
   subtitle: string;
   href: string;
-  icon: React.ComponentType<{ size?: number; className?: string; color?: string }>;
-  iconBg: string;
+  icon: React.ComponentType<{ size?: number; className?: string; color?: string; strokeWidth?: number }>;
+  color: string;
   module: string;
+  metaBadge?: string;
   adminOnly?: boolean;
   highlight?: boolean;
 }
 
-const launcherModules: LauncherModule[] = [
+// Section A: Core Election Operations & Management
+const coreAndWarroomModules: NavModule[] = [
   {
     id: 'voters',
     name: 'मतदाता खोज व पर्ची',
-    subtitle: 'मतदाता खोज, परिवार व पर्ची',
+    subtitle: 'मतदाता खोज, परिवार व 1-क्लिक WhatsApp पर्ची',
     href: '/voters',
     icon: Ticket,
-    iconBg: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+    color: '#2563eb', // Royal Blue
     module: 'voters',
+    metaBadge: '1-क्लिक पर्ची',
   },
   {
     id: 'poll-desk',
     name: 'मतदान दिवस डेस्क',
-    subtitle: 'बूथ-वार लाइव मार्किंग',
+    subtitle: 'बूथ-वार मतदाताओं की तुरंत लाइव मार्किंग',
     href: '/poll-desk',
     icon: CheckSquare,
-    iconBg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+    color: '#059669', // Emerald Green (Featured in Screenshot)
     module: 'poll-desk',
+    metaBadge: 'लाइव पोलिंग',
+    highlight: true,
   },
   {
     id: 'turnout',
-    name: 'लाइव टर्नआउट',
-    subtitle: 'रियल-टाइम मतदान दर',
+    name: 'लाइव टर्नआउट ट्रैकर',
+    subtitle: 'बूथ-वार मतदान प्रतिशत, रुझान व गति विश्लेषण',
     href: '/turnout',
     icon: Activity,
-    iconBg: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+    color: '#0284c7', // Cyan Blue
     module: 'turnout',
+    metaBadge: 'रियल-टाइम ग्राफ',
   },
   {
     id: 'warroom',
-    name: 'राजनीतिक वॉर-रूम',
-    subtitle: 'रणनीतिक विश्लेषण व आंकड़े',
+    name: 'इलेक्शन मैनेजमेंट',
+    subtitle: 'जीत-हार समीकरण, निर्णायक बढ़त व प्रमुख आंकड़े',
     href: '/warroom',
     icon: TrendingUp,
-    iconBg: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
+    color: '#db2777', // Rose Pink
     module: 'warroom',
-  },
-  {
-    id: 'history',
-    name: 'भेजी गई पर्चियाँ',
-    subtitle: 'WhatsApp डिस्पैच ऑडिट',
-    href: '/history',
-    icon: Send,
-    iconBg: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-    module: 'history',
+    metaBadge: 'समीकरण व बढ़त',
   },
   {
     id: 'community',
     name: 'समुदाय व सामाजिक समीकरण',
-    subtitle: 'Community Demographics & Analytics',
+    subtitle: 'वार्ड व बूथ अनुसार जातिगत मतदाता समीकरण व बाहुल्यता',
     href: '/community',
     icon: Tag,
-    iconBg: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+    color: '#7c3aed', // Purple
     module: 'community',
+    metaBadge: 'जातिगत जनसांख्यिकी',
   },
+];
+
+// Section B: Field Operations, Distribution & Administration
+const fieldAndAdminModules: NavModule[] = [
   {
     id: 'slips',
     name: 'बल्क पर्ची प्रिंट शीट',
-    subtitle: 'A4 प्रिंट शीट्स व बल्क पर्ची',
+    subtitle: 'A4 कागज़ पर 8-8 मतदाता पर्चियाँ एक साथ प्रिंट करें',
     href: '/slips',
-    icon: UsersRound,
-    iconBg: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+    icon: Users,
+    color: '#f97316', // Amber Coral
     module: 'voters',
+    metaBadge: '8-in-1 A4 शीट',
   },
   {
     id: 'workers',
-    name: 'कार्यकर्ता प्रबंधन',
-    subtitle: 'पन्ना प्रमुख व दायित्व ट्रैकिंग',
+    name: 'कार्यकर्ता व पन्ना प्रमुख',
+    subtitle: 'कार्यकर्ताओं को पन्ना, बूथ व वार्ड की ज़िम्मेदारी सौंपें',
     href: '/workers',
     icon: ContactRound,
-    iconBg: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+    color: '#4f46e5', // Indigo
     module: 'workers',
+    metaBadge: 'फील्ड टीम',
   },
   {
     id: 'migrants',
-    name: 'प्रवासी मतदाता',
-    subtitle: 'कॉलिंग व यात्रा समन्वय सूची',
+    name: 'प्रवासी मतदाता सूची',
+    subtitle: 'गाँव/शहर से बाहर रहने वाले मतदाताओं की कॉलिंग लिस्ट',
     href: '/migrants',
     icon: Plane,
-    iconBg: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+    color: '#0d9488', // Teal
     module: 'migrants',
+    metaBadge: 'कॉलिंग समन्वय',
+  },
+  {
+    id: 'history',
+    name: 'भेजी गई पर्चियाँ ऑडिट',
+    subtitle: 'WhatsApp पर्ची वितरण रिकॉर्ड, स्थिति व डिलीवरी लॉग',
+    href: '/history',
+    icon: Send,
+    color: '#ea580c', // Orange
+    module: 'history',
+    metaBadge: 'डिस्पैच लॉग',
   },
   {
     id: 'accounts',
     name: 'खाते व अनुमतियाँ',
-    subtitle: 'उप-खाते व दल प्रबंधन',
+    subtitle: 'प्रत्याशी टीम, व्यवस्थापक व कार्यकर्ताओं के सुरक्षित लॉगिन',
     href: '/accounts',
     icon: UserCog,
-    iconBg: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
+    color: '#dc2626', // Red
     module: 'accounts',
+    metaBadge: 'सुरक्षित एक्सेस',
   },
   {
     id: 'admin',
     name: 'सुपर एडमिन कंसोल',
-    subtitle: 'सिस्टम, टेनेंट्स व डेटा इम्पोर्ट',
+    subtitle: 'वोटर लिस्ट OCR, पर्ची ब्रांडिंग व संपूर्ण सिस्टम सेटिंग्स',
     href: '/admin',
     icon: Database,
-    iconBg: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+    color: '#065f46', // Forest Teal
     module: 'admin',
     adminOnly: true,
     highlight: true,
+    metaBadge: 'सिस्टम कंट्रोल',
   },
 ];
 
@@ -145,6 +164,20 @@ export default function DashboardHomePage() {
     organizationName?: string;
     role?: string;
   }>({});
+  const [stats, setStats] = useState<{
+    totalVoters: number;
+    wardCount: number;
+    votedCount: number;
+    turnoutPercent: number;
+    dispatchesCount: number;
+  }>({
+    totalVoters: 0,
+    wardCount: 0,
+    votedCount: 0,
+    turnoutPercent: 0,
+    dispatchesCount: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     try {
@@ -169,31 +202,59 @@ export default function DashboardHomePage() {
     } catch {}
   }, []);
 
-  const [stats, setStats] = useState<{ totalVoters: number }>({ totalVoters: 0 });
-
-  // Filter modules based on user permissions & admin role
   const isWorker = userInfo.role === 'worker';
-  const visibleModules = launcherModules.filter((mod) => {
-    if (mod.adminOnly && !isAdmin) return false;
-    if (isWorker && (mod.module === 'accounts' || mod.module === 'admin')) return false;
-    if (allowedModules && !allowedModules.includes(mod.module) && !isAdmin) {
-      return false;
-    }
-    return true;
-  });
 
-  useEffect(() => {
-    const loadStats = async () => {
-      try {
-        const res = await apiFetch('/voters?page=1&pageSize=1', { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && typeof data.total === 'number') {
-            setStats({ totalVoters: data.total });
+  // Filter modules helper: workers ONLY see modules explicitly assigned to them
+  const filterList = (list: NavModule[]) => {
+    return list.filter((mod) => {
+      if (mod.adminOnly && !isAdmin) return false;
+      if (isWorker) {
+        if (mod.module === 'accounts' || mod.module === 'admin') return false;
+        return Array.isArray(allowedModules) && allowedModules.includes(mod.module);
+      }
+      if (allowedModules && !allowedModules.includes(mod.module) && !isAdmin) return false;
+      return true;
+    });
+  };
+
+  const visibleCore = useMemo(() => filterList(coreAndWarroomModules), [isAdmin, isWorker, allowedModules]);
+  const visibleField = useMemo(() => filterList(fieldAndAdminModules), [isAdmin, isWorker, allowedModules]);
+
+  // Load real data stats
+  const loadStats = async () => {
+    setLoading(true);
+    const start = Date.now();
+    try {
+      const res = await apiFetch('/features/dashboard', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data) {
+          setStats({
+            totalVoters: typeof data.totalVoters === 'number' ? data.totalVoters : 0,
+            wardCount: typeof data.wardCount === 'number' ? data.wardCount : 0,
+            votedCount: typeof data.votedCount === 'number' ? data.votedCount : 0,
+            turnoutPercent: typeof data.turnoutPercent === 'number' ? data.turnoutPercent : 0,
+            dispatchesCount: typeof data.dispatchesCount === 'number' ? data.dispatchesCount : 0,
+          });
+        }
+      } else {
+        const vRes = await apiFetch('/voters?page=1&pageSize=1', { cache: 'no-store' });
+        if (vRes.ok) {
+          const vData = await vRes.json();
+          if (vData && typeof vData.total === 'number') {
+            setStats((prev) => ({ ...prev, totalVoters: vData.total }));
           }
         }
-      } catch {}
-    };
+      }
+    } catch {
+    } finally {
+      const elapsed = Date.now() - start;
+      const remaining = Math.max(0, 200 - elapsed);
+      setTimeout(() => setLoading(false), remaining);
+    }
+  };
+
+  useEffect(() => {
     void loadStats();
 
     const handleClientChange = () => {
@@ -203,265 +264,188 @@ export default function DashboardHomePage() {
     return () => window.removeEventListener('client-changed', handleClientChange);
   }, []);
 
+  const renderCard = (item: NavModule) => {
+    const Icon = item.icon;
+    return (
+      <Link
+        key={item.id}
+        href={item.href}
+        className="matdata-item-card"
+        style={{ '--card-color': item.color } as React.CSSProperties}
+      >
+        <div className="matdata-item-card-top">
+          <div
+            className="matdata-item-card-icon"
+            style={{
+              background: item.color,
+              boxShadow: `0 4px 12px ${item.color}35`,
+            }}
+          >
+            <Icon size={22} strokeWidth={2.4} />
+          </div>
+          <span className="matdata-item-card-btn">
+            खोलें
+            <ArrowRight size={12} />
+          </span>
+        </div>
+
+        <div>
+          <h3 className="matdata-item-card-title">{item.name}</h3>
+          <p className="matdata-item-card-desc">{item.subtitle}</p>
+
+          {item.metaBadge && (
+            <div className="matdata-item-card-meta">
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: item.color }} />
+              <span>{item.metaBadge}</span>
+            </div>
+          )}
+        </div>
+      </Link>
+    );
+  };
+
   return (
-    <div className="dashboard-home-container" style={{ maxWidth: '1680px', margin: '0 auto', padding: '20px 16px 60px', width: '100%' }}>
-      {/* Top Banner / Heading: VijaySetu Brand & Context */}
-      <div
-        className="dashboard-top-banner"
-        style={{
-          background: 'linear-gradient(135deg, #064e3b 0%, #047857 60%, #0f766e 100%)',
-          borderRadius: '16px',
-          padding: '20px 24px',
-          marginBottom: '20px',
-          color: '#ffffff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '16px',
-          boxShadow: '0 8px 24px -4px rgba(4, 120, 87, 0.25)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
-          <div
-            style={{
-              width: '52px',
-              height: '52px',
-              borderRadius: '12px',
-              background: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              overflow: 'hidden',
-              flexShrink: 0,
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="VijaySetu" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+    <div
+      style={{
+        maxWidth: '1360px',
+        margin: '0 auto',
+        padding: '20px 20px 80px',
+        width: '100%',
+        color: '#0f172a',
+        position: 'relative',
+      }}
+    >
+      {/* 1. OPEN CANVAS EXECUTIVE HEADER */}
+      <div className="matdata-top-deck">
+        <div className="matdata-top-deck-left">
+          <div className="matdata-sovereign-tag">
+            <Sparkles size={12} />
+            <span>भारत निर्वाचन प्रबंधन तंत्र • BHARAT ELECTION OS</span>
           </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 900, letterSpacing: '-0.4px', color: '#ffffff' }}>
-                विजयसेतु (VijaySetu)
-              </h1>
-              <span
-                style={{
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  border: '1px solid rgba(255, 255, 255, 0.35)',
-                  color: '#ffffff',
-                  fontSize: '10.5px',
-                  fontWeight: 700,
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.4px',
-                }}
-              >
-                इलेक्शन मैनेजमेंट सिस्टम
-              </span>
-            </div>
-            <p style={{ margin: '3px 0 0', fontSize: '12.5px', color: '#d1fae5', fontWeight: 500 }}>
-              मतदाता खोज, डिजिटल पर्ची वितरण, वॉर-रूम व फील्ड ऑपरेशन कंसोल
-            </p>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <div
-            style={{
-              background: 'rgba(255, 255, 255, 0.15)',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255, 255, 255, 0.25)',
-              borderRadius: '10px',
-              padding: '6px 12px',
-              fontSize: '12px',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              color: '#ffffff',
-            }}
-          >
-            <Building2 size={14} />
+          <h1 className="matdata-title">
+            चुनाव संचालन मुख्य कंसोल
+            <span className="matdata-title-badge">VijaySetu (विजयसेतु)</span>
+          </h1>
+          <p className="matdata-subtitle">
             <span>{userInfo.organizationName || 'सक्रिय चुनाव क्षेत्र'}</span>
+            <span>•</span>
+            <span>कुल {stats.totalVoters > 0 ? stats.totalVoters.toLocaleString('hi-IN') : '...'} पंजीकृत मतदाता</span>
+            <span>•</span>
+            <span>लाइव पोलिंग व डिजिटल पर्ची इलेक्शन मैनेजमेंट</span>
+          </p>
+        </div>
+
+        <div className="matdata-top-deck-right">
+          <div className="matdata-live-pill">
+            <span className="pulse-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+            <span>लाइव सिंक सक्रिय</span>
           </div>
-          <div
-            style={{
-              background: '#ffffff',
-              color: '#065f46',
-              borderRadius: '10px',
-              padding: '6px 12px',
-              fontSize: '12px',
-              fontWeight: 800,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-            }}
-          >
-            Roots Reach Media &bull; 📞 7231077770
-          </div>
+          {(!isWorker || (Array.isArray(allowedModules) && allowedModules.includes('poll-desk'))) && (
+            <Link href="/poll-desk" className="matdata-action-btn-primary">
+              <Vote size={15} />
+              <span>लाइव मतदान डेस्क ➔</span>
+            </Link>
+          )}
         </div>
       </div>
 
-      {/* Quick Summary / Status Strip (Fills wide screen nicely, stacks on mobile) */}
-      <div
-        className="dashboard-summary-grid"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
-          gap: '14px',
-          marginBottom: '24px',
-        }}
-      >
-        <div
-          className="dashboard-summary-card"
-          style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            border: '1px solid #e2e8f0',
-            padding: '14px 18px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-          }}
-        >
-          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <UsersRound size={20} />
+      {/* 2. PANORAMIC TELEMETRY RIBBON (4 SEAMLESS METRICS) */}
+      <div className="matdata-telemetry-ribbon">
+        {/* Item 1: कुल मतदाता */}
+        <div className="matdata-telemetry-item">
+          <div className="matdata-telemetry-icon" style={{ background: '#eff6ff', color: '#2563eb' }}>
+            <Users size={20} strokeWidth={2.4} />
           </div>
           <div>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>पंजीकृत मतदाता</div>
-            <div style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a' }}>
-              {stats.totalVoters > 0 ? stats.totalVoters.toLocaleString('hi-IN') : 'डेटाबेस कनेक्टेड'}
+            <div className="matdata-telemetry-label">कुल मतदाता</div>
+            <div className="matdata-telemetry-value">
+              {stats.totalVoters > 0 ? stats.totalVoters.toLocaleString('hi-IN') : '...'} वोटर
             </div>
           </div>
         </div>
 
-        <div
-          className="dashboard-summary-card"
-          style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            border: '1px solid #e2e8f0',
-            padding: '14px 18px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-          }}
-        >
-          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <CheckSquare size={20} />
+        {/* Item 2: डिजिटल पर्ची इंजन */}
+        <div className="matdata-telemetry-item">
+          <div className="matdata-telemetry-icon" style={{ background: '#fffbeb', color: '#d97706' }}>
+            <Ticket size={20} strokeWidth={2.4} />
           </div>
           <div>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>मतदान दिवस डेस्क</div>
-            <div style={{ fontSize: '18px', fontWeight: 900, color: '#059669' }}>लाइव ट्रैकिंग सक्रिय</div>
+            <div className="matdata-telemetry-label">पर्ची वितरण इंजन</div>
+            <div className="matdata-telemetry-value" style={{ color: '#d97706' }}>
+              1-क्लिक WhatsApp
+            </div>
           </div>
         </div>
 
-        <div
-          className="dashboard-summary-card"
-          style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            border: '1px solid #e2e8f0',
-            padding: '14px 18px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-          }}
-        >
-          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Ticket size={20} />
+        {/* Item 3: पोलिंग डेस्क स्थिति */}
+        <div className="matdata-telemetry-item">
+          <div className="matdata-telemetry-icon" style={{ background: '#ecfdf5', color: '#059669' }}>
+            <Activity size={20} strokeWidth={2.4} />
           </div>
           <div>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>डिजिटल मतदाता पर्ची</div>
-            <div style={{ fontSize: '18px', fontWeight: 900, color: '#d97706' }}>ECI मानक + फ़ोटो</div>
+            <div className="matdata-telemetry-label">मतदान दिवस डेस्क</div>
+            <div className="matdata-telemetry-value" style={{ color: '#059669' }}>
+              लाइव ट्रैकर सक्रिय
+            </div>
           </div>
         </div>
 
-        <div
-          className="dashboard-summary-card"
-          style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            border: '1px solid #e2e8f0',
-            padding: '14px 18px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-          }}
-        >
-          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#f3e8ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <ShieldCheck size={20} />
+        {/* Item 4: डेटा गोपनीयता व सुरक्षा */}
+        <div className="matdata-telemetry-item">
+          <div className="matdata-telemetry-icon" style={{ background: '#faf5ff', color: '#7c3aed' }}>
+            <ShieldCheck size={20} strokeWidth={2.4} />
           </div>
           <div>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>सर्वर व डेटा सुरक्षा</div>
-            <div style={{ fontSize: '18px', fontWeight: 900, color: '#7c3aed' }}>100% एन्क्रिप्टेड</div>
+            <div className="matdata-telemetry-label">डेटा गोपनीयता</div>
+            <div className="matdata-telemetry-value" style={{ color: '#7c3aed' }}>
+              100% एन्क्रिप्टेड
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main Open Cards Grid ("खुले-खुले बटन") */}
-      <div
-        className="dashboard-modules-grid"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))',
-          gap: '20px',
-        }}
-      >
-        {visibleModules.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.id}
-              href={item.href}
-              className={`dashboard-module-card ${item.highlight ? 'is-highlighted' : ''}`}
-            >
-              {/* Card Header: Icon + "खोलें →" link */}
-              <div className="card-top-row">
-                {/* Large Colorful Icon Tile */}
-                <div
-                  className="card-icon-tile"
-                  style={{ background: item.iconBg }}
-                >
-                  <Icon size={26} />
-                </div>
+      {/* 3. WORKSPACE SECTION A: मुख्य चुनाव ऑपरेशन्स व इलेक्शन मैनेजमेंट */}
+      {visibleCore.length > 0 && (
+        <div>
+          <div className="matdata-workspace-head">
+            <h2 className="matdata-workspace-title">
+              <TrendingUp size={18} style={{ color: '#2563eb' }} />
+              <span>मुख्य चुनाव ऑपरेशन्स व इलेक्शन मैनेजमेंट</span>
+            </h2>
+            <span className="matdata-workspace-badge">{visibleCore.length} कोर टूल्स</span>
+          </div>
 
-                {/* "खोलें →" Link */}
-                <div className="card-action-badge">
-                  <span>खोलें</span>
-                  <ArrowRight size={13} className="card-arrow" />
-                </div>
-              </div>
+          <div className="matdata-workspace-grid-3">
+            {visibleCore.map((item) => renderCard(item))}
+          </div>
+        </div>
+      )}
 
-              {/* Card Body: Title & Subtitle */}
-              <div>
-                <h3 className="card-title">
-                  {item.name}
-                </h3>
+      {/* 4. WORKSPACE SECTION B: फील्ड टीम, पर्ची प्रिंट व व्यवस्थापक */}
+      {visibleField.length > 0 && (
+        <div>
+          <div className="matdata-workspace-head" style={{ marginTop: visibleCore.length > 0 ? '36px' : '0px' }}>
+            <h2 className="matdata-workspace-title">
+              <ContactRound size={18} style={{ color: '#4f46e5' }} />
+              <span>फील्ड टीम, पर्ची प्रिंट व सिस्टम प्रबंधन</span>
+            </h2>
+            <span className="matdata-workspace-badge">{visibleField.length} प्रबंधन टूल्स</span>
+          </div>
 
-                <div className="card-subtitle">
-                  {item.subtitle}
-                </div>
-              </div>
+          <div className="matdata-workspace-grid-3">
+            {visibleField.map((item) => renderCard(item))}
+            <PwaInstallDashboardCard />
+          </div>
+        </div>
+      )}
 
-              {/* Special Tag for Admin Only Card */}
-              {item.highlight && (
-                <div className="card-admin-tag">
-                  <ShieldCheck size={13} className="text-emerald-700" />
-                  <span>★ केवल एडमिन (Admin Console)</span>
-                </div>
-              )}
-            </Link>
-          );
-        })}
-
-        {/* 📲 PWA App Download / Install Card */}
-        <PwaInstallDashboardCard />
-      </div>
+      {visibleField.length === 0 && (
+        <div style={{ marginTop: '30px' }}>
+          <div className="matdata-workspace-grid-3">
+            <PwaInstallDashboardCard />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
