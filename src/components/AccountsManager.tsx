@@ -342,19 +342,106 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
     <div className={embeddedOrganizationId ? "embedded-manager" : "work-page"}>
       {!embeddedOrganizationId && (
         <>
-          <div className="page-intro">
-            <div><div className="eyebrow-label"><span className="eyebrow-mark" /> ACCESS CONTROL</div><h1>यूज़र व एक्सेस</h1><p>भूमिका, क्षेत्रीय दायरा और मॉड्यूल access सेट करें। खाता credentials सुरक्षित रूप से hash होकर सेव होते हैं।</p></div>
+          <div className="page-intro" style={{ marginBottom: '22px' }}>
+            <div>
+              <div className="eyebrow-label" style={{ color: '#dc2626' }}>
+                <span className="eyebrow-mark" style={{ background: '#dc2626' }} />
+                BHARAT ELECTION OS · टीम व अनुमतियाँ
+              </div>
+              <h1 style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <span>खाते व अनुमतियाँ</span>
+                <span className="badge-migrant-dark" style={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }}>
+                  सुरक्षित लॉगिन & रोल्स
+                </span>
+              </h1>
+              <p>
+                प्रत्याशी टीम, व्यवस्थापक व कार्यकर्ताओं के सुरक्षित लॉगिन, क्षेत्रीय दायरा और मॉड्यूल अनुमतियाँ। पासवर्ड सुरक्षित रूप से हैश होकर सेव होते हैं।
+              </p>
+            </div>
             <div className="feature-actions">
-              <button className="button-secondary" type="button" onClick={() => void load()} disabled={loading}>{loading ? <LoaderCircle size={15} className="spin" /> : <RefreshCw size={15} />} रिफ्रेश</button>
-              <button className="button-primary" type="button" onClick={startCreate} disabled={isPlatformAdmin && !organizationId}><Plus size={15} /> नया खाता</button>
+              <button className="button-secondary" type="button" onClick={() => void load()} disabled={loading}>
+                {loading ? <LoaderCircle size={15} className="spin" /> : <RefreshCw size={15} />} रिफ्रेश
+              </button>
+              <button className="button-primary" type="button" onClick={startCreate} disabled={isPlatformAdmin && !organizationId} style={{ background: '#dc2626', borderColor: '#dc2626' }}>
+                <Plus size={15} /> नया खाता
+              </button>
             </div>
           </div>
-          {error && !editing && <div className="inline-notice error-notice" role="alert">{error}</div>}
-          {notice && <div className="inline-notice" role="status">{notice}</div>}
-          <section className="feature-metrics">
-            <article className="metric-card"><span>कुल खाते</span><strong>{loading ? '—' : accounts.length}</strong><small>अपने खाते को छोड़कर</small></article>
-            <article className="metric-card metric-card-green"><span>सक्रिय</span><strong>{loading ? '—' : accounts.filter((item) => item.isActive).length}</strong><small>लॉगिन सक्षम</small></article>
-            <article className="metric-card metric-card-sky"><span>अलग scopes</span><strong>{loading ? '—' : new Set(accounts.map((item) => item.scope)).size}</strong><small>Booth · Ward · Village · All</small></article>
+          {error && !editing && <div className="inline-notice error-notice" role="alert" style={{ marginBottom: '16px' }}>{error}</div>}
+          {notice && <div className="inline-notice" role="status" style={{ marginBottom: '16px' }}>{notice}</div>}
+          <section
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '14px',
+              marginBottom: '22px',
+            }}
+          >
+            <div
+              style={{
+                background: '#ffffff',
+                border: '1.5px solid #e2e8f0',
+                borderRadius: '16px',
+                padding: '16px 20px',
+                boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+              }}
+            >
+              <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2563eb' }} />
+                कुल खाते (Total Users)
+              </div>
+              <div style={{ fontSize: '26px', fontWeight: 850, color: '#0f172a', marginTop: '6px' }}>
+                {loading ? '—' : accounts.length}{' '}
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748b' }}>यूज़र्स</span>
+              </div>
+              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                मास्टर लॉगिन को छोड़कर
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: '#ffffff',
+                border: '1.5px solid #bbf7d0',
+                borderRadius: '16px',
+                padding: '16px 20px',
+                boxShadow: '0 2px 8px rgba(22, 101, 52, 0.04)',
+              }}
+            >
+              <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#15803d', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ShieldCheck size={15} />
+                सक्रिय खाते (Active)
+              </div>
+              <div style={{ fontSize: '26px', fontWeight: 850, color: '#14532d', marginTop: '6px' }}>
+                {loading ? '—' : accounts.filter((item) => item.isActive).length}{' '}
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#16a34a' }}>सक्रिय</span>
+              </div>
+              <div style={{ fontSize: '12px', color: '#16a34a', marginTop: '2px' }}>
+                सिस्टम में लॉगिन अधिकृत
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: '#ffffff',
+                border: '1.5px solid #e0e7ff',
+                borderRadius: '16px',
+                padding: '16px 20px',
+                boxShadow: '0 2px 8px rgba(79, 70, 229, 0.04)',
+              }}
+            >
+              <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#4338ca', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <KeyRound size={15} />
+                अलग Access Scopes
+              </div>
+              <div style={{ fontSize: '26px', fontWeight: 850, color: '#312e81', marginTop: '6px' }}>
+                {loading ? '—' : new Set(accounts.map((item) => item.scope)).size}{' '}
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#4f46e5' }}>दायरे</span>
+              </div>
+              <div style={{ fontSize: '12px', color: '#6366f1', marginTop: '2px' }}>
+                Booth · Ward · Village · All
+              </div>
+            </div>
           </section>
         </>
       )}

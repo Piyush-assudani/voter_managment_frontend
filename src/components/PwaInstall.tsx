@@ -206,51 +206,54 @@ export function PwaInstallDashboardCard() {
         tabIndex={0}
         onClick={triggerInstall}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') triggerInstall(); }}
-        className="dashboard-module-card is-highlighted"
+        className="matdata-item-card"
         style={{
-          border: isInstalled ? '2px solid #059669' : '2px dashed #0284c7',
+          '--card-color': isInstalled ? '#059669' : '#0284c7',
+          border: isInstalled ? '1.8px solid #059669' : '1.8px dashed #0284c7',
           background: isInstalled ? '#f0fdf4' : '#f0f9ff',
           cursor: 'pointer',
-        }}
+        } as React.CSSProperties}
       >
-        <div className="card-top-row">
+        <div className="matdata-item-card-top">
           <div
-            className="card-icon-tile"
+            className="matdata-item-card-icon"
             style={{
-              background: isInstalled
-                ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
-                : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+              background: isInstalled ? '#059669' : '#0284c7',
+              boxShadow: isInstalled ? '0 6px 14px rgba(5,150,105,0.25)' : '0 6px 14px rgba(2,132,199,0.25)',
             }}
           >
-            {isInstalled ? <CheckCircle2 size={26} /> : <Download size={26} />}
+            {isInstalled ? <CheckCircle2 size={27} strokeWidth={2.4} /> : <Download size={27} strokeWidth={2.4} />}
           </div>
 
-          <div
-            className="card-action-badge"
+          <span
+            className="matdata-item-card-btn"
             style={{
               background: isInstalled ? '#dcfce7' : '#e0f2fe',
               color: isInstalled ? '#15803d' : '#0369a1',
               borderColor: isInstalled ? '#86efac' : '#bae6fd',
             }}
           >
-            <span>{isInstalled ? 'इंस्टॉल है ✓' : 'डाउनलोड करें'}</span>
-          </div>
+            {isInstalled ? 'इंस्टॉल है ✓' : 'डाउनलोड करें'}
+          </span>
         </div>
 
         <div>
-          <h3 className="card-title" style={{ color: isInstalled ? '#166534' : '#0369a1' }}>
+          <h3 className="matdata-item-card-title" style={{ color: isInstalled ? '#166534' : '#0369a1' }}>
             {isInstalled ? 'विजयसेतु ऐप इंस्टॉल है' : 'विजयसेतु ऐप डाउनलोड करें'}
           </h3>
-          <div className="card-subtitle">
+          <p className="matdata-item-card-desc">
             {isInstalled
               ? 'ऐप होम स्क्रीन पर सक्रिय है, ऑफलाइन भी काम करेगा'
               : 'बिना प्ले स्टोर के सीधे मोबाइल/PC पर 1-टैप में ऐप इंस्टॉल करें'}
-          </div>
-        </div>
+          </p>
 
-        <div className="card-admin-tag" style={{ borderTopColor: isInstalled ? '#bbf7d0' : '#bae6fd', color: isInstalled ? '#15803d' : '#0284c7' }}>
-          <Smartphone size={13} />
-          <span>{isInstalled ? 'PWA Standalone Active' : '⚡ 1-Click PWA App Download'}</span>
+          <div
+            className="matdata-item-card-meta"
+            style={{ color: isInstalled ? '#15803d' : '#0284c7' }}
+          >
+            <Smartphone size={13} />
+            <span>{isInstalled ? 'PWA Standalone Active' : '⚡ 1-Click PWA App Download'}</span>
+          </div>
         </div>
       </div>
 

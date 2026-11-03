@@ -266,11 +266,12 @@ export default function DashboardHomePage() {
 
   const renderCard = (item: NavModule) => {
     const Icon = item.icon;
+    const isFeatured = item.id === 'voters';
     return (
       <Link
         key={item.id}
         href={item.href}
-        className="matdata-item-card"
+        className={`matdata-item-card ${isFeatured ? 'is-featured' : ''}`}
         style={{ '--card-color': item.color } as React.CSSProperties}
       >
         <div className="matdata-item-card-top">
@@ -278,14 +279,14 @@ export default function DashboardHomePage() {
             className="matdata-item-card-icon"
             style={{
               background: item.color,
-              boxShadow: `0 4px 12px ${item.color}35`,
+              boxShadow: `0 6px 16px ${item.color}40`,
             }}
           >
-            <Icon size={25} strokeWidth={2.3} />
+            <Icon size={28} strokeWidth={2.3} />
           </div>
-          <span className="matdata-item-card-btn">
+          <span className={`matdata-item-card-btn ${isFeatured ? 'is-featured-btn' : ''}`}>
             खोलें
-            <ArrowRight size={13} />
+            <ArrowRight size={13.5} />
           </span>
         </div>
 
@@ -295,7 +296,7 @@ export default function DashboardHomePage() {
 
           {item.metaBadge && (
             <div className="matdata-item-card-meta">
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: item.color }} />
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: item.color }} />
               <span>{item.metaBadge}</span>
             </div>
           )}

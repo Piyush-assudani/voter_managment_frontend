@@ -318,18 +318,18 @@ export default function MigrantsPage() {
       {/* ── PAGE HEADER ── */}
       <div className="page-intro" style={{ marginBottom: '20px' }}>
         <div>
-          <div className="eyebrow-label" style={{ color: '#5b21b6' }}>
-            <span className="eyebrow-mark" style={{ background: '#5b21b6' }} />
-            MIGRANT VOTERS · प्रवासी मतदाता ट्रैकर
+          <div className="eyebrow-label" style={{ color: '#0d9488' }}>
+            <span className="eyebrow-mark" style={{ background: '#0d9488' }} />
+            BHARAT ELECTION OS · प्रवासी मतदाता प्रबंधन
           </div>
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <span>प्रवासी मतदाता</span>
-            <span className="badge-migrant-dark">
-              प्रवासी ट्रैकर
+            <span>प्रवासी मतदाता सूची</span>
+            <span className="badge-migrant-dark" style={{ background: '#f0fdfa', color: '#0f766e', borderColor: '#99f6e4' }}>
+              कॉलिंग समन्वय & ट्रैकर
             </span>
           </h1>
           <p>
-            शहर से बाहर रहने वाले मतदाताओं की सूची, वर्तमान स्थान, मतदान स्थिति (दे दिया / बाकी) और कॉलिंग समन्वय।
+            गाँव/शहर से बाहर रहने वाले मतदाताओं की सूची, वर्तमान प्रवास स्थल, मतदान स्थिति (दे दिया / बाकी) और कॉलिंग समन्वय।
           </p>
         </div>
 
