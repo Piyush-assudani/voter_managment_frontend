@@ -4893,38 +4893,147 @@ export default function AdminPanel() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 
                 {/* Active Template Status Card */}
-                <div style={{
-                  background: 'linear-gradient(135deg, #065f46 0%, #047857 100%)',
-                  borderRadius: '16px',
-                  padding: '20px',
-                  color: '#ffffff',
-                  boxShadow: '0 8px 20px rgba(4, 120, 87, 0.15)',
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <span style={{
-                      background: 'rgba(255,255,255,0.2)',
-                      fontSize: '11px',
-                      fontWeight: 800,
-                      padding: '3px 10px',
-                      borderRadius: '12px',
-                      backdropFilter: 'blur(4px)'
-                    }}>
-                      ✓ CURRENT ACTIVE TEMPLATE
-                    </span>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#a7f3d0' }}>
-                      {templateTargetOrgId ? organizations.find(o => o.id === templateTargetOrgId)?.name : 'ग्लोबल सक्रिय'}
-                    </span>
-                  </div>
+                {(() => {
+                  const activeTmplObj = metaTemplates.find((t) => t.name.toLowerCase() === activeMetaTemplate.toLowerCase());
+                  const isApproved = activeTmplObj?.status === 'APPROVED' || !activeTmplObj?.status;
+                  const isPending = activeTmplObj?.status === 'PENDING';
+                  const isRejected = activeTmplObj?.status === 'REJECTED';
+                  const hasActiveImageHeader = activeTmplObj?.hasImageHeader || activeTmplObj?.components?.some((c: any) => c.type?.toUpperCase() === 'HEADER' && c.format?.toUpperCase() === 'IMAGE');
 
-                  <div style={{ fontSize: '22px', fontWeight: 900, fontFamily: 'monospace', letterSpacing: '0.5px', marginBottom: '8px' }}>
-                    {activeMetaTemplate}
-                  </div>
-                  <div style={{ fontSize: '13px', color: '#d1fae5', lineHeight: 1.5 }}>
-                    जब भी कोई यूजर या कार्यकर्ता &apos;WhatsApp पर भेजें&apos; दबाएगा, तो यही अनुमोदित टेम्पलेट सीधे डिलीवर होगा।
-                  </div>
-                </div>
+                  return (
+                    <div style={{
+                      background: 'linear-gradient(135deg, #065f46 0%, #047857 100%)',
+                      borderRadius: '16px',
+                      padding: '22px',
+                      color: '#ffffff',
+                      boxShadow: '0 8px 24px rgba(4, 120, 87, 0.2)',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                        <span style={{
+                          background: 'rgba(255,255,255,0.2)',
+                          fontSize: '11px',
+                          fontWeight: 800,
+                          padding: '4px 11px',
+                          borderRadius: '12px',
+                          backdropFilter: 'blur(4px)',
+                          letterSpacing: '0.5px'
+                        }}>
+                          ✓ CURRENT ACTIVE TEMPLATE
+                        </span>
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#a7f3d0', background: 'rgba(0,0,0,0.18)', padding: '3px 10px', borderRadius: '8px' }}>
+                          लागू दायरा: {templateTargetOrgId ? organizations.find(o => o.id === templateTargetOrgId)?.name : 'ग्लोबल (सभी क्लाइंट्स)'}
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '24px', fontWeight: 900, fontFamily: 'monospace', letterSpacing: '0.5px', marginBottom: '12px' }}>
+                        {activeMetaTemplate}
+                      </div>
+
+                      {/* Prominent Status & Image Header Badges */}
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                        {isApproved ? (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            background: '#ecfdf5',
+                            color: '#065f46',
+                            fontWeight: 800,
+                            fontSize: '12px',
+                            padding: '5px 12px',
+                            borderRadius: '8px',
+                            border: '1.5px solid #6ee7b7'
+                          }}>
+                            <Check size={14} /> Meta Approved (स्वीकृत)
+                          </span>
+                        ) : isPending ? (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            background: '#fffbeb',
+                            color: '#92400e',
+                            fontWeight: 800,
+                            fontSize: '12px',
+                            padding: '5px 12px',
+                            borderRadius: '8px',
+                            border: '1.5px solid #fde68a'
+                          }}>
+                            ⏳ Meta Pending (समीक्षाधीन)
+                          </span>
+                        ) : (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            background: '#fef2f2',
+                            color: '#991b1b',
+                            fontWeight: 800,
+                            fontSize: '12px',
+                            padding: '5px 12px',
+                            borderRadius: '8px',
+                            border: '1.5px solid #fca5a5'
+                          }}>
+                            ❌ Meta Rejected (अस्वीकृत)
+                          </span>
+                        )}
+
+                        {hasActiveImageHeader ? (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            background: '#e0f2fe',
+                            color: '#0369a1',
+                            fontWeight: 800,
+                            fontSize: '12px',
+                            padding: '5px 12px',
+                            borderRadius: '8px',
+                            border: '1.5px solid #7dd3fc'
+                          }}>
+                            🖼️ पर्ची इमेज/फोटो साथ जाएगी (IMAGE Header Active)
+                          </span>
+                        ) : (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            background: 'rgba(255,255,255,0.2)',
+                            color: '#ffffff',
+                            fontWeight: 700,
+                            fontSize: '12px',
+                            padding: '5px 12px',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(255,255,255,0.3)'
+                          }}>
+                            📄 केवल टेक्स्ट (बिना फोटो/इमेज)
+                          </span>
+                        )}
+
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          background: 'rgba(255,255,255,0.2)',
+                          color: '#ffffff',
+                          fontWeight: 700,
+                          fontSize: '12px',
+                          padding: '5px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(255,255,255,0.3)'
+                        }}>
+                          📁 {activeTmplObj?.category || 'UTILITY'}
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '13px', color: '#d1fae5', lineHeight: 1.5, background: 'rgba(0,0,0,0.14)', padding: '10px 14px', borderRadius: '10px' }}>
+                        💡 <strong>गारंटीड डिलीवरी:</strong> जब भी कोई यूजर या कार्यकर्ता इस क्लाइंट के लिए &apos;WhatsApp पर भेजें&apos; दबाएगा, तो शत-प्रतिशत यही सक्रिय टेम्पलेट (<strong>{activeMetaTemplate}</strong>) {hasActiveImageHeader ? 'पर्ची फोटो के साथ' : ''} डिलीवर होगा।
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Templates Selector List */}
                 <div style={{
@@ -4961,18 +5070,30 @@ export default function AdminPanel() {
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
                             <div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                <span style={{ fontWeight: 800, fontSize: '14.5px', fontFamily: 'monospace', color: '#0f172a' }}>
+                                <span style={{ fontWeight: 800, fontSize: '15px', fontFamily: 'monospace', color: '#0f172a' }}>
                                   {tmpl.name}
                                 </span>
                                 <span style={{
-                                  fontSize: '10.5px',
+                                  fontSize: '11px',
                                   fontWeight: 800,
-                                  color: '#059669',
-                                  background: '#d1fae5',
-                                  padding: '2px 7px',
-                                  borderRadius: '6px'
+                                  color: tmpl.status === 'APPROVED' || !tmpl.status ? '#059669' : tmpl.status === 'PENDING' ? '#b45309' : '#dc2626',
+                                  background: tmpl.status === 'APPROVED' || !tmpl.status ? '#d1fae5' : tmpl.status === 'PENDING' ? '#fef3c7' : '#fee2e2',
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  border: `1px solid ${tmpl.status === 'APPROVED' || !tmpl.status ? '#a7f3d0' : '#fde68a'}`
                                 }}>
-                                  {tmpl.status || 'APPROVED'}
+                                  {tmpl.status === 'APPROVED' || !tmpl.status ? '✓ APPROVED' : tmpl.status}
+                                </span>
+                                <span style={{
+                                  fontSize: '11px',
+                                  fontWeight: 800,
+                                  color: (tmpl.hasImageHeader || headerComp?.format === 'IMAGE' || tmpl.components?.some((c: any) => c.format === 'IMAGE')) ? '#0369a1' : '#475569',
+                                  background: (tmpl.hasImageHeader || headerComp?.format === 'IMAGE' || tmpl.components?.some((c: any) => c.format === 'IMAGE')) ? '#e0f2fe' : '#f1f5f9',
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  border: `1px solid ${(tmpl.hasImageHeader || headerComp?.format === 'IMAGE' || tmpl.components?.some((c: any) => c.format === 'IMAGE')) ? '#bae6fd' : '#e2e8f0'}`
+                                }}>
+                                  {(tmpl.hasImageHeader || headerComp?.format === 'IMAGE' || tmpl.components?.some((c: any) => c.format === 'IMAGE')) ? '🖼️ फोटो / पर्ची इमेज साथ जाएगी' : '📄 केवल टेक्स्ट'}
                                 </span>
                                 <span style={{
                                   fontSize: '10.5px',
@@ -4987,7 +5108,7 @@ export default function AdminPanel() {
                               </div>
                               {headerComp?.text && (
                                 <div style={{ fontSize: '12px', fontWeight: 700, color: '#047857', marginTop: '4px' }}>
-                                  हेडर: {headerComp.text}
+                                  हेडर टेक्स्ट: {headerComp.text}
                                 </div>
                               )}
                             </div>
