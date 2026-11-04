@@ -844,6 +844,30 @@ export default function AdminPanel() {
     }
   };
 
+  const [deletingTemplate, setDeletingTemplate] = useState<string | null>(null);
+
+  const handleDeleteMetaTemplate = async (tmplName: string) => {
+    const confirmed = window.confirm(`क्या आप Meta से टेम्पलेट "${tmplName}" को स्थायी रूप से हटाना (Delete) चाहते हैं?`);
+    if (!confirmed) return;
+
+    setDeletingTemplate(tmplName);
+    setError('');
+    setNotice('');
+    try {
+      const res = await apiFetch(`/whatsapp/templates/${encodeURIComponent(tmplName)}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'टेम्पलेट हटाया नहीं जा सका।');
+      setNotice(data.message || `टेम्पलेट '${tmplName}' Meta से हटा दिया गया है।`);
+      await loadMetaTemplates();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'टेम्पलेट हटाने में विफलता।');
+    } finally {
+      setDeletingTemplate(null);
+    }
+  };
+
   const handleCreateMetaTemplate = async (e: FormEvent) => {
     e.preventDefault();
     if (!newTmplName.trim() || !newTmplBody.trim()) {
@@ -5226,41 +5250,65 @@ export default function AdminPanel() {
                               )}
                             </div>
 
-                            {isActive ? (
-                              <span style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                background: '#10b981',
-                                color: '#ffffff',
-                                fontSize: '11.5px',
-                                fontWeight: 800,
-                                padding: '5px 12px',
-                                borderRadius: '8px',
-                                flexShrink: 0
-                              }}>
-                                <Check size={13} /> सक्रिय (Active)
-                              </span>
-                            ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                              {isActive ? (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  background: '#10b981',
+                                  color: '#ffffff',
+                                  fontSize: '11.5px',
+                                  fontWeight: 800,
+                                  padding: '5px 12px',
+                                  borderRadius: '8px',
+                                }}>
+                                  <Check size={13} /> सक्रिय (Active)
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={savingTemplate}
+                                  onClick={() => void handleSelectActiveTemplate(tmpl.name, tmpl.language || 'hi')}
+                                  style={{
+                                    background: '#0284c7',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    fontSize: '11.5px',
+                                    fontWeight: 700,
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  {savingTemplate ? 'सेव हो रहा...' : 'सक्रिय बनाएं'}
+                                </button>
+                              )}
+
                               <button
                                 type="button"
-                                disabled={savingTemplate}
-                                onClick={() => void handleSelectActiveTemplate(tmpl.name, tmpl.language || 'hi')}
+                                disabled={deletingTemplate === tmpl.name}
+                                onClick={() => void handleDeleteMetaTemplate(tmpl.name)}
+                                title="Meta से यह टेम्पलेट डिलीट करें"
                                 style={{
-                                  background: '#0284c7',
-                                  color: '#ffffff',
-                                  border: 'none',
-                                  fontSize: '11.5px',
-                                  fontWeight: 700,
-                                  padding: '6px 12px',
+                                  background: '#fef2f2',
+                                  color: '#dc2626',
+                                  border: '1px solid #fecaca',
                                   borderRadius: '8px',
+                                  padding: '5px 9px',
                                   cursor: 'pointer',
-                                  flexShrink: 0
+                                  fontSize: '11.5px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontWeight: 700,
+                                  transition: 'all 0.15s ease'
                                 }}
                               >
-                                {savingTemplate ? 'सेव हो रहा...' : 'सक्रिय बनाएं'}
+                                {deletingTemplate === tmpl.name ? <LoaderCircle size={13} className="spin" /> : <Trash2 size={13} />}
+                                <span>हटाएं</span>
                               </button>
-                            )}
+                            </div>
                           </div>
 
                           <div style={{
