@@ -131,22 +131,36 @@ export const generateSlipImage = async (
               }
               .voter-slip-ribbon-pill {
                 min-height: 28px !important;
-                padding: 6px 12px !important;
-                overflow: visible !important;
-              }
-              .voter-slip-ribbon-pill span {
-                line-height: 1.25 !important;
+                height: auto !important;
+                padding: 4px 10px !important;
                 display: inline-flex !important;
                 align-items: center !important;
+                justify-content: center !important;
+                overflow: hidden !important;
+                box-sizing: border-box !important;
+              }
+              .voter-slip-ribbon-pill span {
+                line-height: 1.15 !important;
+                display: block !important;
+                margin: 0 !important;
+                padding: 0 !important;
                 white-space: nowrap !important;
               }
-              .voter-slip-symbol-caption,
-              .voter-slip-symbol-caption * {
-                min-height: 26px !important;
+              .voter-slip-symbol-caption {
+                min-height: 34px !important;
                 height: auto !important;
-                padding: 2px 4px !important;
-                line-height: 1.25 !important;
-                overflow: visible !important;
+                padding: 3px 6px !important;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                box-sizing: border-box !important;
+              }
+              .voter-slip-symbol-caption * {
+                line-height: 1.2 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                text-align: center !important;
               }
               .voter-slip-center-column,
               .voter-slip-center-column * {

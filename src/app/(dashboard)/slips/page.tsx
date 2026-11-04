@@ -829,7 +829,7 @@ export default function SlipsPage() {
             phoneNumber: wpPhone || selectedHousehold.members.find((m) => m.phone)?.phone || '',
             slipImageDataUrl,
             slipType: 'family',
-            templateName: 'voter_campaign_appeal',
+            templateName: slipConfig?.whatsappTemplateName || undefined,
           }),
         });
         const data = await response.json().catch(() => ({}));
@@ -865,7 +865,7 @@ export default function SlipsPage() {
             voterId: selectedVoter._id,
             phoneNumber: wpPhone || selectedVoter.phone || '',
             slipImageDataUrl,
-            templateName: 'voter_campaign_appeal',
+            templateName: effectiveConfig?.whatsappTemplateName || undefined,
           }),
         });
         const data = await response.json().catch(() => ({}));

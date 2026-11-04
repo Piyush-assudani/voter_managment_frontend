@@ -24,6 +24,7 @@ export interface SlipConfig {
   showWardInsteadOfPart?: boolean;
   metricLabel?: string;
   slipFormat?: SlipFormat;
+  whatsappTemplateName?: string;
 }
 
 export const defaultSlipConfig: SlipConfig = {
@@ -858,24 +859,25 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                 className="voter-slip-symbol-caption"
                 style={{
                   width: '92%',
-                  minHeight: isRibbonHidden ? '30px' : '26px',
+                  minHeight: '34px',
                   height: 'auto',
                   boxSizing: 'border-box',
                   marginBottom: '4px',
                   background: '#eff6ff',
                   border: isEditable ? '1px dashed #3b82f6' : '1px solid #bfdbfe',
-                  borderRadius: '5px',
+                  borderRadius: '6px',
                   color: '#ea580c',
-                  fontSize: isRibbonHidden ? '11.5px' : '10.5px',
+                  fontSize: isRibbonHidden ? '11px' : '10px',
                   fontWeight: 700,
                   textAlign: 'center',
-                  padding: '2px 4px',
-                  overflow: 'visible',
+                  padding: '3px 6px',
+                  overflow: 'hidden',
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
-                  lineHeight: 1.25,
+                  lineHeight: 1.2,
                 }}
               >
                 <InlineText
@@ -886,7 +888,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                   onChange={(v) => updateField('partySymbolName', v)}
                   title="चुनाव चिन्ह का नाम बदलें (उदा. कमल, हाथ, पतंग, बल्ला)"
                   style={{
-                    fontSize: isRibbonHidden ? '11.5px' : '10.5px',
+                    fontSize: isRibbonHidden ? '11px' : '10px',
                     fontWeight: 700,
                     color: '#ea580c',
                     textAlign: 'center',
@@ -894,11 +896,10 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                     margin: 0,
                     border: 'none',
                     background: 'transparent',
-                    lineHeight: 1.25,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    lineHeight: 1.2,
+                    display: 'block',
                     width: '100%',
+                    wordBreak: 'break-word',
                   }}
                 />
               </div>
@@ -1365,24 +1366,26 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               style={{
                 background: '#ffffff',
                 borderRadius: '8px',
-                padding: '6px 12px',
+                padding: '4px 10px',
                 minHeight: '28px',
                 boxSizing: 'border-box',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '6px',
                 color: '#ea580c',
                 fontSize: '11.5px',
-                fontWeight: 700,
+                fontWeight: 800,
                 flexShrink: 0,
-                overflow: 'visible',
+                overflow: 'hidden',
+                lineHeight: 1,
               }}
             >
               {merged.partySymbolImage && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={merged.partySymbolImage} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0 }} />
+                <img src={merged.partySymbolImage} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0, display: 'block' }} />
               )}
-              <span style={{ lineHeight: 1.25, display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
+              <span style={{ lineHeight: 1.15, display: 'block', margin: 0, padding: 0, whiteSpace: 'nowrap' }}>
                 {merged.partySymbolName || 'कमल का फूल'}
               </span>
             </div>

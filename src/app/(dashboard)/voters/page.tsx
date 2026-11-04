@@ -1266,7 +1266,7 @@ export default function VoterDirectoryPage() {
           voterId: slipVoter._id,
           phoneNumber: slipPhone,
           slipImageDataUrl,
-          templateName: 'voter_campaign_appeal'
+          templateName: slipConfig?.whatsappTemplateName || undefined
         }),
       });
       const data = await response.json().catch(() => ({}));
