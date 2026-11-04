@@ -642,10 +642,12 @@ export default function AdminPanel() {
     category?: string;
     language?: string;
     hasImageHeader?: boolean;
+    buttons?: Array<{ type: string; text: string; phone_number?: string; url?: string }>;
     components?: Array<{
       type: string;
       format?: string;
       text?: string;
+      buttons?: Array<{ type: string; text: string; phone_number?: string; url?: string }>;
       example?: { body_text?: string[][] };
     }>;
   }
@@ -669,14 +671,23 @@ export default function AdminPanel() {
 
   // New Template Creation Form States
   const [newTmplName, setNewTmplName] = useState<string>('');
-  const [newTmplCategory, setNewTmplCategory] = useState<string>('UTILITY');
+  const [newTmplCategory, setNewTmplCategory] = useState<string>('MARKETING');
   const [newTmplLanguage, setNewTmplLanguage] = useState<string>('hi');
+  const [newTmplHeaderType, setNewTmplHeaderType] = useState<'IMAGE' | 'TEXT' | 'NONE'>('IMAGE');
   const [newTmplHeader, setNewTmplHeader] = useState<string>('डिजिटल मतदाता सूचना पर्ची 🗳️');
   const [newTmplBody, setNewTmplBody] = useState<string>(
-    'नमस्कार {{1}} जी,\n\nआपकी डिजिटल मतदाता सूचना पर्ची विवरण:\n• पहचान पत्र (EPIC): {{2}}\n• वार्ड संख्या: {{3}}\n• भाग संख्या: {{4}}\n• क्रमांक संख्या: #{{5}}\n• मतदान केंद्र: {{6}}\n\nकृपया मतदान दिवस पर अपना पहचान पत्र साथ लाएं। आपका वोट, आपका अधिकार!'
+    'आदरणीय {{1}} जी, सादर प्रणाम!\nआपके अपने जनसेवक व लोकप्रिय प्रत्याशी {{2}} की ओर से चुनाव में आपका बहुमूल्य आशीर्वाद और समर्थन सादर प्रार्थनीय है।\n\nआपकी मतदान पर्ची विवरण:\n• EPIC नंबर: {{3}}\n• वार्ड नंबर: {{4}}\n• भाग संख्या: {{5}}\n• क्रम संख्या: {{6}}\n• मतदान केंद्र: {{7}}\n\nक्षेत्र के चहुंमुखी विकास व प्रगति हेतु मतदान के दिन भारी संख्या में पहुँचकर विजय बनाएं। लोकतंत्र के महापर्व में अपना मत अवश्य दें!'
   );
   const [newTmplFooter, setNewTmplFooter] = useState<string>('विजयसेतु चुनावी प्रबंधन');
+  const [newTmplButtonType, setNewTmplButtonType] = useState<'NONE' | 'QUICK_REPLY' | 'CTA'>('QUICK_REPLY');
+  const [newTmplQuickReply1, setNewTmplQuickReply1] = useState<string>('मतदान पर्ची मिली ✅');
+  const [newTmplQuickReply2, setNewTmplQuickReply2] = useState<string>('सहायता चाहिए 📞');
+  const [newTmplCallBtnText, setNewTmplCallBtnText] = useState<string>('हेल्पलाइन पर कॉल करें');
+  const [newTmplCallBtnPhone, setNewTmplCallBtnPhone] = useState<string>('+919413879444');
+  const [newTmplUrlBtnText, setNewTmplUrlBtnText] = useState<string>('वेबसाइट देखें');
+  const [newTmplUrlBtnLink, setNewTmplUrlBtnLink] = useState<string>('https://vijaysetu.com');
   const [creatingTemplate, setCreatingTemplate] = useState<boolean>(false);
+  const [previewMode, setPreviewMode] = useState<'active' | 'draft'>('active');
 
   // Test Send States
   const [testPhone, setTestPhone] = useState<string>('');
@@ -794,6 +805,27 @@ export default function AdminPanel() {
     setError('');
     setNotice('');
     try {
+      const buttonsPayload: Array<{ type: string; text: string; phone_number?: string; url?: string }> = [];
+      if (newTmplButtonType === 'QUICK_REPLY') {
+        if (newTmplQuickReply1.trim()) buttonsPayload.push({ type: 'QUICK_REPLY', text: newTmplQuickReply1.trim() });
+        if (newTmplQuickReply2.trim()) buttonsPayload.push({ type: 'QUICK_REPLY', text: newTmplQuickReply2.trim() });
+      } else if (newTmplButtonType === 'CTA') {
+        if (newTmplCallBtnText.trim() && newTmplCallBtnPhone.trim()) {
+          buttonsPayload.push({
+            type: 'PHONE_NUMBER',
+            text: newTmplCallBtnText.trim(),
+            phone_number: newTmplCallBtnPhone.trim(),
+          });
+        }
+        if (newTmplUrlBtnText.trim() && newTmplUrlBtnLink.trim()) {
+          buttonsPayload.push({
+            type: 'URL',
+            text: newTmplUrlBtnText.trim(),
+            url: newTmplUrlBtnLink.trim(),
+          });
+        }
+      }
+
       const res = await apiFetch('/whatsapp/templates/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -801,9 +833,11 @@ export default function AdminPanel() {
           name: newTmplName.trim(),
           category: newTmplCategory,
           language: newTmplLanguage,
-          headerText: newTmplHeader.trim() || undefined,
+          headerType: newTmplHeaderType,
+          headerText: newTmplHeaderType === 'TEXT' ? newTmplHeader.trim() : undefined,
           bodyText: newTmplBody.trim(),
           footerText: newTmplFooter.trim() || undefined,
+          buttons: buttonsPayload.length > 0 ? buttonsPayload : undefined,
         }),
       });
       const data = await res.json();
@@ -5218,8 +5252,9 @@ export default function AdminPanel() {
                     नया टेम्पलेट सीधे Meta Cloud API को सत्यापन एवं स्वीकृति (Approval) हेतु भेजा जाएगा।
                   </p>
 
-                  <form onSubmit={handleCreateMetaTemplate} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                  <form onSubmit={handleCreateMetaTemplate} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {/* Template Name & Category */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
                         टेम्पलेट का नाम (Name)*
                         <input
@@ -5227,8 +5262,7 @@ export default function AdminPanel() {
                           required
                           value={newTmplName}
                           onChange={(e) => setNewTmplName(e.target.value)}
-                          placeholder="e.g. voter_slip_custom_hi"
-                          pattern="^[a-z0-9_]+$"
+                          placeholder="e.g. छगन रावतराम या voter_slip_campaign"
                           style={{
                             width: '100%',
                             padding: '8px 10px',
@@ -5239,7 +5273,12 @@ export default function AdminPanel() {
                             boxSizing: 'border-box'
                           }}
                         />
-                        <span style={{ fontSize: '10px', color: '#94a3b8' }}>केवल छोटे अक्षर, संख्या और अंडरस्कोर (_)</span>
+                        <div style={{ fontSize: '10.5px', color: '#64748b', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span>Meta ID:</span>
+                          <code style={{ background: '#f1f5f9', color: '#0369a1', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                            {newTmplName ? newTmplName.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').slice(0, 45) || 'voter_slip_custom' : 'voter_slip_custom'}
+                          </code>
+                        </div>
                       </label>
 
                       <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
@@ -5258,54 +5297,137 @@ export default function AdminPanel() {
                             background: '#ffffff'
                           }}
                         >
+                          <option value="MARKETING">MARKETING (प्रचार, अपील व संदेश - अनुशंसित)</option>
                           <option value="UTILITY">UTILITY (मतदाता पर्ची, सेवा संदेश)</option>
-                          <option value="MARKETING">MARKETING (प्रचार व अपील)</option>
                         </select>
+                        <span style={{ fontSize: '10px', color: '#94a3b8' }}>चुनावी अपील व प्रचार हेतु MARKETING उपयुक्त है</span>
                       </label>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
-                        हेडर टेक्स्ट (वैकल्पिक)
-                        <input
-                          type="text"
-                          value={newTmplHeader}
-                          onChange={(e) => setNewTmplHeader(e.target.value)}
-                          placeholder="डिजिटल मतदाता पर्ची"
+                    {/* Header Format Selection */}
+                    <div>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                        हेडर प्रारूप (Header Type) — पर्ची की फोटो के लिए
+                      </span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setNewTmplHeaderType('IMAGE')}
                           style={{
-                            width: '100%',
-                            padding: '8px 10px',
-                            fontSize: '12.5px',
+                            padding: '10px',
                             borderRadius: '8px',
-                            border: '1px solid #cbd5e1',
-                            marginTop: '4px',
-                            boxSizing: 'border-box'
+                            border: `1.5px solid ${newTmplHeaderType === 'IMAGE' ? '#10b981' : '#cbd5e1'}`,
+                            background: newTmplHeaderType === 'IMAGE' ? '#ecfdf5' : '#ffffff',
+                            color: newTmplHeaderType === 'IMAGE' ? '#065f46' : '#475569',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '4px',
+                            textAlign: 'center'
                           }}
-                        />
-                      </label>
+                        >
+                          <span style={{ fontSize: '18px' }}>🖼️</span>
+                          <span>फोटो / इमेज हेडर</span>
+                          <small style={{ fontSize: '10px', fontWeight: 500, color: '#059669' }}>मतदाता पर्ची फोटो सहित (अनुशंसित)</small>
+                        </button>
 
-                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
-                        फ़ूटर टेक्स्ट (वैकल्पिक)
-                        <input
-                          type="text"
-                          value={newTmplFooter}
-                          onChange={(e) => setNewTmplFooter(e.target.value)}
-                          placeholder="विजयसेतु"
+                        <button
+                          type="button"
+                          onClick={() => setNewTmplHeaderType('TEXT')}
                           style={{
-                            width: '100%',
-                            padding: '8px 10px',
-                            fontSize: '12.5px',
+                            padding: '10px',
                             borderRadius: '8px',
-                            border: '1px solid #cbd5e1',
-                            marginTop: '4px',
-                            boxSizing: 'border-box'
+                            border: `1.5px solid ${newTmplHeaderType === 'TEXT' ? '#0284c7' : '#cbd5e1'}`,
+                            background: newTmplHeaderType === 'TEXT' ? '#f0f9ff' : '#ffffff',
+                            color: newTmplHeaderType === 'TEXT' ? '#0369a1' : '#475569',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '4px',
+                            textAlign: 'center'
                           }}
-                        />
-                      </label>
+                        >
+                          <span style={{ fontSize: '18px' }}>📄</span>
+                          <span>टेक्स्ट हेडर</span>
+                          <small style={{ fontSize: '10px', fontWeight: 500, color: '#0284c7' }}>केवल शीर्षक टेक्स्ट</small>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setNewTmplHeaderType('NONE')}
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${newTmplHeaderType === 'NONE' ? '#64748b' : '#cbd5e1'}`,
+                            background: newTmplHeaderType === 'NONE' ? '#f8fafc' : '#ffffff',
+                            color: newTmplHeaderType === 'NONE' ? '#1e293b' : '#475569',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '4px',
+                            textAlign: 'center'
+                          }}
+                        >
+                          <span style={{ fontSize: '18px' }}>🚫</span>
+                          <span>बिना हेडर</span>
+                          <small style={{ fontSize: '10px', fontWeight: 500, color: '#64748b' }}>केवल बॉडी टेक्स्ट</small>
+                        </button>
+                      </div>
+
+                      {newTmplHeaderType === 'IMAGE' && (
+                        <div style={{
+                          marginTop: '8px',
+                          padding: '8px 12px',
+                          background: '#f0fdf4',
+                          border: '1px solid #bbf7d0',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          color: '#166534',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}>
+                          <span>✅</span>
+                          <span>इस टेम्पलेट के साथ मतदाता की रंगीन पर्ची (Canvas/Photo) WhatsApp संदेश के हेडर में भेजी जाएगी।</span>
+                        </div>
+                      )}
+
+                      {newTmplHeaderType === 'TEXT' && (
+                        <div style={{ marginTop: '8px' }}>
+                          <label style={{ fontSize: '11.5px', fontWeight: 700, color: '#334155' }}>
+                            हेडर टेक्स्ट (Header Text)
+                            <input
+                              type="text"
+                              value={newTmplHeader}
+                              onChange={(e) => setNewTmplHeader(e.target.value)}
+                              placeholder="डिजिटल मतदाता सूचना पर्ची 🗳️"
+                              style={{
+                                width: '100%',
+                                padding: '8px 10px',
+                                fontSize: '12px',
+                                borderRadius: '6px',
+                                border: '1px solid #cbd5e1',
+                                marginTop: '4px',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          </label>
+                        </div>
+                      )}
                     </div>
 
+                    {/* Body Text */}
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
-                      बॉडी टेक्स्ट (Body with Variables)*
+                      बॉडी टेक्स्ट (Body Text with Variables)*
                       <textarea
                         required
                         rows={6}
@@ -5324,17 +5446,230 @@ export default function AdminPanel() {
                         }}
                       />
                       <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '4px' }}>
-                        चर मान: &#123;&#123;1&#125;&#125;=नाम, &#123;&#123;2&#125;&#125;=EPIC, &#123;&#123;3&#125;&#125;=वार्ड, &#123;&#123;4&#125;&#125;=भाग, &#123;&#123;5&#125;&#125;=क्रमांक, &#123;&#123;6&#125;&#125;=मतदान केंद्र
+                        चर मान: &#123;&#123;1&#125;&#125;=मतदाता नाम, &#123;&#123;2&#125;&#125;=प्रत्याशी नाम, &#123;&#123;3&#125;&#125;=EPIC, &#123;&#123;4&#125;&#125;=वार्ड, &#123;&#123;5&#125;&#125;=भाग संख्या, &#123;&#123;6&#125;&#125;=क्रमांक, &#123;&#123;7&#125;&#125;=मतदान केंद्र
                       </span>
                     </label>
+
+                    {/* Footer Text */}
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                      फ़ूटर टेक्स्ट (वैकल्पिक)
+                      <input
+                        type="text"
+                        value={newTmplFooter}
+                        onChange={(e) => setNewTmplFooter(e.target.value)}
+                        placeholder="विजयसेतु चुनावी प्रबंधन"
+                        style={{
+                          width: '100%',
+                          padding: '8px 10px',
+                          fontSize: '12.5px',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          marginTop: '4px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </label>
+
+                    {/* Interactive Buttons Configuration */}
+                    <div style={{
+                      background: '#f8fafc',
+                      border: '1.5px solid #e2e8f0',
+                      borderRadius: '10px',
+                      padding: '12px 14px'
+                    }}>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#1e293b', display: 'block', marginBottom: '8px' }}>
+                        WhatsApp बटन विकल्प (Interactive Buttons)
+                      </span>
+
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => setNewTmplButtonType('QUICK_REPLY')}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            border: `1.5px solid ${newTmplButtonType === 'QUICK_REPLY' ? '#00a884' : '#cbd5e1'}`,
+                            background: newTmplButtonType === 'QUICK_REPLY' ? '#e6f7f2' : '#ffffff',
+                            color: newTmplButtonType === 'QUICK_REPLY' ? '#00705a' : '#475569',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          🔘 त्वरित उत्तर (Quick Replies)
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setNewTmplButtonType('CTA')}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            border: `1.5px solid ${newTmplButtonType === 'CTA' ? '#0284c7' : '#cbd5e1'}`,
+                            background: newTmplButtonType === 'CTA' ? '#f0f9ff' : '#ffffff',
+                            color: newTmplButtonType === 'CTA' ? '#0369a1' : '#475569',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          📞 कॉल व वेबसाइट बटन (CTA)
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setNewTmplButtonType('NONE')}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            border: `1.5px solid ${newTmplButtonType === 'NONE' ? '#64748b' : '#cbd5e1'}`,
+                            background: newTmplButtonType === 'NONE' ? '#f1f5f9' : '#ffffff',
+                            color: newTmplButtonType === 'NONE' ? '#334155' : '#64748b',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          🚫 कोई बटन नहीं
+                        </button>
+                      </div>
+
+                      {newTmplButtonType === 'QUICK_REPLY' && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                          <label style={{ fontSize: '11px', fontWeight: 600, color: '#334155' }}>
+                            त्वरित उत्तर बटन 1
+                            <input
+                              type="text"
+                              value={newTmplQuickReply1}
+                              onChange={(e) => setNewTmplQuickReply1(e.target.value)}
+                              placeholder="मतदान पर्ची मिली ✅"
+                              maxLength={25}
+                              style={{
+                                width: '100%',
+                                padding: '6px 10px',
+                                fontSize: '12px',
+                                borderRadius: '6px',
+                                border: '1px solid #cbd5e1',
+                                marginTop: '4px',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          </label>
+
+                          <label style={{ fontSize: '11px', fontWeight: 600, color: '#334155' }}>
+                            त्वरित उत्तर बटन 2
+                            <input
+                              type="text"
+                              value={newTmplQuickReply2}
+                              onChange={(e) => setNewTmplQuickReply2(e.target.value)}
+                              placeholder="सहायता चाहिए 📞"
+                              maxLength={25}
+                              style={{
+                                width: '100%',
+                                padding: '6px 10px',
+                                fontSize: '12px',
+                                borderRadius: '6px',
+                                border: '1px solid #cbd5e1',
+                                marginTop: '4px',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          </label>
+                        </div>
+                      )}
+
+                      {newTmplButtonType === 'CTA' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                            <label style={{ fontSize: '11px', fontWeight: 600, color: '#334155' }}>
+                              कॉल बटन का नाम
+                              <input
+                                type="text"
+                                value={newTmplCallBtnText}
+                                onChange={(e) => setNewTmplCallBtnText(e.target.value)}
+                                placeholder="हेल्पलाइन पर कॉल करें"
+                                maxLength={25}
+                                style={{
+                                  width: '100%',
+                                  padding: '6px 10px',
+                                  fontSize: '12px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #cbd5e1',
+                                  marginTop: '4px',
+                                  boxSizing: 'border-box'
+                                }}
+                              />
+                            </label>
+                            <label style={{ fontSize: '11px', fontWeight: 600, color: '#334155' }}>
+                              फ़ोन नंबर (+91 सहित)
+                              <input
+                                type="text"
+                                value={newTmplCallBtnPhone}
+                                onChange={(e) => setNewTmplCallBtnPhone(e.target.value)}
+                                placeholder="+919413879444"
+                                style={{
+                                  width: '100%',
+                                  padding: '6px 10px',
+                                  fontSize: '12px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #cbd5e1',
+                                  marginTop: '4px',
+                                  boxSizing: 'border-box'
+                                }}
+                              />
+                            </label>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                            <label style={{ fontSize: '11px', fontWeight: 600, color: '#334155' }}>
+                              वेबसाइट बटन का नाम
+                              <input
+                                type="text"
+                                value={newTmplUrlBtnText}
+                                onChange={(e) => setNewTmplUrlBtnText(e.target.value)}
+                                placeholder="वेबसाइट देखें"
+                                maxLength={25}
+                                style={{
+                                  width: '100%',
+                                  padding: '6px 10px',
+                                  fontSize: '12px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #cbd5e1',
+                                  marginTop: '4px',
+                                  boxSizing: 'border-box'
+                                }}
+                              />
+                            </label>
+                            <label style={{ fontSize: '11px', fontWeight: 600, color: '#334155' }}>
+                              वेबसाइट URL
+                              <input
+                                type="text"
+                                value={newTmplUrlBtnLink}
+                                onChange={(e) => setNewTmplUrlBtnLink(e.target.value)}
+                                placeholder="https://vijaysetu.com"
+                                style={{
+                                  width: '100%',
+                                  padding: '6px 10px',
+                                  fontSize: '12px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #cbd5e1',
+                                  marginTop: '4px',
+                                  boxSizing: 'border-box'
+                                }}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     <button
                       type="submit"
                       disabled={creatingTemplate}
                       className="button-primary"
-                      style={{ padding: '9px 18px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                      style={{ padding: '10px 20px', fontSize: '13.5px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 700 }}
                     >
-                      {creatingTemplate ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}
+                      {creatingTemplate ? <LoaderCircle size={16} className="spin" /> : <Send size={16} />}
                       <span>Meta को सबमिट करें (Submit to Meta)</span>
                     </button>
                   </form>
@@ -5362,29 +5697,67 @@ export default function AdminPanel() {
                     padding: '14px 16px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '12px',
+                    justifyContent: 'space-between',
                     color: '#ffffff'
                   }}>
-                    <div style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '50%',
-                      background: '#128c7e',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: 800,
-                      fontSize: '14px',
-                      border: '1.5px solid #25d366'
-                    }}>
-                      VS
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '14px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span>विजयसेतु आधिकारिक</span>
-                        <CheckCheck size={14} color="#25d366" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        background: '#128c7e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 800,
+                        fontSize: '14px',
+                        border: '1.5px solid #25d366'
+                      }}>
+                        VS
                       </div>
-                      <div style={{ fontSize: '11px', color: '#dcfce7' }}>Official WhatsApp Business</div>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span>विजयसेतु आधिकारिक</span>
+                          <CheckCheck size={14} color="#25d366" />
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#dcfce7' }}>Official WhatsApp Business</div>
+                      </div>
+                    </div>
+
+                    {/* Preview Switch Tabs */}
+                    <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.2)', padding: '2px', borderRadius: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewMode('active')}
+                        style={{
+                          background: previewMode === 'active' ? '#25d366' : 'transparent',
+                          color: previewMode === 'active' ? '#0f5132' : '#ffffff',
+                          border: 'none',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          fontSize: '10.5px',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        सक्रिय
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewMode('draft')}
+                        style={{
+                          background: previewMode === 'draft' ? '#25d366' : 'transparent',
+                          color: previewMode === 'draft' ? '#0f5132' : '#ffffff',
+                          border: 'none',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          fontSize: '10.5px',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        नया ड्राफ्ट
+                      </button>
                     </div>
                   </div>
 
@@ -5393,7 +5766,7 @@ export default function AdminPanel() {
                     background: '#e5ddd5',
                     backgroundImage: 'radial-gradient(#d1c7bc 1px, transparent 1px)',
                     backgroundSize: '16px 16px',
-                    padding: '24px 16px',
+                    padding: '20px 14px',
                     minHeight: '380px',
                     display: 'flex',
                     flexDirection: 'column',
@@ -5407,67 +5780,180 @@ export default function AdminPanel() {
                       fontWeight: 700,
                       padding: '4px 12px',
                       borderRadius: '12px',
-                      marginBottom: '16px',
+                      marginBottom: '14px',
                       boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                     }}>
                       आज
                     </div>
 
                     {/* WhatsApp Message Bubble */}
-                    <div style={{
-                      background: '#ffffff',
-                      borderRadius: '12px 12px 12px 2px',
-                      padding: '14px',
-                      boxShadow: '0 2px 5px rgba(0,0,0,0.08)',
-                      maxWidth: '92%',
-                      position: 'relative'
-                    }}>
-                      {/* Message Header */}
-                      <div style={{
-                        fontSize: '13.5px',
-                        fontWeight: 800,
-                        color: '#075e54',
-                        marginBottom: '8px',
-                        borderBottom: '1px solid #f1f5f9',
-                        paddingBottom: '6px'
-                      }}>
-                        डिजिटल मतदाता सूचना पर्ची 🗳️
-                      </div>
+                    {(() => {
+                      const activeTmpl = metaTemplates.find((t) => t.name === activeMetaTemplate) || metaTemplates[0];
+                      const isDraft = previewMode === 'draft';
 
-                      {/* Message Body with Highlighted Values */}
-                      <div style={{ fontSize: '12.5px', color: '#1e293b', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
-                        {(() => {
-                          const tmpl = metaTemplates.find((t) => t.name === activeMetaTemplate) || metaTemplates[0];
-                          const body = tmpl?.components?.find((c) => c.type.toUpperCase() === 'BODY')?.text;
-                          if (body) {
-                            return body
-                              .replace(/\{\{1\}\}/g, 'रमेश कुमार')
-                              .replace(/\{\{2\}\}/g, 'RJ/17/105/012345')
-                              .replace(/\{\{3\}\}/g, '12')
-                              .replace(/\{\{4\}\}/g, '45')
-                              .replace(/\{\{5\}\}/g, '142')
-                              .replace(/\{\{6\}\}/g, 'राजकीय उच्च प्राथमिक विद्यालय');
-                          }
-                          return `नमस्कार रमेश कुमार जी,\n\nआपकी डिजिटल मतदाता सूचना पर्ची विवरण:\n• पहचान पत्र: RJ/17/105/012345\n• वार्ड: 12 · भाग: 45\n• क्रमांक संख्या: #142\n• मतदान केंद्र: राजकीय उच्च प्राथमिक विद्यालय\n\nकृपया मतदान दिवस पर अपना पहचान पत्र साथ लाएं। आपका वोट, आपका अधिकार!`;
-                        })()}
-                      </div>
+                      const hasImage = isDraft
+                        ? newTmplHeaderType === 'IMAGE'
+                        : Boolean(activeTmpl?.hasImageHeader || activeTmpl?.components?.some((c) => (c.type === 'HEADER' || c.type === 'header') && (c.format === 'IMAGE' || c.format === 'image')));
 
-                      {/* Footer & Meta Time */}
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginTop: '10px',
-                        fontSize: '10.5px',
-                        color: '#94a3b8'
-                      }}>
-                        <span>विजयसेतु चुनावी प्रबंधन</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          <span>10:30 AM</span>
-                          <CheckCheck size={13} color="#34b7f1" />
+                      const textHeader = isDraft
+                        ? (newTmplHeaderType === 'TEXT' ? newTmplHeader : null)
+                        : activeTmpl?.components?.find((c) => (c.type === 'HEADER' || c.type === 'header') && (c.format === 'TEXT' || c.format === 'text'))?.text;
+
+                      const rawBody = isDraft
+                        ? newTmplBody
+                        : activeTmpl?.components?.find((c) => c.type.toUpperCase() === 'BODY')?.text || newTmplBody;
+
+                      const formattedBody = (rawBody || '')
+                        .replace(/\{\{1\}\}/g, 'रमेश कुमार')
+                        .replace(/\{\{2\}\}/g, 'देवेन्द्र सिंह राठौड़')
+                        .replace(/\{\{3\}\}/g, 'RJ/17/105/012345')
+                        .replace(/\{\{4\}\}/g, '12')
+                        .replace(/\{\{5\}\}/g, '45')
+                        .replace(/\{\{6\}\}/g, '142')
+                        .replace(/\{\{7\}\}/g, 'राजकीय उच्च प्राथमिक विद्यालय');
+
+                      const footer = isDraft
+                        ? newTmplFooter
+                        : activeTmpl?.components?.find((c) => c.type.toUpperCase() === 'FOOTER')?.text || newTmplFooter;
+
+                      const buttonsList: Array<{ type: string; text: string; phone_number?: string; url?: string }> = isDraft
+                        ? (newTmplButtonType === 'QUICK_REPLY'
+                            ? [
+                                ...(newTmplQuickReply1 ? [{ type: 'QUICK_REPLY', text: newTmplQuickReply1 }] : []),
+                                ...(newTmplQuickReply2 ? [{ type: 'QUICK_REPLY', text: newTmplQuickReply2 }] : [])
+                              ]
+                            : newTmplButtonType === 'CTA'
+                            ? [
+                                ...(newTmplCallBtnText ? [{ type: 'PHONE_NUMBER', text: newTmplCallBtnText, phone_number: newTmplCallBtnPhone }] : []),
+                                ...(newTmplUrlBtnText ? [{ type: 'URL', text: newTmplUrlBtnText, url: newTmplUrlBtnLink }] : [])
+                              ]
+                            : [])
+                        : (activeTmpl?.buttons || activeTmpl?.components?.find((c) => c.type.toUpperCase() === 'BUTTONS')?.buttons || []);
+
+                      return (
+                        <div style={{ maxWidth: '94%' }}>
+                          <div style={{
+                            background: '#ffffff',
+                            borderRadius: '12px 12px 12px 2px',
+                            padding: '12px',
+                            boxShadow: '0 2px 5px rgba(0,0,0,0.08)',
+                            position: 'relative'
+                          }}>
+                            {/* Image Header Preview */}
+                            {hasImage && (
+                              <div style={{
+                                background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                                border: '1.5px solid #cbd5e1',
+                                borderRadius: '8px',
+                                padding: '10px 12px',
+                                marginBottom: '10px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px'
+                              }}>
+                                <span style={{ fontSize: '26px' }}>🖼️</span>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a' }}>
+                                    मतदाता पर्ची फोटो (Slip Photo)
+                                  </div>
+                                  <div style={{ fontSize: '10px', color: '#64748b' }}>
+                                    हैंडसेट पर फोटो के रूप में संलग्न
+                                  </div>
+                                </div>
+                                <span style={{
+                                  fontSize: '9.5px',
+                                  background: '#10b981',
+                                  color: '#ffffff',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  fontWeight: 800
+                                }}>
+                                  IMAGE HEADER
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Text Header */}
+                            {textHeader && (
+                              <div style={{
+                                fontSize: '13.5px',
+                                fontWeight: 800,
+                                color: '#075e54',
+                                marginBottom: '8px',
+                                borderBottom: '1px solid #f1f5f9',
+                                paddingBottom: '6px'
+                              }}>
+                                {textHeader}
+                              </div>
+                            )}
+
+                            {/* Message Body */}
+                            <div style={{ fontSize: '12px', color: '#1e293b', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+                              {formattedBody}
+                            </div>
+
+                            {/* Footer & Meta Time */}
+                            <div style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginTop: '10px',
+                              fontSize: '10.5px',
+                              color: '#94a3b8'
+                            }}>
+                              <span>{footer || 'विजयसेतु'}</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <span>10:30 AM</span>
+                                <CheckCheck size={13} color="#34b7f1" />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Interactive Buttons Below Bubble */}
+                          {buttonsList && buttonsList.length > 0 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                              {buttonsList.map((btn, idx) => (
+                                <div
+                                  key={idx}
+                                  style={{
+                                    background: '#ffffff',
+                                    borderRadius: '8px',
+                                    padding: '8px 12px',
+                                    textAlign: 'center',
+                                    color: '#00a884',
+                                    fontWeight: 700,
+                                    fontSize: '12px',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '6px',
+                                    border: '1px solid rgba(0,0,0,0.04)'
+                                  }}
+                                >
+                                  {btn.type === 'PHONE_NUMBER' ? (
+                                    <>
+                                      <span>📞</span>
+                                      <span>{btn.text}</span>
+                                    </>
+                                  ) : btn.type === 'URL' ? (
+                                    <>
+                                      <span>🌐</span>
+                                      <span>{btn.text} ↗</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span>↩️</span>
+                                      <span>{btn.text}</span>
+                                    </>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    </div>
+                      );
+                    })()}
                   </div>
                 </div>
 
