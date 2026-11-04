@@ -51,20 +51,10 @@ interface Voter {
   photoUrl?: string;
 }
 
-const getWardsFromToken = () => {
-  if (typeof window === 'undefined') return Array.from({ length: 9 }, (_, index) => String(index + 1));
-  try {
-    const token = window.localStorage.getItem('token');
-    if (!token) return Array.from({ length: 9 }, (_, index) => String(index + 1));
-    const payload = decodeJwtPayload<{ user?: { allowedWards?: string[] } }>(token);
-    const allowedWards = payload?.user?.allowedWards;
-    return Array.isArray(allowedWards) && allowedWards.length > 0
-      ? allowedWards.map((w: string) => w.replace(/[^\d]/g, '')).filter(Boolean).sort((a: string, b: string) => Number(a) - Number(b))
-      : Array.from({ length: 9 }, (_, index) => String(index + 1));
-  } catch {
-    return Array.from({ length: 9 }, (_, index) => String(index + 1));
-  }
-};
+interface WardInfo {
+  id: string;
+  count: number;
+}
 
 const VoterGridButton = React.memo(({
   voter,
@@ -233,8 +223,9 @@ const VoterTableRow = React.memo(({
 VoterTableRow.displayName = 'VoterTableRow';
 
 export default function PollDeskPage() {
-  const [wards, setWards] = useState<string[]>([]);
-  const [selectedWards, setSelectedWards] = useState<string[]>([]);
+  const [availableWards, setAvailableWards] = useState<WardInfo[]>([]);
+  const [totalOrgVoters, setTotalOrgVoters] = useState<number>(0);
+  const [selectedWards, setSelectedWards] = useState<string[]>(['all']);
   const [selectedPart, setSelectedPart] = useState('');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'pending' | 'voted'>('all');
@@ -255,57 +246,28 @@ export default function PollDeskPage() {
     return true;
   });
 
-  useEffect(() => {
-    const initialWards = getWardsFromToken();
-    setWards(initialWards);
-    setSelectedWards(initialWards.length > 0 ? [initialWards[0]] : ['1']);
-
-    if (typeof window !== 'undefined') {
-      const savedLang = localStorage.getItem('poll_desk_lang');
-      if (savedLang === 'en' || savedLang === 'hinglish' || savedLang === 'hi') {
-        setLanguage(savedLang);
+  const loadWardsSummary = useCallback(async () => {
+    try {
+      const res = await apiFetch('/voters/wards-summary', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.wards) && data.wards.length > 0) {
+          const list: WardInfo[] = data.wards
+            .map((w: any) => ({
+              id: String(w._id).trim(),
+              count: typeof w.count === 'number' ? w.count : 0,
+            }))
+            .filter((w: WardInfo) => Boolean(w.id));
+          setAvailableWards(list);
+        }
+        if (typeof data.total === 'number') {
+          setTotalOrgVoters(data.total);
+        }
       }
-      const savedView = localStorage.getItem('poll_desk_view_mode');
-      if (savedView === 'both' || savedView === 'grid' || savedView === 'table') {
-        setViewMode(savedView);
-      }
+    } catch {
+      // ignore
     }
   }, []);
-
-  const handleLanguageChange = (newLang: DisplayLanguage) => {
-    setLanguage(newLang);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('poll_desk_lang', newLang);
-    }
-  };
-
-  const handleViewModeChange = (mode: ViewMode) => {
-    setViewMode(mode);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('poll_desk_view_mode', mode);
-    }
-  };
-
-  const toggleWard = (wardNo: string) => {
-    setSelectedWards((prev) => {
-      if (wardNo === 'all') {
-        if (prev.includes('all') || (wards.length > 0 && prev.length === wards.length)) {
-          return [wards[0] || '1'];
-        }
-        return ['all'];
-      }
-      const withoutAll = prev.filter((w) => w !== 'all');
-      if (withoutAll.includes(wardNo)) {
-        const next = withoutAll.filter((w) => w !== wardNo);
-        return next.length > 0 ? next : [wardNo];
-      } else {
-        const next = [...withoutAll, wardNo];
-        if (wards.length > 0 && next.length === wards.length) return ['all'];
-        return next;
-      }
-    });
-    setSelectedPart('');
-  };
 
   const loadVoters = useCallback(async (wardsList: string[]) => {
     if (!wardsList || wardsList.length === 0) return;
@@ -327,6 +289,73 @@ export default function PollDeskPage() {
     }
   }, []);
 
+  useEffect(() => {
+    // If worker token has strictly assigned wards, respect them
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
+    if (token) {
+      try {
+        const payload = decodeJwtPayload<{ user?: { allowedWards?: string[] } }>(token);
+        const allowedWards = payload?.user?.allowedWards;
+        if (Array.isArray(allowedWards) && allowedWards.length > 0) {
+          const cleanWards = allowedWards.map((w: string) => String(w).trim()).filter(Boolean);
+          if (cleanWards.length > 0) {
+            setSelectedWards(cleanWards);
+            setAvailableWards(cleanWards.map((w) => ({ id: w, count: 0 })));
+          }
+        }
+      } catch {}
+    }
+
+    void loadWardsSummary();
+    void loadVoters(selectedWards.length > 0 ? selectedWards : ['all']);
+
+    if (typeof window !== 'undefined') {
+      const savedLang = localStorage.getItem('poll_desk_lang');
+      if (savedLang === 'en' || savedLang === 'hinglish' || savedLang === 'hi') {
+        setLanguage(savedLang);
+      }
+      const savedView = localStorage.getItem('poll_desk_view_mode');
+      if (savedView === 'both' || savedView === 'grid' || savedView === 'table') {
+        setViewMode(savedView);
+      }
+    }
+  }, [loadWardsSummary]);
+
+  const handleLanguageChange = (newLang: DisplayLanguage) => {
+    setLanguage(newLang);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('poll_desk_lang', newLang);
+    }
+  };
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('poll_desk_view_mode', mode);
+    }
+  };
+
+  const toggleWard = (wardNo: string) => {
+    setSelectedWards((prev) => {
+      if (wardNo === 'all') {
+        if (prev.includes('all')) {
+          return availableWards.length > 0 ? [availableWards[0].id] : ['all'];
+        }
+        return ['all'];
+      }
+      const withoutAll = prev.filter((w) => w !== 'all');
+      if (withoutAll.includes(wardNo)) {
+        const next = withoutAll.filter((w) => w !== wardNo);
+        return next.length > 0 ? next : ['all'];
+      } else {
+        const next = [...withoutAll, wardNo];
+        if (availableWards.length > 0 && next.length === availableWards.length) return ['all'];
+        return next;
+      }
+    });
+    setSelectedPart('');
+  };
+
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
   useEffect(() => {
@@ -344,11 +373,15 @@ export default function PollDeskPage() {
 
   useEffect(() => {
     const handleClientChange = () => {
-      if (selectedWards.length > 0) void loadVoters(selectedWards);
+      setSelectedWards(['all']);
+      setSelectedPart('');
+      setSearch('');
+      void loadWardsSummary();
+      void loadVoters(['all']);
     };
     window.addEventListener('client-changed', handleClientChange);
     return () => window.removeEventListener('client-changed', handleClientChange);
-  }, [selectedWards, loadVoters]);
+  }, [loadWardsSummary, loadVoters]);
 
   const [sort, setSort] = useState<SortState>({ field: 'serialNo', direction: 'asc' });
   const handleSort = (field: string) => {
@@ -454,10 +487,10 @@ export default function PollDeskPage() {
   };
 
   const getWardDisplayText = () => {
-    if (selectedWards.includes('all') || (wards.length > 0 && selectedWards.length === wards.length)) {
+    if (selectedWards.includes('all') || (availableWards.length > 0 && selectedWards.length === availableWards.length)) {
       return 'सभी वार्ड';
     }
-    return `वार्ड ${selectedWards.join(', ')}`;
+    return selectedWards.map((w) => `वार्ड ${w}`).join(', ');
   };
 
   return (
@@ -529,23 +562,28 @@ export default function PollDeskPage() {
           </span>
           <button
             type="button"
-            className={`ward-pill-btn ${selectedWards.includes('all') || (wards.length > 0 && selectedWards.length === wards.length) ? 'is-active' : ''}`}
+            className={`ward-pill-btn ${selectedWards.includes('all') || (availableWards.length > 0 && selectedWards.length === availableWards.length) ? 'is-active' : ''}`}
             onClick={() => toggleWard('all')}
             title="सभी वार्ड एक साथ देखें"
           >
-            सभी वार्ड ({wards.length})
+            सभी वार्ड ({totalOrgVoters > 0 ? totalOrgVoters.toLocaleString('hi-IN') : availableWards.length || voters.length})
           </button>
-          {wards.map((ward) => {
-            const isSelected = selectedWards.includes('all') || selectedWards.includes(ward);
+          {availableWards.map((wardItem) => {
+            const isSelected = !selectedWards.includes('all') && selectedWards.includes(wardItem.id);
             return (
               <button
-                key={ward}
+                key={wardItem.id}
                 type="button"
                 className={`ward-pill-btn ${isSelected ? 'is-active' : ''}`}
-                onClick={() => toggleWard(ward)}
-                title={`वार्ड ${ward} चयन टॉगल करें`}
+                onClick={() => toggleWard(wardItem.id)}
+                title={`वार्ड ${wardItem.id} (${wardItem.count} मतदाता)`}
               >
-                वार्ड {ward}
+                वार्ड {wardItem.id}
+                {wardItem.count > 0 && (
+                  <span style={{ fontSize: '11px', opacity: 0.85, marginLeft: '4px', fontWeight: 600 }}>
+                    ({wardItem.count.toLocaleString('hi-IN')})
+                  </span>
+                )}
               </button>
             );
           })}
@@ -746,9 +784,40 @@ export default function PollDeskPage() {
           </div>
         ) : visibleVoters.length === 0 ? (
           <div className="empty-state">
-            <span className="empty-icon"><Search size={18} /></span>
+            <span className="empty-icon"><Search size={22} /></span>
             <strong>कोई रिकॉर्ड नहीं मिला</strong>
-            <p>वार्ड या खोज के अनुसार रिकॉर्ड उपलब्ध नहीं है।</p>
+            <p>
+              {search
+                ? `खोज '${search}' के लिए कोई मतदाता नहीं मिला।`
+                : selectedWards.includes('all')
+                ? 'इस संगठन/क्लाइंट में कोई मतदाता रिकॉर्ड उपलब्ध नहीं है।'
+                : `चुने गए ${getWardDisplayText()} में कोई मतदाता रिकॉर्ड नहीं मिला।`}
+            </p>
+            {(!selectedWards.includes('all') || Boolean(search)) && (
+              <div style={{ display: 'flex', gap: '8px', marginTop: '12px', justifyContent: 'center' }}>
+                {search && (
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => {
+                      setSearch('');
+                      setDebouncedSearch('');
+                    }}
+                  >
+                    खोज साफ़ करें
+                  </button>
+                )}
+                {!selectedWards.includes('all') && (
+                  <button
+                    type="button"
+                    className="button-primary"
+                    onClick={() => toggleWard('all')}
+                  >
+                    सभी वार्ड देखें ({totalOrgVoters > 0 ? totalOrgVoters.toLocaleString('hi-IN') : 'सभी'})
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <>
