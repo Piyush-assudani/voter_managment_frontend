@@ -1265,7 +1265,8 @@ export default function VoterDirectoryPage() {
         body: JSON.stringify({
           voterId: slipVoter._id,
           phoneNumber: slipPhone,
-          slipImageDataUrl
+          slipImageDataUrl,
+          templateName: 'voter_campaign_appeal'
         }),
       });
       const data = await response.json().catch(() => ({}));

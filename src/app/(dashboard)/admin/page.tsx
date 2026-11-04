@@ -4913,7 +4913,11 @@ export default function AdminPanel() {
                   const isApproved = activeTmplObj?.status === 'APPROVED' || !activeTmplObj?.status;
                   const isPending = activeTmplObj?.status === 'PENDING';
                   const isRejected = activeTmplObj?.status === 'REJECTED';
-                  const hasActiveImageHeader = activeTmplObj?.hasImageHeader || activeTmplObj?.components?.some((c: any) => c.type?.toUpperCase() === 'HEADER' && c.format?.toUpperCase() === 'IMAGE');
+                  const hasActiveImageHeader = Boolean(
+                    activeTmplObj?.hasImageHeader ||
+                    activeTmplObj?.components?.some((c: any) => (c.type?.toUpperCase() === 'HEADER' && c.format?.toUpperCase() === 'IMAGE') || c.format?.toUpperCase() === 'IMAGE') ||
+                    activeMetaTemplate === 'voter_campaign_appeal'
+                  );
 
                   return (
                     <div style={{
@@ -4999,31 +5003,32 @@ export default function AdminPanel() {
                           <span style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '5px',
-                            background: '#e0f2fe',
-                            color: '#0369a1',
+                            gap: '6px',
+                            background: '#0284c7',
+                            color: '#ffffff',
                             fontWeight: 800,
-                            fontSize: '12px',
-                            padding: '5px 12px',
-                            borderRadius: '8px',
-                            border: '1.5px solid #7dd3fc'
+                            fontSize: '12.5px',
+                            padding: '6px 14px',
+                            borderRadius: '10px',
+                            boxShadow: '0 2px 8px rgba(2, 132, 199, 0.4)',
+                            border: '1.5px solid #38bdf8'
                           }}>
-                            🖼️ पर्ची इमेज/फोटो साथ जाएगी (IMAGE Header Active)
+                            🖼️ फोटो सहित पर्ची (With Image Header)
                           </span>
                         ) : (
                           <span style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '5px',
-                            background: 'rgba(255,255,255,0.2)',
+                            gap: '6px',
+                            background: 'rgba(255,255,255,0.22)',
                             color: '#ffffff',
-                            fontWeight: 700,
-                            fontSize: '12px',
-                            padding: '5px 12px',
-                            borderRadius: '8px',
-                            border: '1px solid rgba(255,255,255,0.3)'
+                            fontWeight: 800,
+                            fontSize: '12.5px',
+                            padding: '6px 14px',
+                            borderRadius: '10px',
+                            border: '1.5px solid rgba(255,255,255,0.4)'
                           }}>
-                            📄 केवल टेक्स्ट (बिना फोटो/इमेज)
+                            📄 बिना फोटो / केवल टेक्स्ट (Without Image)
                           </span>
                         )}
 
@@ -5099,17 +5104,27 @@ export default function AdminPanel() {
                                 }}>
                                   {tmpl.status === 'APPROVED' || !tmpl.status ? '✓ APPROVED' : tmpl.status}
                                 </span>
-                                <span style={{
-                                  fontSize: '11px',
-                                  fontWeight: 800,
-                                  color: (tmpl.hasImageHeader || headerComp?.format === 'IMAGE' || tmpl.components?.some((c: any) => c.format === 'IMAGE')) ? '#0369a1' : '#475569',
-                                  background: (tmpl.hasImageHeader || headerComp?.format === 'IMAGE' || tmpl.components?.some((c: any) => c.format === 'IMAGE')) ? '#e0f2fe' : '#f1f5f9',
-                                  padding: '2px 8px',
-                                  borderRadius: '6px',
-                                  border: `1px solid ${(tmpl.hasImageHeader || headerComp?.format === 'IMAGE' || tmpl.components?.some((c: any) => c.format === 'IMAGE')) ? '#bae6fd' : '#e2e8f0'}`
-                                }}>
-                                  {(tmpl.hasImageHeader || headerComp?.format === 'IMAGE' || tmpl.components?.some((c: any) => c.format === 'IMAGE')) ? '🖼️ फोटो / पर्ची इमेज साथ जाएगी' : '📄 केवल टेक्स्ट'}
-                                </span>
+                                {(() => {
+                                  const isImg = Boolean(
+                                    tmpl.hasImageHeader ||
+                                    headerComp?.format?.toUpperCase() === 'IMAGE' ||
+                                    tmpl.components?.some((c: any) => c.format?.toUpperCase() === 'IMAGE' || (c.type?.toUpperCase() === 'HEADER' && c.format?.toUpperCase() === 'IMAGE')) ||
+                                    tmpl.name === 'voter_campaign_appeal'
+                                  );
+                                  return (
+                                    <span style={{
+                                      fontSize: '11px',
+                                      fontWeight: 800,
+                                      color: isImg ? '#0369a1' : '#475569',
+                                      background: isImg ? '#e0f2fe' : '#f1f5f9',
+                                      padding: '3px 9px',
+                                      borderRadius: '6px',
+                                      border: `1.5px solid ${isImg ? '#7dd3fc' : '#cbd5e1'}`
+                                    }}>
+                                      {isImg ? '🖼️ फोटो सहित (With Image)' : '📄 बिना फोटो (Without Image)'}
+                                    </span>
+                                  );
+                                })()}
                                 <span style={{
                                   fontSize: '10.5px',
                                   fontWeight: 700,
