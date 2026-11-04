@@ -636,6 +636,55 @@ export default function AdminPanel() {
   // ==========================================
   // Meta WhatsApp Template Management States
   // ==========================================
+  const hindiConsonantsMap: Record<string, string> = {
+    'क':'ka','ख':'kha','ग':'ga','घ':'gha','ङ':'nga',
+    'च':'cha','छ':'chha','ज':'ja','झ':'jha','ञ':'nya',
+    'ट':'ta','ठ':'tha','ड':'da','ढ':'dha','ण':'na',
+    'त':'ta','थ':'tha','द':'da','ध':'dha','न':'na',
+    'प':'pa','फ':'pha','ब':'ba','भ':'bha','म':'ma',
+    'य':'ya','र':'ra','ल':'la','व':'va','श':'sha','ष':'sha','स':'sa','ह':'ha',
+    'क्ष':'ksha','त्र':'tra','ज्ञ':'gya','श्र':'shra'
+  };
+  const hindiMatrasMap: Record<string, string> = {
+    'ा':'a','ि':'i','ी':'ee','ु':'u','ू':'oo','ृ':'ri','े':'e','ै':'ai','ो':'o','ौ':'au','ं':'n','ः':'h'
+  };
+  const hindiVowelsMap: Record<string, string> = {
+    'अ':'a','आ':'aa','इ':'i','ई':'ee','उ':'u','ऊ':'oo','ऋ':'ri','ए':'e','ऐ':'ai','ओ':'o','औ':'au','अं':'am','अः':'ah'
+  };
+  const hindiDigitsMap: Record<string, string> = {
+    '०':'0','१':'1','२':'2','३':'3','४':'4','५':'5','६':'6','७':'7','८':'8','९':'9'
+  };
+
+  const getCleanMetaTemplateSlug = (raw: string) => {
+    if (!raw) return 'voter_slip_custom';
+    let res = '';
+    const str = String(raw).trim();
+    for (let i = 0; i < str.length; i++) {
+      const ch = str[i];
+      const nextCh = str[i + 1];
+      if (hindiConsonantsMap[ch]) {
+        if (nextCh === '्') {
+          res += hindiConsonantsMap[ch].slice(0, -1);
+          i++;
+        } else if (hindiMatrasMap[nextCh]) {
+          res += hindiConsonantsMap[ch].slice(0, -1) + hindiMatrasMap[nextCh];
+          i++;
+        } else {
+          res += hindiConsonantsMap[ch];
+        }
+      } else if (hindiVowelsMap[ch]) {
+        res += hindiVowelsMap[ch];
+      } else if (hindiMatrasMap[ch]) {
+        res += hindiMatrasMap[ch];
+      } else if (hindiDigitsMap[ch]) {
+        res += hindiDigitsMap[ch];
+      } else {
+        res += ch;
+      }
+    }
+    return res.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '').slice(0, 50) || 'voter_slip_custom';
+  };
+
   interface MetaTemplateItem {
     name: string;
     status: string;
@@ -830,7 +879,7 @@ export default function AdminPanel() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: newTmplName.trim(),
+          name: getCleanMetaTemplateSlug(newTmplName.trim()),
           category: newTmplCategory,
           language: newTmplLanguage,
           headerType: newTmplHeaderType,
@@ -5276,7 +5325,7 @@ export default function AdminPanel() {
                         <div style={{ fontSize: '10.5px', color: '#64748b', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <span>Meta ID:</span>
                           <code style={{ background: '#f1f5f9', color: '#0369a1', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
-                            {newTmplName ? newTmplName.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').slice(0, 45) || 'voter_slip_custom' : 'voter_slip_custom'}
+                            {getCleanMetaTemplateSlug(newTmplName)}
                           </code>
                         </div>
                       </label>
