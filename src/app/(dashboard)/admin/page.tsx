@@ -5368,8 +5368,8 @@ export default function AdminPanel() {
                   </p>
 
                   <form onSubmit={handleCreateMetaTemplate} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {/* Template Name & Category */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                    {/* Template Name, Category & Language */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
                         टेम्पलेट का नाम (Name)*
                         <input
@@ -5420,10 +5420,45 @@ export default function AdminPanel() {
                             background: '#ffffff'
                           }}
                         >
-                          <option value="MARKETING">MARKETING (प्रचार, अपील व संदेश - अनुशंसित)</option>
+                          <option value="MARKETING">MARKETING (प्रचार व अपील - अनुशंसित)</option>
                           <option value="UTILITY">UTILITY (मतदाता पर्ची, सेवा संदेश)</option>
                         </select>
-                        <span style={{ fontSize: '10px', color: '#94a3b8' }}>चुनावी अपील व प्रचार हेतु MARKETING उपयुक्त है</span>
+                        <span style={{ fontSize: '10px', color: '#94a3b8' }}>चुनावी अपील व पर्ची हेतु MARKETING</span>
+                      </label>
+
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                        भाषा (Language)
+                        <select
+                          value={newTmplLanguage}
+                          onFocus={() => setPreviewMode('draft')}
+                          onChange={(e) => {
+                            setNewTmplLanguage(e.target.value);
+                            setPreviewMode('draft');
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            fontSize: '12.5px',
+                            borderRadius: '8px',
+                            border: '1px solid #cbd5e1',
+                            marginTop: '4px',
+                            boxSizing: 'border-box',
+                            background: '#ffffff'
+                          }}
+                        >
+                          <option value="hi">हिंदी (Hindi - hi)</option>
+                          <option value="en">English (अंग्रेजी - en)</option>
+                          <option value="en_US">English US (en_US)</option>
+                          <option value="gu">गुजराती (Gujarati - gu)</option>
+                          <option value="mr">मराठी (Marathi - mr)</option>
+                          <option value="pa">पंजाबी (Punjabi - pa)</option>
+                          <option value="bn">बंगाली (Bengali - bn)</option>
+                          <option value="te">तेलुगु (Telugu - te)</option>
+                          <option value="ta">तमिल (Tamil - ta)</option>
+                          <option value="kn">कन्नड़ (Kannada - kn)</option>
+                          <option value="ur">उर्दू (Urdu - ur)</option>
+                        </select>
+                        <span style={{ fontSize: '10px', color: '#94a3b8' }}>Meta समर्थित भाषा कोड</span>
                       </label>
                     </div>
 
