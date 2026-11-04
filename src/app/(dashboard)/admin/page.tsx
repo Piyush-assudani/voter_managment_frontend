@@ -899,6 +899,18 @@ export default function AdminPanel() {
         }
       }
 
+      // Clean up body variables to strict {{1}}, {{2}} standard
+      const cleanBody = newTmplBody
+        .trim()
+        .replace(/\{+([०-९0-9\s]+)\}+/g, (m, g) => {
+          const hindiToAscii: Record<string, string> = { '०':'0','१':'1','२':'2','३':'3','४':'4','५':'5','६':'6','७':'7','८':'8','९':'9' };
+          let digits = '';
+          for (const c of g.trim()) {
+            digits += hindiToAscii[c] !== undefined ? hindiToAscii[c] : c;
+          }
+          return '{{' + digits + '}}';
+        });
+
       const res = await apiFetch('/whatsapp/templates/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -908,7 +920,7 @@ export default function AdminPanel() {
           language: newTmplLanguage,
           headerType: newTmplHeaderType,
           headerText: newTmplHeaderType === 'TEXT' ? newTmplHeader.trim() : undefined,
-          bodyText: newTmplBody.trim(),
+          bodyText: cleanBody,
           footerText: newTmplFooter.trim() || undefined,
           buttons: buttonsPayload.length > 0 ? buttonsPayload : undefined,
         }),
