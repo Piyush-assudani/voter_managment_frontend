@@ -5914,13 +5914,14 @@ export default function AdminPanel() {
                     </div>
                   </div>
 
-                  {/* Chat Wallpaper Background */}
+                  {/* Chat Wallpaper Background (Scrollable, never cuts off content) */}
                   <div style={{
                     background: '#e5ddd5',
                     backgroundImage: 'radial-gradient(#d1c7bc 1px, transparent 1px)',
                     backgroundSize: '16px 16px',
-                    padding: '20px 14px',
-                    minHeight: '380px',
+                    padding: '14px 12px 20px 12px',
+                    maxHeight: '490px',
+                    overflowY: 'auto',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'flex-start'
@@ -5992,13 +5993,14 @@ export default function AdminPanel() {
                         : (activeTmpl?.buttons || activeTmpl?.components?.find((c) => c.type.toUpperCase() === 'BUTTONS')?.buttons || []);
 
                       return (
-                        <div style={{ maxWidth: '94%' }}>
+                        <div style={{ width: '100%', boxSizing: 'border-box' }}>
                           <div style={{
                             background: '#ffffff',
                             borderRadius: '12px 12px 12px 2px',
                             padding: '12px',
                             boxShadow: '0 2px 5px rgba(0,0,0,0.08)',
-                            position: 'relative'
+                            position: 'relative',
+                            boxSizing: 'border-box'
                           }}>
                             {/* Image Header Preview */}
                             {hasImage && (
@@ -6048,8 +6050,15 @@ export default function AdminPanel() {
                               </div>
                             )}
 
-                            {/* Message Body */}
-                            <div style={{ fontSize: '12px', color: '#1e293b', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+                            {/* Message Body (Word wrap to prevent overflow) */}
+                            <div style={{
+                              fontSize: '12px',
+                              color: '#1e293b',
+                              lineHeight: 1.5,
+                              whiteSpace: 'pre-line',
+                              wordBreak: 'break-word',
+                              overflowWrap: 'anywhere'
+                            }}>
                               {formattedBody}
                             </div>
 
@@ -6115,6 +6124,41 @@ export default function AdminPanel() {
                         </div>
                       );
                     })()}
+                  </div>
+
+                  {/* WhatsApp Bottom Input Bar Mockup */}
+                  <div style={{
+                    background: '#f0f2f5',
+                    padding: '8px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    borderTop: '1px solid #e2e8f0'
+                  }}>
+                    <span style={{ fontSize: '18px', color: '#8696a0' }}>😊</span>
+                    <div style={{
+                      flex: 1,
+                      background: '#ffffff',
+                      borderRadius: '20px',
+                      padding: '6px 14px',
+                      fontSize: '11.5px',
+                      color: '#94a3b8',
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      संदेश टाइप करें...
+                    </div>
+                    <div style={{
+                      width: '30px',
+                      height: '30px',
+                      borderRadius: '50%',
+                      background: '#00a884',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#ffffff'
+                    }}>
+                      <Send size={13} />
+                    </div>
                   </div>
                 </div>
 
