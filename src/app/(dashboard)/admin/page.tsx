@@ -682,7 +682,14 @@ export default function AdminPanel() {
         res += ch;
       }
     }
-    return res.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '').slice(0, 50) || 'voter_slip_custom';
+    let slug = res.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+    if (!slug || slug.length < 2) {
+      slug = 'voter_slip_' + Date.now().toString().slice(-4);
+    }
+    if (/^[0-9_]/.test(slug)) {
+      slug = 'voter_' + slug;
+    }
+    return slug.slice(0, 50);
   };
 
   interface MetaTemplateItem {
@@ -899,8 +906,8 @@ export default function AdminPanel() {
         }
       }
 
-      // Clean up body variables to strict {{1}}, {{2}} standard
-      const cleanBody = newTmplBody
+      // Clean up body variables to strict {{1}}, {{2}} standard with no missing gaps
+      let cleanBody = newTmplBody
         .trim()
         .replace(/\{+([०-९0-9\s]+)\}+/g, (m, g) => {
           const hindiToAscii: Record<string, string> = { '०':'0','१':'1','२':'2','३':'3','४':'4','५':'5','६':'6','७':'7','८':'8','९':'9' };
@@ -910,6 +917,22 @@ export default function AdminPanel() {
           }
           return '{{' + digits + '}}';
         });
+
+      // Auto-resequence variables in order of appearance (e.g. 1, 3, 4, 7 -> 1, 2, 3, 4)
+      const varMatches = [...cleanBody.matchAll(/\{\{(\d+)\}\}/g)];
+      const seenNums: number[] = [];
+      for (const m of varMatches) {
+        const n = parseInt(m[1], 10);
+        if (!seenNums.includes(n)) seenNums.push(n);
+      }
+      const numMap: Record<number, number> = {};
+      seenNums.forEach((oldN, idx) => {
+        numMap[oldN] = idx + 1;
+      });
+      cleanBody = cleanBody.replace(/\{\{(\d+)\}\}/g, (m, g) => {
+        const n = parseInt(g, 10);
+        return `{{${numMap[n] || g}}}`;
+      });
 
       const res = await apiFetch('/whatsapp/templates/create', {
         method: 'POST',
