@@ -799,11 +799,28 @@ export default function SlipsPage() {
     }
   };
 
-  // Note: Slip images are generated on-demand when WhatsApp or Download is clicked,
-  // preventing main-thread UI freezing and canvas lag on voter selection.
+  // Auto-save phone number permanently to voter record
+  const handleAutoSaveWpPhone = async (newPhone: string) => {
+    if (!selectedVoter) return;
+    const clean = newPhone.replace(/\D/g, '').slice(-10);
+    if (clean && clean.length === 10 && clean !== (selectedVoter.phone || (selectedVoter as any).mobileNo)) {
+      try {
+        await apiFetch(`/voters/${selectedVoter._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: clean, mobileNo: clean }),
+        });
+        setSelectedVoter((prev) => (prev ? { ...prev, phone: clean, mobileNo: clean } : null));
+        setVoters((prev) => prev.map((v) => (v._id === selectedVoter._id ? { ...v, phone: clean, mobileNo: clean } : v)));
+      } catch (err) {
+        console.warn('Auto-save voter phone failed:', err);
+      }
+    }
+  };
 
   // Official WhatsApp Send (Meta Cloud API with Photo)
   const handleSendWhatsAppViaApi = async () => {
+    void handleAutoSaveWpPhone(wpPhone);
     setWpSending(true);
     setWpMessage('पर्ची की फोटो और संदेश Meta API द्वारा भेजा जा रहा है...');
     try {
@@ -891,6 +908,7 @@ export default function SlipsPage() {
 
   // Direct WhatsApp (Mobile Share with Photo + Desktop Clipboard Paste + Android Native Bridge)
   const handleSendDirectWhatsApp = async () => {
+    void handleAutoSaveWpPhone(wpPhone);
     setWpSending(true);
     try {
       if (slipMode === 'family' && selectedHousehold) {
@@ -2779,7 +2797,7 @@ export default function SlipsPage() {
                   style={{ background: '#25D366', borderColor: '#22c55e', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   onClick={() => {
                     if (!selectedVoter) return;
-                    setWpPhone(selectedVoter.phone || '');
+                    setWpPhone(selectedVoter.phone || (selectedVoter as any).mobileNo || '');
                     setWpMessage('');
                     setIsWpModalOpen(true);
                   }}
@@ -3687,6 +3705,7 @@ export default function SlipsPage() {
                   placeholder="+91 98765 43210"
                   value={wpPhone}
                   onChange={(e) => setWpPhone(e.target.value)}
+                  onBlur={() => handleAutoSaveWpPhone(wpPhone)}
                   style={{ marginTop: '6px', height: '38px' }}
                 />
               </label>

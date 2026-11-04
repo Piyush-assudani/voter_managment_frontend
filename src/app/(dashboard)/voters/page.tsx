@@ -950,10 +950,29 @@ export default function VoterDirectoryPage() {
     }
   };
 
+  // Auto-save phone number permanently to voter record
+  const handleAutoSaveSlipPhone = async (newPhone: string) => {
+    if (!slipVoter) return;
+    const clean = newPhone.replace(/\D/g, '').slice(-10);
+    if (clean && clean.length === 10 && clean !== (slipVoter.phone || slipVoter.mobileNo)) {
+      try {
+        await apiFetch(`/voters/${slipVoter._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: clean, mobileNo: clean }),
+        });
+        setSlipVoter((prev) => (prev ? { ...prev, phone: clean, mobileNo: clean } : null));
+        setVoters((prev) => prev.map((v) => (v._id === slipVoter._id ? { ...v, phone: clean, mobileNo: clean } : v)));
+      } catch (err) {
+        console.warn('Auto-save voter phone failed:', err);
+      }
+    }
+  };
+
   // Open Slip Modal
   const openSlipModal = (voter: Voter) => {
     setActionMessage('');
-    setSlipPhone(voter.phone || '');
+    setSlipPhone(voter.phone || voter.mobileNo || '');
     setSlipVoter(voter);
     void loadWhatsappQuota();
   };
@@ -1246,6 +1265,7 @@ export default function VoterDirectoryPage() {
   const sendSlip = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!slipVoter) return;
+    void handleAutoSaveSlipPhone(slipPhone);
     setSending(true);
     setActionMessage('पर्ची की फोटो और संदेश Meta API द्वारा भेजा जा रहा है...');
     try {
@@ -1287,6 +1307,7 @@ export default function VoterDirectoryPage() {
   // Direct WhatsApp (Mobile Share with Photo + Desktop Clipboard Paste + Android Native Bridge)
   const sendManualSlip = async () => {
     if (!slipVoter) return;
+    void handleAutoSaveSlipPhone(slipPhone);
     setSending(true);
     try {
       const effective = { ...slipConfig, slipFormat: modalSlipFormat };
@@ -2619,6 +2640,7 @@ export default function VoterDirectoryPage() {
                   inputMode="tel"
                   value={slipPhone}
                   onChange={(event) => setSlipPhone(event.target.value)}
+                  onBlur={() => handleAutoSaveSlipPhone(slipPhone)}
                   placeholder="+91 98765 43210"
                 />
               </label>
