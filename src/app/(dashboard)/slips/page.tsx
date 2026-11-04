@@ -858,7 +858,7 @@ export default function SlipsPage() {
             prev ? { ...prev, whatsappCredits: data.remainingCredits, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev
           );
         }
-        setWpMessage(data.message || 'Meta API द्वारा परिवार पर्ची फोटो व विवरण सफलतापूर्वक भेज दिया गया!');
+        setWpMessage(data.message || 'Meta API ने परिवार पर्ची स्वीकार कर ली है (वितरण कतार में)।');
         setTimeout(() => setIsWpModalOpen(false), 2000);
       } else {
         if (!selectedVoter) return;
@@ -894,7 +894,7 @@ export default function SlipsPage() {
             prev ? { ...prev, whatsappCredits: data.remainingCredits, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev
           );
         }
-        setWpMessage(data.message || 'Meta API द्वारा पर्ची फोटो व विवरण सफलतापूर्वक भेज दिया गया है!');
+        setWpMessage(data.message || 'Meta API ने पर्ची स्वीकार कर ली है (वितरण कतार में)।');
         setTimeout(() => {
           setIsWpModalOpen(false);
         }, 2000);

@@ -12,14 +12,16 @@ interface Dispatch {
   phone: string;
   slipType: string;
   dispatchType?: 'whatsapp' | 'manual_whatsapp' | string;
-  status: 'sent' | 'failed' | 'sending' | 'manual_link' | string;
+  status: 'sent' | 'delivered' | 'read' | 'failed' | 'sending' | 'manual_link' | string;
+  deliveredAt?: string | null;
+  readAt?: string | null;
   providerMessageId: string | null;
   errorMessage: string | null;
   createdAt: string;
 }
 
 interface DispatchResponse {
-  summary: { total: number; sent: number; failed: number; sending: number; manual?: number };
+  summary: { total: number; sent: number; delivered?: number; read?: number; failed: number; sending: number; manual?: number };
   dispatches: Dispatch[];
   pagination?: { page: number; limit: number; total: number; totalPages: number };
 }
@@ -264,23 +266,23 @@ export default function DispatchHistoryPage() {
           <small>रिकॉर्ड किए dispatch</small>
         </article>
         <article className="metric-card metric-card-green">
-          <span>Meta ने स्वीकारे</span>
-          <strong>{data?.summary.sent ?? '—'}</strong>
-          <small>वास्तविक भेजे गए संदेश</small>
+          <span>✅ डिलीवर हुआ</span>
+          <strong>{data?.summary.delivered ?? 0}</strong>
+          <small>हैंडसेट पर प्राप्त संदेश</small>
+        </article>
+        <article className="metric-card" style={{ borderColor: '#fed7aa', background: '#fff7ed' }}>
+          <span style={{ color: '#c2410c' }}>⏳ कतार / होल्ड</span>
+          <strong style={{ color: '#c2410c' }}>{data?.summary.sent ?? 0}</strong>
+          <small style={{ color: '#ea580c' }}>Meta स्वीकार; हैंडसेट लंबित</small>
         </article>
         <article className="metric-card metric-card-rose">
-          <span>विफल</span>
+          <span>❌ विफल</span>
           <strong>{data?.summary.failed ?? '—'}</strong>
-          <small>Meta send errors</small>
-        </article>
-        <article className="metric-card metric-card-sky">
-          <span>प्रोसेस में</span>
-          <strong>{data?.summary.sending ?? '—'}</strong>
-          <small>Webhook receipts प्रतीक्षित</small>
+          <small>Meta रिजेक्ट / एरर</small>
         </article>
         {(data?.summary.manual ?? 0) > 0 && (
           <article className="metric-card" style={{ borderColor: '#cbd5e1' }}>
-            <span>मैनुअल लिंक</span>
+            <span>🔗 मैनुअल लिंक</span>
             <strong>{data?.summary.manual}</strong>
             <small>wa.me ब्राउज़र लिंक</small>
           </article>
@@ -288,6 +290,30 @@ export default function DispatchHistoryPage() {
       </section>
 
       <section className="records-panel">
+        <div
+          style={{
+            background: '#f0f9ff',
+            border: '1px solid #bae6fd',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            marginBottom: '16px',
+            display: 'flex',
+            gap: '12px',
+            alignItems: 'flex-start',
+            fontSize: '0.85rem',
+            color: '#0369a1',
+            lineHeight: '1.5'
+          }}
+        >
+          <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>💡</span>
+          <div>
+            <strong style={{ color: '#0c4a6e', display: 'block', marginBottom: '2px' }}>
+              Meta WhatsApp डिलीवरी स्थिति एवं पॉलिसी नियम:
+            </strong>
+            Meta Business WhatsApp की सख्त मार्केटिंग नीतियां (Marketing Frequency Capping) होती हैं। यदि टेस्टिंग के दौरान <b>एक ही फोन नंबर पर बार-बार</b> पर्ची भेजी जाती है, तो पहली पर्ची तुरंत पहुंचती है, लेकिन बाद के संदेश Meta द्वारा कुछ घंटों के लिए होल्ड/सप्रेस कर दिए जाते हैं। वास्तविक चुनाव में प्रत्येक मतदाता का <b>अलग फोन नंबर</b> होता है, जिससे सभी मतदाताओं को पर्ची तुरंत डिलीवर होती है।
+          </div>
+        </div>
+
         <div className="records-toolbar">
           <div>
             <h2>Dispatch रिकॉर्ड</h2>
@@ -325,10 +351,10 @@ export default function DispatchHistoryPage() {
                 }}
               >
                 <option value="">सभी स्थिति</option>
-                <option value="sent">स्वीकारा गया (Meta API)</option>
-                <option value="manual_link">मैनुअल लिंक (wa.me)</option>
-                <option value="failed">विफल</option>
-                <option value="sending">प्रोसेस में</option>
+                <option value="delivered">✅ डिलीवर हुआ (हैंडसेट)</option>
+                <option value="sent">⏳ Meta कतार / होल्ड</option>
+                <option value="manual_link">🔗 मैनुअल लिंक (wa.me)</option>
+                <option value="failed">❌ विफल (नहीं गया)</option>
               </select>
             </form>
           </div>
@@ -413,34 +439,130 @@ export default function DispatchHistoryPage() {
                         </span>
                       </td>
                       <td>
-                        {isManual ? (
-                          <div>
-                            <span className="record-status" style={{ background: '#f8fafc', color: '#64748b', borderColor: '#e2e8f0' }}>
-                              मैनुअल लिंक
+                        {(() => {
+                          if (isManual) {
+                            return (
+                              <div>
+                                <span className="record-status" style={{ background: '#f8fafc', color: '#64748b', borderColor: '#e2e8f0' }}>
+                                  🔗 मैनुअल लिंक
+                                </span>
+                                <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>wa.me चैट लिंक</div>
+                              </div>
+                            );
+                          }
+
+                          if (isFailed) {
+                            return (
+                              <div>
+                                <span className="record-status status-pending" style={{ background: '#fef2f2', color: '#b91c1c', borderColor: '#fecaca' }}>
+                                  ❌ विफल (नहीं गया)
+                                </span>
+                                {item.errorMessage && (
+                                  <div style={{ fontSize: '0.68rem', color: '#b91c1c', marginTop: '3px', maxWidth: '230px', lineHeight: '1.25' }} title={item.errorMessage}>
+                                    {item.errorMessage}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          const isRead = item.status === 'read' || Boolean(item.readAt);
+                          if (isRead) {
+                            return (
+                              <div>
+                                <span className="record-status" style={{ background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }}>
+                                  👁️ पढ़ा गया (Blue Tick)
+                                </span>
+                                <div style={{ fontSize: '0.68rem', color: '#0284c7', marginTop: '2px' }}>
+                                  {item.readAt ? `देखा: ${new Date(item.readAt).toLocaleTimeString('hi-IN')}` : 'मतदाता द्वारा देखा गया'}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          const isDelivered = item.status === 'delivered' || Boolean(item.deliveredAt);
+                          if (isDelivered) {
+                            return (
+                              <div>
+                                <span className="record-status status-voted" style={{ background: '#ecfdf5', color: '#047857', borderColor: '#a7f3d0' }}>
+                                  ✅ डिलीवर हुआ (Double Tick)
+                                </span>
+                                <div style={{ fontSize: '0.68rem', color: '#059669', marginTop: '2px' }}>
+                                  {item.deliveredAt ? `प्राप्त: ${new Date(item.deliveredAt).toLocaleTimeString('hi-IN')}` : 'हैंडसेट पर प्राप्त'}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          if (isSent) {
+                            const ageMs = Date.now() - new Date(item.createdAt).getTime();
+                            const isOld = ageMs > 3 * 60 * 1000;
+
+                            if (isOld) {
+                              return (
+                                <div>
+                                  <span
+                                    className="record-status"
+                                    style={{
+                                      background: '#fff7ed',
+                                      color: '#c2410c',
+                                      borderColor: '#fed7aa',
+                                      fontWeight: 600,
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '3px',
+                                    }}
+                                  >
+                                    ⚠️ Meta द्वारा होल्ड/सप्रेस्ड
+                                  </span>
+                                  <div style={{ fontSize: '0.68rem', color: '#9a3412', marginTop: '3px', maxWidth: '240px', lineHeight: '1.25' }}>
+                                    Meta API ने स्वीकारा, पर फोन पर नहीं पहुंचा।
+                                    <span style={{ display: 'block', color: '#ea580c', fontWeight: 500 }}>
+                                      (समान नंबर पर बार-बार मार्केटिंग संदेश भेजने पर Meta होल्ड कर देता है)
+                                    </span>
+                                  </div>
+                                  {item.providerMessageId && (
+                                    <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '2px', fontFamily: 'monospace' }} title={item.providerMessageId}>
+                                      ID: {item.providerMessageId.slice(0, 14)}…
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div>
+                                <span
+                                  className="record-status"
+                                  style={{
+                                    background: '#fefce8',
+                                    color: '#a16207',
+                                    borderColor: '#fef08a',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                  }}
+                                >
+                                  ⏳ Meta कतार (वितरण प्रतीक्षित)
+                                </span>
+                                <div style={{ fontSize: '0.68rem', color: '#854d0e', marginTop: '2px' }}>
+                                  Meta द्वारा स्वीकार; फोन पर डिलीवरी प्रतीक्षारत…
+                                </div>
+                                {item.providerMessageId && (
+                                  <div style={{ fontSize: '0.65rem', color: '#a3a3a3', marginTop: '2px', fontFamily: 'monospace' }} title={item.providerMessageId}>
+                                    ID: {item.providerMessageId.slice(0, 14)}…
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <span className="record-status" style={{ background: '#f5f3ff', color: '#6d28d9', borderColor: '#ddd6fe' }}>
+                              🔄 भेजा जा रहा है
                             </span>
-                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>wa.me चैट लिंक</div>
-                          </div>
-                        ) : isSent ? (
-                          <div>
-                            <span className="record-status status-voted">स्वीकारा गया</span>
-                            {item.providerMessageId && (
-                              <div style={{ fontSize: '0.68rem', color: '#16a34a', marginTop: '2px', fontFamily: 'monospace' }} title={item.providerMessageId}>
-                                ID: {item.providerMessageId.slice(0, 14)}…
-                              </div>
-                            )}
-                          </div>
-                        ) : isFailed ? (
-                          <div>
-                            <span className="record-status status-pending">विफल</span>
-                            {item.errorMessage && (
-                              <div style={{ fontSize: '0.68rem', color: '#b91c1c', marginTop: '3px', maxWidth: '200px', lineHeight: '1.2' }} title={item.errorMessage}>
-                                {item.errorMessage.length > 50 ? `${item.errorMessage.slice(0, 50)}…` : item.errorMessage}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="record-status">भेजा जा रहा है</span>
-                        )}
+                          );
+                        })()}
                       </td>
                       {isAdmin && (
                         <td style={{ textAlign: 'center' }}>

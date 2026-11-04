@@ -1295,7 +1295,7 @@ export default function VoterDirectoryPage() {
       }
       void loadWhatsappQuota();
       setSlipVoter(null);
-      setActionMessage(data.message || 'Meta API द्वारा पर्ची फोटो व विवरण सफलतापूर्वक भेज दिया गया है!');
+      setActionMessage(data.message || 'Meta API ने पर्ची स्वीकार कर ली है (वितरण कतार में)।');
       setTimeout(() => setActionMessage(''), 4500);
     } catch (sendError) {
       setActionMessage(sendError instanceof Error ? sendError.message : 'WhatsApp पर्ची नहीं भेजी जा सकी।');
