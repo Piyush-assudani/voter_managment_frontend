@@ -49,6 +49,22 @@ export const defaultSlipConfig: SlipConfig = {
   slipFormat: 'full',
 };
 
+export function normalizeImageSrc(src?: string | null): string {
+  if (!src) return '';
+  if (src.startsWith('data:image/svg+xml;utf8,<svg') || src.startsWith('data:image/svg+xml,<svg')) {
+    try {
+      const svgContent = src.substring(src.indexOf('<svg'));
+      const base64 = typeof window !== 'undefined'
+        ? window.btoa(unescape(encodeURIComponent(svgContent)))
+        : Buffer.from(svgContent).toString('base64');
+      return `data:image/svg+xml;base64,${base64}`;
+    } catch {
+      return src;
+    }
+  }
+  return src;
+}
+
 
 
 export interface VoterSlipData {
@@ -774,7 +790,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                 {merged.partySymbolImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={merged.partySymbolImage}
+                    src={normalizeImageSrc(merged.partySymbolImage)}
                     alt={merged.partySymbolName || 'Party Symbol'}
                     style={{ maxWidth: '100%', maxHeight: isRibbonHidden ? '112px' : '66px', width: 'auto', height: 'auto', objectFit: 'contain' }}
                   />
@@ -1368,6 +1384,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                 borderRadius: '8px',
                 padding: '4px 10px',
                 minHeight: '28px',
+                maxWidth: '220px',
                 boxSizing: 'border-box',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -1383,9 +1400,25 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             >
               {merged.partySymbolImage && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={merged.partySymbolImage} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0, display: 'block' }} />
+                <img
+                  src={normalizeImageSrc(merged.partySymbolImage)}
+                  alt=""
+                  style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0, display: 'block' }}
+                />
               )}
-              <span style={{ lineHeight: 1.15, display: 'block', margin: 0, padding: 0, whiteSpace: 'nowrap' }}>
+              <span
+                style={{
+                  lineHeight: 1.15,
+                  display: 'block',
+                  margin: 0,
+                  padding: 0,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxWidth: '140px'
+                }}
+                title={merged.partySymbolName || 'कमल का फूल'}
+              >
                 {merged.partySymbolName || 'कमल का फूल'}
               </span>
             </div>

@@ -5265,6 +5265,24 @@ export default function AdminPanel() {
                                 }}>
                                   <Check size={13} /> सक्रिय (Active)
                                 </span>
+                              ) : tmpl.status === 'PENDING' ? (
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    background: '#fef3c7',
+                                    color: '#b45309',
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    padding: '5px 10px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #fde68a'
+                                  }}
+                                  title="यह टेम्पलेट अभी Meta द्वारा जांचा जा रहा है। स्वीकृति के बाद ही इसे सक्रिय किया जा सकेगा।"
+                                >
+                                  ⏳ Meta समीक्षा जारी
+                                </span>
                               ) : (
                                 <button
                                   type="button"
@@ -5358,7 +5376,11 @@ export default function AdminPanel() {
                           type="text"
                           required
                           value={newTmplName}
-                          onChange={(e) => setNewTmplName(e.target.value)}
+                          onFocus={() => setPreviewMode('draft')}
+                          onChange={(e) => {
+                            setNewTmplName(e.target.value);
+                            setPreviewMode('draft');
+                          }}
                           placeholder="e.g. छगन रावतराम या voter_slip_campaign"
                           style={{
                             width: '100%',
@@ -5382,7 +5404,11 @@ export default function AdminPanel() {
                         श्रेणी (Category)
                         <select
                           value={newTmplCategory}
-                          onChange={(e) => setNewTmplCategory(e.target.value)}
+                          onFocus={() => setPreviewMode('draft')}
+                          onChange={(e) => {
+                            setNewTmplCategory(e.target.value);
+                            setPreviewMode('draft');
+                          }}
                           style={{
                             width: '100%',
                             padding: '8px 10px',
@@ -5409,7 +5435,10 @@ export default function AdminPanel() {
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
                         <button
                           type="button"
-                          onClick={() => setNewTmplHeaderType('IMAGE')}
+                          onClick={() => {
+                            setNewTmplHeaderType('IMAGE');
+                            setPreviewMode('draft');
+                          }}
                           style={{
                             padding: '10px',
                             borderRadius: '8px',
@@ -5433,7 +5462,10 @@ export default function AdminPanel() {
 
                         <button
                           type="button"
-                          onClick={() => setNewTmplHeaderType('TEXT')}
+                          onClick={() => {
+                            setNewTmplHeaderType('TEXT');
+                            setPreviewMode('draft');
+                          }}
                           style={{
                             padding: '10px',
                             borderRadius: '8px',
@@ -5457,7 +5489,10 @@ export default function AdminPanel() {
 
                         <button
                           type="button"
-                          onClick={() => setNewTmplHeaderType('NONE')}
+                          onClick={() => {
+                            setNewTmplHeaderType('NONE');
+                            setPreviewMode('draft');
+                          }}
                           style={{
                             padding: '10px',
                             borderRadius: '8px',
@@ -5505,7 +5540,11 @@ export default function AdminPanel() {
                             <input
                               type="text"
                               value={newTmplHeader}
-                              onChange={(e) => setNewTmplHeader(e.target.value)}
+                              onFocus={() => setPreviewMode('draft')}
+                              onChange={(e) => {
+                                setNewTmplHeader(e.target.value);
+                                setPreviewMode('draft');
+                              }}
                               placeholder="डिजिटल मतदाता सूचना पर्ची 🗳️"
                               style={{
                                 width: '100%',
@@ -5529,7 +5568,11 @@ export default function AdminPanel() {
                         required
                         rows={6}
                         value={newTmplBody}
-                        onChange={(e) => setNewTmplBody(e.target.value)}
+                        onFocus={() => setPreviewMode('draft')}
+                        onChange={(e) => {
+                          setNewTmplBody(e.target.value);
+                          setPreviewMode('draft');
+                        }}
                         style={{
                           width: '100%',
                           padding: '10px',
@@ -5553,7 +5596,11 @@ export default function AdminPanel() {
                       <input
                         type="text"
                         value={newTmplFooter}
-                        onChange={(e) => setNewTmplFooter(e.target.value)}
+                        onFocus={() => setPreviewMode('draft')}
+                        onChange={(e) => {
+                          setNewTmplFooter(e.target.value);
+                          setPreviewMode('draft');
+                        }}
                         placeholder="विजयसेतु चुनावी प्रबंधन"
                         style={{
                           width: '100%',
@@ -5774,8 +5821,17 @@ export default function AdminPanel() {
 
               </div>
 
-              {/* ================= RIGHT COLUMN: LIVE PHONE PREVIEW & TEST SEND ================= */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* ================= RIGHT COLUMN: LIVE PHONE PREVIEW & TEST SEND (Sticky Alongside Form) ================= */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px',
+                position: 'sticky',
+                top: '24px',
+                alignSelf: 'start',
+                maxHeight: 'calc(100vh - 48px)',
+                overflowY: 'auto'
+              }}>
 
                 {/* WhatsApp Chat Simulation Mockup */}
                 <div style={{
