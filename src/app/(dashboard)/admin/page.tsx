@@ -1046,6 +1046,7 @@ export default function AdminPanel() {
   const [excelIsNewWard, setExcelIsNewWard] = useState(false);
   const [excelBooth, setExcelBooth] = useState('');
   const [excelDescription, setExcelDescription] = useState('');
+  const [selectedExcelFiles, setSelectedExcelFiles] = useState<File[]>([]);
 
   // Form states for PDF import
   const [pdfWard, setPdfWard] = useState('');
@@ -1858,33 +1859,38 @@ export default function AdminPanel() {
   const importWorkbook = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
-    const file = form.querySelector<HTMLInputElement>('input[type="file"]')?.files?.[0];
-    if (!file || !organizationId) {
-      setError('क्लाइंट चुनें और Excel workbook अपलोड करें।');
+    if (selectedExcelFiles.length === 0 || !organizationId) {
+      setError('क्लाइंट चुनें और कम-से-कम एक Excel workbook अपलोड करें।');
       return;
     }
     const targetWard = (excelIsNewWard ? excelCustomWard : excelWard).trim();
-    const MAX_SIZE = 100 * 1024 * 1024; // 100MB
-    if (file.size > MAX_SIZE) {
-      setError(`चयनित Excel फाइल (${(file.size / (1024 * 1024)).toFixed(1)}MB) 100MB की सीमा से बड़ी है। कृपया 100MB से छोटी फाइल अपलोड करें।`);
+    const oversizedFile = selectedExcelFiles.find((file) => file.size > 20 * 1024 * 1024);
+    if (oversizedFile) {
+      setError(`"${oversizedFile.name}" 20MB प्रति-फाइल सीमा से बड़ी है।`);
+      return;
+    }
+    const totalSize = selectedExcelFiles.reduce((total, file) => total + file.size, 0);
+    if (totalSize > 100 * 1024 * 1024) {
+      setError('सभी Excel फाइलों का कुल आकार 100MB से कम रखें।');
       return;
     }
     setImporting(true);
     setError('');
-    setNotice(`Excel फाइल अपलोड हो रही है (${(file.size / (1024 * 1024)).toFixed(1)}MB)...`);
+    setNotice(`${selectedExcelFiles.length} Excel फाइलें अपलोड हो रही हैं (${(totalSize / (1024 * 1024)).toFixed(1)}MB)...`);
     try {
       const body = new FormData();
       body.set('organizationId', organizationId);
-      body.set('file', file);
+      selectedExcelFiles.forEach((file) => body.append('files', file));
       if (targetWard) body.set('wardNo', targetWard);
       if (excelBooth.trim()) body.set('boothNo', excelBooth.trim());
       if (excelDescription.trim()) body.set('listDescription', excelDescription.trim());
 
       const response = await apiFetch('/admin/upload-voters', { method: 'POST', body });
       if (!response.ok) throw new Error(await getApiError(response, 'मतदाता Excel import नहीं हुआ।'));
-      const result = await response.json() as { inserted: number; updated: number };
-      setNotice(`${result.inserted} नए और ${result.updated} अपडेटेड मतदाता Excel से सेव हुए।` + (targetWard ? ` (वार्ड: ${targetWard})` : ''));
+      const result = await response.json() as { inserted: number; updated: number; fileCount?: number };
+      setNotice(`${result.inserted} नए और ${result.updated} अपडेटेड मतदाता ${result.fileCount || selectedExcelFiles.length} Excel फाइलों से सेव हुए।` + (targetWard ? ` (वार्ड: ${targetWard})` : ''));
       form.reset();
+      setSelectedExcelFiles([]);
       setExcelDescription('');
       setExcelBooth('');
       if (excelIsNewWard) {
@@ -7605,24 +7611,63 @@ export default function AdminPanel() {
                       <FileSpreadsheet size={32} style={{ color: '#00875a' }} />
                     </div>
                     <span style={{ fontSize: '14px', fontWeight: '600', color: '#1a2620', display: 'block' }}>
-                      Excel फाइल (.xlsx) <span style={{ color: '#d93025' }}>*</span>
+                      Excel फाइलें (.xlsx) <span style={{ color: '#d93025' }}>*</span>
                     </span>
                     <p style={{ fontSize: '12px', color: '#7d8981', margin: '4px 0 12px 0' }}>
-                      मानक टेम्पलेट फॉर्मेट में तैयार की गई Excel वर्कबुक चुनें (अधिकतम 100MB)
+                      एक साथ अधिकतम 10 Excel वर्कबुक चुनें; हर फाइल 20MB और कुल आकार 100MB तक
                     </p>
                     <input 
                       type="file" 
                       accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
-                      required 
+                      multiple
+                      onChange={(event) => {
+                        const newFiles = Array.from(event.target.files || []);
+                        event.target.value = '';
+                        if (newFiles.some((file) => file.size > 20 * 1024 * 1024)) {
+                          setError('हर Excel फाइल 20MB से छोटी होनी चाहिए।');
+                          return;
+                        }
+                        const existing = new Set(selectedExcelFiles.map((file) => `${file.name}-${file.size}-${file.lastModified}`));
+                        const combined = [
+                          ...selectedExcelFiles,
+                          ...newFiles.filter((file) => !existing.has(`${file.name}-${file.size}-${file.lastModified}`)),
+                        ];
+                        if (combined.length > 10) {
+                          setError('एक बार में अधिकतम 10 Excel फाइलें चुनें।');
+                          return;
+                        }
+                        if (combined.reduce((total, file) => total + file.size, 0) > 100 * 1024 * 1024) {
+                          setError('सभी Excel फाइलों का कुल आकार 100MB से कम रखें।');
+                          return;
+                        }
+                        setError('');
+                        setSelectedExcelFiles(combined);
+                      }}
                       style={{ maxWidth: '420px', margin: '0 auto', fontSize: '13px' }}
                     />
+                    {selectedExcelFiles.length > 0 && (
+                      <div style={{ maxWidth: '560px', margin: '14px auto 0', textAlign: 'left' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '600', marginBottom: '8px' }}>
+                          <span>{selectedExcelFiles.length} फाइलें चयनित</span>
+                          <span>{(selectedExcelFiles.reduce((total, file) => total + file.size, 0) / (1024 * 1024)).toFixed(1)} MB</span>
+                        </div>
+                        {selectedExcelFiles.map((file, index) => (
+                          <div key={`${file.name}-${file.lastModified}-${index}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '6px 0', borderTop: '1px solid #e4eae5' }}>
+                            <span title={file.name} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '12px' }}>{file.name}</span>
+                            <button type="button" className="button-secondary" onClick={() => setSelectedExcelFiles((files) => files.filter((_, fileIndex) => fileIndex !== index))} style={{ padding: '3px 8px', fontSize: '11px', flexShrink: 0 }}>
+                              हटाएं
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="admin-form-actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <button className="button-secondary" type="button" onClick={() => void downloadExcel('/admin/import-template.xlsx', 'टेम्पलेट डाउनलोड नहीं हुआ।', 'voter-import-template.xlsx')} disabled={saving}>
                       <Download size={15} /> मानक Template डाउनलोड करें
                     </button>
-                    <button className="button-primary" type="submit" disabled={importing || !organizationId} style={{ height: '42px', padding: '0 24px', fontSize: '14px', fontWeight: '600' }}>
+                    <button className="button-primary" type="submit" disabled={importing || !organizationId || selectedExcelFiles.length === 0} style={{ height: '42px', padding: '0 24px', fontSize: '14px', fontWeight: '600' }}>
                       {importing ? <LoaderCircle size={16} className="spin" /> : <Upload size={16} />} Excel इम्पोर्ट करें
                     </button>
                   </div>

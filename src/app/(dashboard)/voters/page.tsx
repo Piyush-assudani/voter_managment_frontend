@@ -2197,16 +2197,18 @@ export default function VoterDirectoryPage() {
                           className={`sb-badge-gender-clean ${
                             voter.gender === 'महिला' || voter.gender === 'स्त्री' || voter.gender === 'Female' || voter.gender === 'F'
                               ? 'gender-female'
-                              : voter.gender === 'अन्य' || voter.gender === 'Other'
-                              ? 'gender-other'
-                              : 'gender-male'
+                              : voter.gender === 'पुरुष' || voter.gender === 'Male' || voter.gender === 'M'
+                                ? 'gender-male'
+                                : 'gender-other'
                           }`}
                         >
                           {voter.gender === 'महिला' || voter.gender === 'स्त्री' || voter.gender === 'Female' || voter.gender === 'F'
                             ? '♀ महिला'
-                            : voter.gender === 'अन्य' || voter.gender === 'Other'
-                            ? 'अन्य'
-                            : '♂ पुरुष'}
+                            : voter.gender === 'पुरुष' || voter.gender === 'Male' || voter.gender === 'M'
+                              ? '♂ पुरुष'
+                              : voter.gender === 'अन्य' || voter.gender === 'Other'
+                                ? 'अन्य'
+                                : '—'}
                         </span>
                       </div>
                     </div>
