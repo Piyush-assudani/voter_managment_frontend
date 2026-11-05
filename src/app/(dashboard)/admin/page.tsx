@@ -2,7 +2,7 @@
 
 import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  AlertCircle, AlertTriangle, Building2, Check, CheckCheck, CheckCircle, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Copy, Database, Download, Edit3, Eye, EyeOff, FileSpreadsheet,
+  AlertCircle, AlertTriangle, Archive, Building2, Check, CheckCheck, CheckCircle, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Copy, Database, Download, Edit3, Eye, EyeOff, FileSpreadsheet,
   FileText, Info, KeyRound, Layers, LayoutDashboard, LoaderCircle, MapPin, MessageCircle, MessageSquareCode, Phone, Plus, RefreshCw, Search, Send,
   Settings2, ShieldCheck, Activity, Cpu, Sliders, Smartphone, Sparkles, Tag, Ticket, ToggleLeft, ToggleRight, Trash2, Upload, User, UserPlus, UsersRound, X,
 } from 'lucide-react';
@@ -1969,20 +1969,21 @@ export default function AdminPanel() {
     event.preventDefault();
     const form = event.currentTarget;
     if (selectedPdfFiles.length === 0 || !organizationId) {
-      setError('कृपया कम से कम एक PDF फाइल चुनें और क्लाइंट चुनें।');
+      setError('कृपया कम से कम एक PDF या ZIP फाइल चुनें और क्लाइंट चुनें।');
       return;
     }
     const targetWard = (pdfIsNewWard ? pdfCustomWard : pdfWard).trim();
     const MAX_SIZE = 100 * 1024 * 1024; // 100MB
     const oversized = selectedPdfFiles.find((f) => f.size > MAX_SIZE);
     if (oversized) {
-      setError(`चयनित PDF फाइल "${oversized.name}" (${(oversized.size / (1024 * 1024)).toFixed(1)}MB) 100MB की सीमा से बड़ी है। कृपया फाइल कंप्रेस करें या 100MB से छोटी PDF चुनें।`);
+      setError(`चयनित फाइल "${oversized.name}" (${(oversized.size / (1024 * 1024)).toFixed(1)}MB) 100MB की सीमा से बड़ी है। कृपया फाइल कंप्रेस करें या 100MB से छोटी फाइल चुनें।`);
       return;
     }
     setUploadingPdf(true);
     setError('');
     const totalMb = (selectedPdfFiles.reduce((acc, f) => acc + f.size, 0) / (1024 * 1024)).toFixed(1);
-    setNotice(`${selectedPdfFiles.length} PDF फाइल(ें) अपलोड हो रही हैं (कुल ${totalMb}MB)... कृपया प्रतीक्षा करें।`);
+    const hasZip = selectedPdfFiles.some((f) => f.name.toLowerCase().endsWith('.zip'));
+    setNotice(`${selectedPdfFiles.length} ${hasZip ? 'PDF/ZIP' : 'PDF'} फाइल(ें) अपलोड हो रही हैं (कुल ${totalMb}MB)... कृपया प्रतीक्षा करें।`);
     try {
       const body = new FormData();
       body.set('organizationId', organizationId);
@@ -1999,12 +2000,12 @@ export default function AdminPanel() {
       }
 
       const response = await apiFetch('/admin/pdf/upload', { method: 'POST', body });
-      if (!response.ok) throw new Error(await getApiError(response, 'PDF अपलोड नहीं हुई।'));
+      if (!response.ok) throw new Error(await getApiError(response, 'PDF या ZIP अपलोड नहीं हुई।'));
       const result = await response.json() as { message?: string, extractedCount?: number, backgroundProcessing?: boolean };
       if (result.backgroundProcessing) {
-        setNotice(result.message || `${selectedPdfFiles.length} PDF फाइलें बैकग्राउंड में प्रोसेस हो रही हैं!` + (targetWard ? ` (वार्ड: ${targetWard})` : ''));
+        setNotice(result.message || `${selectedPdfFiles.length} फाइलें बैकग्राउंड में प्रोसेस हो रही हैं!` + (targetWard ? ` (वार्ड: ${targetWard})` : ''));
       } else {
-        setNotice(`${result.extractedCount ?? 0} Voter IDs सफलता पूर्वक PDF से निकाले गए।`);
+        setNotice(`${result.extractedCount ?? 0} Voter IDs सफलता पूर्वक निकाले गए।`);
       }
       form.reset();
       setSelectedPdfFiles([]);
@@ -2018,7 +2019,7 @@ export default function AdminPanel() {
       await loadPdfJobs();
       await loadDictionaryStats();
     } catch (importError) {
-      setError(importError instanceof Error ? importError.message : 'PDF अपलोड नहीं हुई।');
+      setError(importError instanceof Error ? importError.message : 'PDF या ZIP अपलोड नहीं हुई।');
       setNotice('');
     } finally {
       setUploadingPdf(false);
@@ -7309,7 +7310,7 @@ export default function AdminPanel() {
                     <input 
                       id="admin-pdf-input"
                       type="file" 
-                      accept=".pdf,application/pdf" 
+                      accept=".pdf,.zip,application/pdf,application/zip,application/x-zip-compressed" 
                       multiple 
                       onChange={(e) => {
                         const files = Array.from(e.target.files || []);
@@ -7329,10 +7330,10 @@ export default function AdminPanel() {
                       <FileText size={34} style={{ color: '#059669' }} />
                     </div>
                     <span style={{ fontSize: '15px', fontWeight: '700', color: '#1a2620', display: 'block' }}>
-                      {selectedPdfFiles.length > 0 ? `📁 ${selectedPdfFiles.length} PDF फाइलें चयनित` : 'PDF मतदाता सूची चुनें या यहाँ ड्रैग करें (.pdf)'}
+                      {selectedPdfFiles.length > 0 ? `📁 ${selectedPdfFiles.length} फाइलें चयनित (PDF / ZIP)` : 'PDF या ZIP मतदाता सूची चुनें या यहाँ ड्रैग करें (.pdf, .zip)'}
                     </span>
                     <p style={{ fontSize: '12px', color: '#7d8981', margin: '4px 0 12px 0' }}>
-                      निर्वाचन आयोग (SEC/ECI) की आधिकारिक पीडीएफ फाइलें — एक साथ 1 या अनेक फाइलें चुनें (अधिकतम 100MB प्रति फाइल)
+                      निर्वाचन आयोग (SEC/ECI) की आधिकारिक पीडीएफ फाइलें या सभी वार्ड्स की ZIP फाइल (.zip) — एक साथ 1 या अनेक फाइलें चुनें (अधिकतम 100MB)
                     </p>
 
                     <button
@@ -7340,7 +7341,7 @@ export default function AdminPanel() {
                       className="button-secondary"
                       style={{ padding: '6px 18px', fontSize: '13px', fontWeight: '600', pointerEvents: 'none' }}
                     >
-                      + {selectedPdfFiles.length > 0 ? 'और PDF फाइलें जोड़ें' : 'फाइलें चुनें (मल्टीपल सेलेक्ट सक्षम)'}
+                      + {selectedPdfFiles.length > 0 ? 'और PDF/ZIP फाइलें जोड़ें' : 'फाइलें चुनें (मल्टीपल PDF या ZIP समर्थित)'}
                     </button>
                   </div>
 
@@ -7381,6 +7382,7 @@ export default function AdminPanel() {
 
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '8px', maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
                         {selectedPdfFiles.map((f, idx) => {
+                          const isZip = f.name.toLowerCase().endsWith('.zip');
                           const customWards = (pdfIsNewWard ? pdfCustomWard : pdfWard)
                             .split(',')
                             .map((w) => w.trim())
@@ -7406,14 +7408,22 @@ export default function AdminPanel() {
                               }}
                             >
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                                <FileText size={18} style={{ color: '#c5221f', flexShrink: 0 }} />
+                                {isZip ? (
+                                  <Archive size={18} style={{ color: '#2563eb', flexShrink: 0 }} />
+                                ) : (
+                                  <FileText size={18} style={{ color: '#c5221f', flexShrink: 0 }} />
+                                )}
                                 <div style={{ minWidth: 0 }}>
                                   <div style={{ fontSize: '12px', fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '170px' }} title={f.name}>
                                     {f.name}
                                   </div>
                                   <div style={{ fontSize: '10px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <span>{(f.size / (1024 * 1024)).toFixed(1)} MB</span>
-                                    {hasSequential ? (
+                                    {isZip ? (
+                                      <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '1px 6px', borderRadius: '4px', fontWeight: '700' }}>
+                                        📦 ZIP संग्रह
+                                      </span>
+                                    ) : hasSequential ? (
                                       <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '1px 7px', borderRadius: '4px', fontWeight: '700' }}>
                                         📍 वार्ड {assignedWard} (फाइल #{idx + 1})
                                       </span>
@@ -7489,8 +7499,10 @@ export default function AdminPanel() {
                       {uploadingPdf ? <LoaderCircle size={16} className="spin" /> : <Upload size={16} />}
                       {' '}
                       {selectedPdfFiles.length > 1 
-                        ? `⚡ ${selectedPdfFiles.length} PDFs से Excel व वोटर डेटाबेस तैयार करें` 
-                        : '⚡ PDF से Excel कन्वर्ट व इम्पोर्ट करें'}
+                        ? `⚡ ${selectedPdfFiles.length} फाइलों (PDF / ZIP) से Excel व वोटर डेटाबेस तैयार करें` 
+                        : (selectedPdfFiles[0]?.name.toLowerCase().endsWith('.zip')
+                            ? '⚡ ZIP संग्रह से PDF निकालें व डेटाबेस तैयार करें'
+                            : '⚡ PDF से Excel कन्वर्ट व इम्पोर्ट करें')}
                     </button>
                   </div>
                 </form>
@@ -7614,7 +7626,7 @@ export default function AdminPanel() {
                       Excel फाइलें (.xlsx) <span style={{ color: '#d93025' }}>*</span>
                     </span>
                     <p style={{ fontSize: '12px', color: '#7d8981', margin: '4px 0 12px 0' }}>
-                      एक साथ अधिकतम 10 Excel वर्कबुक चुनें; हर फाइल 20MB और कुल आकार 100MB तक
+                      एक साथ अधिकतम 50 Excel वर्कबुक चुनें (मल्टीपल वार्ड्स हेतु); हर फाइल 20MB और कुल आकार 100MB तक
                     </p>
                     <input 
                       type="file" 
@@ -7632,8 +7644,8 @@ export default function AdminPanel() {
                           ...selectedExcelFiles,
                           ...newFiles.filter((file) => !existing.has(`${file.name}-${file.size}-${file.lastModified}`)),
                         ];
-                        if (combined.length > 10) {
-                          setError('एक बार में अधिकतम 10 Excel फाइलें चुनें।');
+                        if (combined.length > 50) {
+                          setError('एक बार में अधिकतम 50 Excel फाइलें चुनें।');
                           return;
                         }
                         if (combined.reduce((total, file) => total + file.size, 0) > 100 * 1024 * 1024) {
