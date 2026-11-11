@@ -75,7 +75,21 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
             });
           }
         } else {
-          setCropBox({ width: baseSize, height: baseSize, x: 0, y: 0 });
+          // Free aspect ratio (e.g. party symbol logos): wrap entire fitted image without clipping edges
+          const containerW = containerRef.current?.clientWidth || 400;
+          const containerH = containerRef.current?.clientHeight || 350;
+          const fitScale = Math.min(
+            (containerW * 0.85) / img.naturalWidth,
+            (containerH * 0.85) / img.naturalHeight
+          );
+          const fittedW = Math.round(img.naturalWidth * fitScale);
+          const fittedH = Math.round(img.naturalHeight * fitScale);
+          setCropBox({
+            width: Math.max(120, Math.min(containerW - 24, fittedW + 16)),
+            height: Math.max(120, Math.min(containerH - 24, fittedH + 16)),
+            x: 0,
+            y: 0,
+          });
         }
       };
     }
@@ -97,9 +111,9 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
     }
   };
 
-  // Zoom handlers
+  // Zoom handlers (allow zooming out down to 0.35x so full logos fit cleanly)
   const handleZoomChange = (newZoom: number) => {
-    setZoom(Math.max(1, Math.min(3.5, Number(newZoom.toFixed(2)))));
+    setZoom(Math.max(0.35, Math.min(3.5, Number(newZoom.toFixed(2)))));
   };
 
   const handleRotate = () => {
@@ -228,9 +242,11 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      // Crisp background
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, outW, outH);
+      // Preserve transparency for free/symbol crops; keep solid white backdrop for fixed-ratio photos
+      if (aspectRatio !== 0) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, outW, outH);
+      }
 
       // Relative vector from cropBox center to image center in viewport
       const vectorX = pan.x - cropBox.x;
@@ -249,7 +265,8 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
       ctx.drawImage(img, -renderW / 2, -renderH / 2, renderW, renderH);
       ctx.restore();
 
-      const croppedResult = canvas.toDataURL('image/jpeg', 0.92);
+      const croppedResult =
+        aspectRatio === 0 ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.92);
       onCropComplete(croppedResult);
       onClose();
     };
@@ -534,7 +551,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
             </button>
             <input
               type="range"
-              min="1"
+              min="0.35"
               max="3.5"
               step="0.05"
               value={zoom}

@@ -712,16 +712,13 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             {/* Left: Party Symbol & Candidate Serial Box (Strictly Upload-Only, Identical Size with Photo Box) */}
             <div
               className="voter-slip-symbol-box"
-              onClick={() => {
-                if (isEditable) symbolFileInputRef.current?.click();
-              }}
               style={{
-                width: isRibbonHidden ? '120px' : '95px',
-                minWidth: isRibbonHidden ? '105px' : '80px',
-                maxWidth: isRibbonHidden ? '135px' : '100px',
-                height: isRibbonHidden ? '180px' : '124px',
-                minHeight: isRibbonHidden ? '175px' : '120px',
-                maxHeight: isRibbonHidden ? '190px' : '126px',
+                width: isRibbonHidden ? '130px' : '110px',
+                minWidth: isRibbonHidden ? '110px' : '96px',
+                maxWidth: isRibbonHidden ? '140px' : '116px',
+                height: isRibbonHidden ? '185px' : '142px',
+                minHeight: isRibbonHidden ? '178px' : '136px',
+                maxHeight: isRibbonHidden ? '195px' : '146px',
                 boxSizing: 'border-box',
                 border: isEditable ? '2px dashed #ea580c' : '2px solid #fb923c',
                 borderRadius: '10px',
@@ -732,15 +729,14 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                 overflow: 'hidden',
                 background: '#fff',
                 position: 'relative',
-                cursor: isEditable ? 'pointer' : 'default',
                 transition: 'all 0.15s ease',
                 flexShrink: 0,
               }}
-              title={isEditable ? 'चुनाव चिन्ह फोटो अपलोड करने के लिए क्लिक करें' : undefined}
             >
               {/* Top Serial Badge */}
               <div
                 className="voter-slip-serial-badge"
+                onClick={(e) => e.stopPropagation()}
                 style={{
                   width: '100%',
                   height: isRibbonHidden ? '26px' : '24px',
@@ -755,7 +751,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '2px',
+                  gap: '3px',
                   flexShrink: 0,
                 }}
               >
@@ -763,21 +759,29 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                 {isEditable ? (
                   <input
                     type="text"
-                    value={merged.evmNumber || '1'}
+                    value={merged.evmNumber ?? ''}
+                    placeholder="1"
+                    onClick={(e) => e.stopPropagation()}
+                    onFocus={(e) => e.target.select()}
+                    onBlur={(e) => {
+                      if (!e.target.value.trim()) updateField('evmNumber', '1');
+                    }}
                     onChange={(e) => updateField('evmNumber', e.target.value)}
                     title="EVM क्रम संख्या बदलें"
                     className="voter-slip-evm-input"
                     style={{
-                      width: '28px',
+                      width: '34px',
                       textAlign: 'center',
-                      background: 'rgba(255, 255, 255, 0.3)',
-                      border: '1px dashed #ffffff',
-                      borderRadius: '3px',
-                      color: '#ffffff',
+                      background: '#ffffff',
+                      border: '1px solid #fed7aa',
+                      borderRadius: '4px',
+                      color: '#ea580c',
                       fontWeight: 900,
                       fontSize: isRibbonHidden ? '12px' : '11.5px',
                       padding: '0 2px',
+                      lineHeight: 1.2,
                       outline: 'none',
+                      cursor: 'text',
                     }}
                   />
                 ) : (
@@ -786,13 +790,37 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               </div>
 
               {/* Symbol Image & Interactive Upload Prompt (Upload-Only, No Auto Vectors) */}
-              <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isRibbonHidden ? '6px' : '4px', position: 'relative', overflow: 'hidden' }}>
+              <div
+                onClick={() => {
+                  if (isEditable) symbolFileInputRef.current?.click();
+                }}
+                title={isEditable ? 'चुनाव चिन्ह फोटो अपलोड करने के लिए क्लिक करें' : undefined}
+                style={{
+                  flex: 1,
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: isRibbonHidden ? '8px' : '6px',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  cursor: isEditable ? 'pointer' : 'default',
+                  boxSizing: 'border-box',
+                }}
+              >
                 {merged.partySymbolImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={normalizeImageSrc(merged.partySymbolImage)}
                     alt={merged.partySymbolName || 'Party Symbol'}
-                    style={{ maxWidth: '100%', maxHeight: isRibbonHidden ? '112px' : '66px', width: 'auto', height: 'auto', objectFit: 'contain' }}
+                    style={{
+                      maxWidth: '94%',
+                      maxHeight: isRibbonHidden ? '116px' : '80px',
+                      width: 'auto',
+                      height: 'auto',
+                      objectFit: 'contain',
+                      display: 'block',
+                    }}
                   />
                 ) : (
                   /* Upload placeholder only - NO auto-generated vectors! */
@@ -873,6 +901,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               {/* Bottom Symbol Caption (Directly Editable) */}
               <div
                 className="voter-slip-symbol-caption"
+                onClick={(e) => e.stopPropagation()}
                 style={{
                   width: '92%',
                   minHeight: '34px',
@@ -1132,12 +1161,12 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                 if (isEditable) candidateFileInputRef.current?.click();
               }}
               style={{
-                width: isRibbonHidden ? '120px' : '95px',
-                minWidth: isRibbonHidden ? '105px' : '80px',
-                maxWidth: isRibbonHidden ? '135px' : '100px',
-                height: isRibbonHidden ? '180px' : '124px',
-                minHeight: isRibbonHidden ? '175px' : '120px',
-                maxHeight: isRibbonHidden ? '190px' : '126px',
+                width: isRibbonHidden ? '130px' : '110px',
+                minWidth: isRibbonHidden ? '110px' : '96px',
+                maxWidth: isRibbonHidden ? '140px' : '116px',
+                height: isRibbonHidden ? '185px' : '142px',
+                minHeight: isRibbonHidden ? '178px' : '136px',
+                maxHeight: isRibbonHidden ? '195px' : '146px',
                 boxSizing: 'border-box',
                 border: isEditable ? '2px dashed #ea580c' : '2px solid #fb923c',
                 borderRadius: '10px',
@@ -1279,7 +1308,12 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               {isEditable ? (
                 <input
                   type="text"
-                  value={merged.evmNumber || '1'}
+                  value={merged.evmNumber ?? ''}
+                  placeholder="1"
+                  onFocus={(e) => e.target.select()}
+                  onBlur={(e) => {
+                    if (!e.target.value.trim()) updateField('evmNumber', '1');
+                  }}
                   onChange={(e) => updateField('evmNumber', e.target.value)}
                   title="EVM क्रम संख्या बदलें"
                   className="voter-slip-ribbon-evm-input"
@@ -1291,7 +1325,9 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                     fontSize: '22px',
                     fontWeight: 900,
                     background: 'transparent',
-                    border: 'none',
+                    border: '2px dashed #f97316',
+                    borderRadius: '8px',
+                    boxSizing: 'border-box',
                     outline: 'none',
                     padding: 0,
                     margin: 0,
@@ -1300,6 +1336,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    cursor: 'text',
                   }}
                 />
               ) : (
@@ -1333,9 +1370,41 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                   textRendering: 'geometricPrecision',
                   margin: 0,
                   padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  flexWrap: 'wrap',
                 }}
               >
-                ईवीएम / मतपत्र क्रम संख्या: {merged.evmNumber || '1'}
+                <span>ईवीएम / मतपत्र क्रम संख्या:</span>
+                {isEditable ? (
+                  <input
+                    type="text"
+                    value={merged.evmNumber ?? ''}
+                    placeholder="1"
+                    onFocus={(e) => e.target.select()}
+                    onBlur={(e) => {
+                      if (!e.target.value.trim()) updateField('evmNumber', '1');
+                    }}
+                    onChange={(e) => updateField('evmNumber', e.target.value)}
+                    title="EVM क्रम संख्या बदलें"
+                    style={{
+                      width: '38px',
+                      textAlign: 'center',
+                      background: '#ffffff',
+                      color: '#ea580c',
+                      border: '1px solid #fed7aa',
+                      borderRadius: '4px',
+                      fontWeight: 900,
+                      fontSize: '12.5px',
+                      padding: '0 4px',
+                      lineHeight: 1.3,
+                      outline: 'none',
+                    }}
+                  />
+                ) : (
+                  <span>{merged.evmNumber || '1'}</span>
+                )}
               </div>
               <div
                 style={{
@@ -1403,7 +1472,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                 <img
                   src={normalizeImageSrc(merged.partySymbolImage)}
                   alt=""
-                  style={{ width: '18px', height: '18px', objectFit: 'contain', flexShrink: 0, display: 'block' }}
+                  style={{ width: '20px', height: '20px', objectFit: 'contain', flexShrink: 0, display: 'block' }}
                 />
               )}
               <span
@@ -1793,7 +1862,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               : 'हेडर ग्राफ़िक क्रॉप करें (Crop Header Graphic)'
           }
           subtitle="फोटो को सही स्थिति में लाने के लिए ड्रैग करें, ज़ूम स्लाइडर से आकार सेट करें और एरिया चुनें।"
-          initialAspectRatio={cropField === 'headerGraphicImage' ? 0 : 1}
+          initialAspectRatio={cropField === 'candidateImage' ? 1 : 0}
           onCropComplete={handleCropComplete}
           onClose={() => setCropModalOpen(false)}
         />

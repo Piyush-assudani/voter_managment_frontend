@@ -3607,6 +3607,8 @@ export default function SlipsPage() {
                     config={editingConfig}
                     format={editingConfig.slipFormat || 'full'}
                     isInline={true}
+                    isEditable={true}
+                    onConfigChange={setEditingConfig}
                   />
                 </div>
               </div>
@@ -3786,7 +3788,7 @@ export default function SlipsPage() {
             : 'हेडर ग्राफ़िक क्रॉप करें (Crop Header Banner)'
         }
         subtitle="फोटो को सही स्थिति में लाने के लिए ड्रैग करें, ज़ूम स्लाइडर से आकार सेट करें और एरिया चुनें।"
-        initialAspectRatio={cropField === 'headerGraphicImage' ? 0 : 1}
+        initialAspectRatio={cropField === 'candidateImage' ? 1 : 0}
         onCropComplete={handleCropComplete}
         onClose={() => setCropModalOpen(false)}
       />

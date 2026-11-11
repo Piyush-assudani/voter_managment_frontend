@@ -4468,6 +4468,99 @@ export default function AdminPanel() {
                     gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
                     gap: '12px',
                   }}>
+                    {/* Top Row: Quick EVM / Ballot Serial Number Control */}
+                    <div style={{
+                      gridColumn: '1 / -1',
+                      background: '#ffffff',
+                      border: '1px solid #fed7aa',
+                      borderRadius: '8px',
+                      padding: '10px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '10px',
+                      flexWrap: 'wrap',
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '12px', fontWeight: 800, color: '#9a3412' }}>EVM / मतपत्र क्रम संख्या (क्र. सं.)</div>
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>बैलट पर प्रत्याशी का क्रमांक यहाँ से सीधे बदलें</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setTargetSlipConfig((prev) => {
+                              const cur = parseInt(String(prev.evmNumber || '1'), 10);
+                              const next = Number.isFinite(cur) && cur > 1 ? cur - 1 : 1;
+                              return { ...prev, evmNumber: String(next) };
+                            })
+                          }
+                          style={{
+                            width: '30px',
+                            height: '30px',
+                            borderRadius: '6px',
+                            border: '1px solid #cbd5e1',
+                            background: '#f8fafc',
+                            color: '#0f172a',
+                            fontWeight: 800,
+                            fontSize: '15px',
+                            cursor: 'pointer',
+                          }}
+                          title="क्रमांक घटाएं"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="text"
+                          value={targetSlipConfig.evmNumber ?? ''}
+                          placeholder="1"
+                          onFocus={(e) => e.target.select()}
+                          onBlur={(e) => {
+                            if (!e.target.value.trim()) {
+                              setTargetSlipConfig((prev) => ({ ...prev, evmNumber: '1' }));
+                            }
+                          }}
+                          onChange={(e) => setTargetSlipConfig((prev) => ({ ...prev, evmNumber: e.target.value }))}
+                          style={{
+                            width: '56px',
+                            height: '30px',
+                            textAlign: 'center',
+                            border: '1.5px solid #ea580c',
+                            borderRadius: '6px',
+                            fontWeight: 900,
+                            fontSize: '15px',
+                            color: '#ea580c',
+                            outline: 'none',
+                          }}
+                          title="EVM क्रम संख्या दर्ज करें"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setTargetSlipConfig((prev) => {
+                              const cur = parseInt(String(prev.evmNumber || '1'), 10);
+                              const next = Number.isFinite(cur) ? cur + 1 : 2;
+                              return { ...prev, evmNumber: String(next) };
+                            })
+                          }
+                          style={{
+                            width: '30px',
+                            height: '30px',
+                            borderRadius: '6px',
+                            border: '1px solid #cbd5e1',
+                            background: '#f8fafc',
+                            color: '#0f172a',
+                            fontWeight: 800,
+                            fontSize: '15px',
+                            cursor: 'pointer',
+                          }}
+                          title="क्रमांक बढ़ाएं"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Left: Symbol Image Quick Upload */}
                     <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '8px', padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -9294,7 +9387,7 @@ export default function AdminPanel() {
             : 'हेडर ग्राफ़िक क्रॉप करें (Crop Header Graphic)'
         }
         subtitle="फोटो को सही स्थिति में लाने के लिए ड्रैग करें, ज़ूम स्लाइडर से आकार सेट करें और एरिया चुनें।"
-        initialAspectRatio={adminCropField === 'headerGraphicImage' ? 0 : 1}
+        initialAspectRatio={adminCropField === 'candidateImage' ? 1 : 0}
         onCropComplete={handleAdminCropComplete}
         onClose={() => setAdminCropModalOpen(false)}
       />
