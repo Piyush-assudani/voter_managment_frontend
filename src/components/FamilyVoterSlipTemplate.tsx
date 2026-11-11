@@ -68,7 +68,7 @@ export const FamilyVoterSlipTemplate: React.FC<FamilyVoterSlipProps> = ({
         margin: '0 auto',
         padding: '16px',
         background: '#ffffff',
-        fontFamily: "'Anek Devanagari', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        fontFamily: 'var(--font-noto-sans-devanagari), var(--font-anek-devanagari), "Noto Sans Devanagari", "Anek Devanagari", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         color: '#0f172a',
         boxSizing: 'border-box',
         overflow: 'visible',

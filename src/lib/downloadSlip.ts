@@ -78,6 +78,9 @@ export const generateSlipImage = async (
         await new Promise((res) => setTimeout(res, 200));
 
         const targetNode = ref.current;
+        const resolvedFont =
+          window.getComputedStyle(targetNode).fontFamily ||
+          '"Noto Sans Devanagari", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         const canvas = await html2canvas(targetNode, {
           scale: 2.5,
           useCORS: true,
@@ -87,7 +90,6 @@ export const generateSlipImage = async (
           onclone: (clonedDoc) => {
             const style = clonedDoc.createElement('style');
             style.innerHTML = `
-              @import url('https://fonts.googleapis.com/css2?family=Anek+Devanagari:wght@400;500;600;700;800;900&family=Noto+Sans+Devanagari:wght@400;500;600;700;800;900&display=swap');
               * {
                 -webkit-font-smoothing: antialiased !important;
                 -moz-osx-font-smoothing: grayscale !important;
@@ -95,7 +97,7 @@ export const generateSlipImage = async (
               }
               .voter-slip-printable-card,
               .voter-slip-printable-card * {
-                font-family: 'Anek Devanagari', 'Noto Sans Devanagari', sans-serif !important;
+                font-family: ${resolvedFont} !important;
                 letter-spacing: normal !important;
                 word-spacing: normal !important;
                 font-variant-ligatures: normal !important;
@@ -111,23 +113,47 @@ export const generateSlipImage = async (
                 height: auto !important;
                 max-height: none !important;
               }
+              .voter-slip-serial-badge {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 0 4px !important;
+              }
+              .voter-slip-serial-badge span {
+                display: inline-block !important;
+                line-height: 1 !important;
+                position: relative !important;
+                top: -2.5px !important;
+              }
               .voter-slip-ribbon {
                 min-height: 68px !important;
                 padding: 12px 14px !important;
                 overflow: visible !important;
               }
-              .voter-slip-ribbon-content,
+              .voter-slip-ribbon-content {
+                position: relative !important;
+                top: -2px !important;
+                overflow: visible !important;
+              }
               .voter-slip-ribbon-content * {
                 overflow: visible !important;
                 line-height: 1.35 !important;
               }
-              .voter-slip-ribbon-evm-badge,
-              .voter-slip-ribbon-evm-badge * {
+              .voter-slip-ribbon-evm-badge {
                 font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
                 line-height: 1 !important;
                 display: flex !important;
                 align-items: center !important;
                 justify-content: center !important;
+              }
+              .voter-slip-ribbon-evm-badge span {
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                display: block !important;
+                line-height: 1 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                position: relative !important;
+                top: -3.5px !important;
               }
               .voter-slip-ribbon-pill {
                 min-height: 28px !important;
@@ -144,12 +170,14 @@ export const generateSlipImage = async (
                 display: block !important;
                 margin: 0 !important;
                 padding: 0 !important;
+                position: relative !important;
+                top: -2.5px !important;
                 white-space: nowrap !important;
               }
               .voter-slip-symbol-caption {
                 min-height: 34px !important;
                 height: auto !important;
-                padding: 3px 6px !important;
+                padding: 4px 6px !important;
                 display: flex !important;
                 flex-direction: column !important;
                 align-items: center !important;
@@ -161,15 +189,30 @@ export const generateSlipImage = async (
                 margin: 0 !important;
                 padding: 0 !important;
                 text-align: center !important;
+                position: relative !important;
+                top: -2.5px !important;
               }
               .voter-slip-center-column,
               .voter-slip-center-column * {
                 overflow: visible !important;
               }
+              .voter-slip-center-column > div {
+                position: relative !important;
+                top: -2px !important;
+              }
               .voter-slip-candidate-name,
               .voter-slip-candidate-name div {
                 overflow: visible !important;
                 line-height: 1.4 !important;
+              }
+              .voter-slip-metric-label {
+                position: relative !important;
+                top: -2px !important;
+              }
+              .voter-slip-metric-num {
+                position: relative !important;
+                top: -3px !important;
+                line-height: 1.05 !important;
               }
               .voter-slip-voter-table,
               .voter-slip-voter-row,
@@ -177,13 +220,26 @@ export const generateSlipImage = async (
               .voter-slip-voter-value {
                 overflow: visible !important;
               }
+              .voter-slip-voter-label,
+              .voter-slip-voter-value {
+                position: relative !important;
+                top: -3px !important;
+              }
               .voter-slip-footer-appeal,
               .voter-slip-footer-appeal * {
                 overflow: visible !important;
               }
+              .voter-slip-footer-appeal > div {
+                position: relative !important;
+                top: -2px !important;
+              }
               .voter-slip-polling-box,
               .voter-slip-polling-box * {
                 overflow: visible !important;
+              }
+              .voter-slip-polling-box > div {
+                position: relative !important;
+                top: -2px !important;
               }
             `;
             clonedDoc.head.appendChild(style);
@@ -297,6 +353,9 @@ export const generateFamilySlipImage = async (
         await new Promise((res) => setTimeout(res, 200));
 
         const targetNode = ref.current;
+        const resolvedFamilyFont =
+          window.getComputedStyle(targetNode).fontFamily ||
+          '"Noto Sans Devanagari", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         const canvas = await html2canvas(targetNode, {
           scale: 2.5,
           useCORS: true,
@@ -306,12 +365,11 @@ export const generateFamilySlipImage = async (
           onclone: (clonedDoc) => {
             const style = clonedDoc.createElement('style');
             style.innerHTML = `
-              @import url('https://fonts.googleapis.com/css2?family=Anek+Devanagari:wght@400;500;600;700;800;900&family=Noto+Sans+Devanagari:wght@400;500;600;700;800;900&display=swap');
               * {
                 -webkit-font-smoothing: antialiased !important;
                 -moz-osx-font-smoothing: grayscale !important;
                 text-rendering: optimizeLegibility !important;
-                font-family: 'Anek Devanagari', 'Noto Sans Devanagari', sans-serif !important;
+                font-family: ${resolvedFamilyFont} !important;
               }
               .family-slip-printable-card {
                 width: 660px !important;
