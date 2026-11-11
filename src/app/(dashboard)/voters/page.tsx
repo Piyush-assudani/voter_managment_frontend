@@ -42,8 +42,10 @@ import { attachEnglishNames, transliterateHindiToEnglish, matchesVoterQuery } fr
 interface Voter {
   _id: string;
   epic: string;
+  name?: string;
   nameEn: string;
   nameHi: string;
+  relativeName?: string;
   relativeNameEn: string;
   relativeNameHi: string;
   relationType: string;
@@ -2278,9 +2280,9 @@ export default function VoterDirectoryPage() {
                       {/* Name Row */}
                       <div className="sb-detail-row">
                         <span className="sb-label">नाम:</span>
-                        <span className="sb-val-name">{voter.nameHi || voter.nameEn || '—'}</span>
-                        {voter.nameEn && voter.nameEn !== voter.nameHi && (
-                          <span className="sb-badge-name-en">{voter.nameEn}</span>
+                        <span className="sb-val-name">{voter.nameHi || voter.name || voter.nameEn || '—'}</span>
+                        {voter.nameEn && voter.nameEn !== (voter.nameHi || voter.name) && (
+                          <span className="sb-badge-name-en">({voter.nameEn})</span>
                         )}
                       </div>
 
@@ -2289,8 +2291,8 @@ export default function VoterDirectoryPage() {
                         <span className="sb-label">
                           {voter.relationType ? `${voter.relationType} का नाम:` : 'पिता का नाम:'}
                         </span>
-                        <span className="sb-val-relative">{voter.relativeNameHi || voter.relativeNameEn || '—'}</span>
-                        {voter.relativeNameEn && voter.relativeNameEn !== voter.relativeNameHi && (
+                        <span className="sb-val-relative">{voter.relativeNameHi || voter.relativeName || voter.relativeNameEn || '—'}</span>
+                        {voter.relativeNameEn && voter.relativeNameEn !== (voter.relativeNameHi || voter.relativeName) && (
                           <span className="sb-badge-relative-en">({voter.relativeNameEn})</span>
                         )}
                       </div>
