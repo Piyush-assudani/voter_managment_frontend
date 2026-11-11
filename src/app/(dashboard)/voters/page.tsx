@@ -426,7 +426,16 @@ export default function VoterDirectoryPage() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.wards)) {
-          setWardsList(data.wards);
+          const cleanWards = data.wards.filter((w: any) => {
+            if (!w || w._id === null || w._id === undefined) return false;
+            const id = String(w._id).trim();
+            if (!id || id === '-' || id === '0') return false;
+            if (/^RJ\//i.test(id) || /^[A-Z]{2,4}\d{6,}/i.test(id) || /^(?:VOTER_|UNREADABLE_)/i.test(id) || id.length > 20) {
+              return false;
+            }
+            return true;
+          });
+          setWardsList(cleanWards);
         }
         if (typeof data.total === 'number') {
           setTotalOrgVoters(data.total);
