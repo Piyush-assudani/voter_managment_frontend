@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { apiFetch, decodeJwtPayload } from '@/lib/api';
+import { listPendingMutations } from '@/lib/offlineSync';
 import { PwaInstallHeaderBtn, PwaInstallFooterBtn } from '@/components/PwaInstall';
 
 const pageTitles = new Map([
@@ -54,6 +55,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [pendingOfflineCount, setPendingOfflineCount] = useState(0);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -270,9 +272,25 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     };
 
     void checkHealth();
+    void listPendingMutations().then((rows) => active && setPendingOfflineCount(rows.length));
+
+    const handleResume = () => {
+      void checkHealth();
+    };
+    const handleQueueChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ count?: number }>).detail;
+      if (typeof detail?.count === 'number') {
+        setPendingOfflineCount(detail.count);
+      }
+    };
+
+    window.addEventListener('app-resumed', handleResume);
+    window.addEventListener('offline-queue-changed', handleQueueChanged);
     const interval = window.setInterval(checkHealth, 30_000);
     return () => {
       active = false;
+      window.removeEventListener('app-resumed', handleResume);
+      window.removeEventListener('offline-queue-changed', handleQueueChanged);
       window.clearInterval(interval);
     };
   }, []);
@@ -285,7 +303,19 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   };
 
   return (
-    <div className="app-shell" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f8fafc', overflowX: 'hidden' }}>
+    <div
+      className="app-shell"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100dvh',
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        background: '#f8fafc',
+        overflowX: 'hidden',
+      }}
+    >
       {/* Top Header Bar with VijaySetu Logo, Name, Back Button & Controls */}
       <header
         className="topbar"
@@ -297,7 +327,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          minHeight: '60px',
+          minHeight: 'calc(60px + env(safe-area-inset-top, 0px))',
+          paddingTop: 'env(safe-area-inset-top, 0px)',
           background: 'rgba(255, 255, 255, 0.92)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
@@ -417,6 +448,23 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               {health === 'connected' ? 'Live data' : health === 'offline' ? 'Offline' : 'Checking'}
             </span>
           </span>
+          {pendingOfflineCount > 0 && (
+            <span
+              className="hidden sm:inline-flex"
+              title="इंटरनेट आने पर स्वतः सिंक हो जाएगा"
+              style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                padding: '4px 8px',
+                borderRadius: '999px',
+                background: '#fef3c7',
+                color: '#92400e',
+                border: '1px solid #fde68a',
+              }}
+            >
+              सिंक लंबित: {pendingOfflineCount}
+            </span>
+          )}
 
           {/* Profile Badge Button with Dropdown Menu containing Logout */}
           <div className="topbar-profile-container" ref={profileMenuRef} suppressHydrationWarning style={{ position: 'relative' }}>

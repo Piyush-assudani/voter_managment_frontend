@@ -12,8 +12,9 @@ import {
   Phone,
   RefreshCw,
 } from 'lucide-react';
-import { apiFetch, decodeJwtPayload, getApiError } from '@/lib/api';
+import { apiFetch, decodeJwtPayload, getApiError, resilientMutate } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
+import { toast } from '@/components/Toast';
 
 interface Voter {
   _id: string;
@@ -275,15 +276,21 @@ export default function TurnoutPage() {
   };
 
   const markVoted = async (voter: Voter) => {
+    if (savingId) return;
     setSavingId(voter._id);
     setError('');
     try {
-      const response = await apiFetch(`/voters/${encodeURIComponent(voter._id)}/vote`, {
+      const result = await resilientMutate(`/voters/${encodeURIComponent(voter._id)}/vote`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voted: true }),
+        body: { voted: true },
+        idempotencyKey: `turnout_vote_${voter._id}_true`,
       });
-      if (!response.ok) throw new Error(await getApiError(response, 'मतदान स्थिति अपडेट नहीं हुई।'));
+      if (!result.queued && result.response && !result.response.ok) {
+        throw new Error(await getApiError(result.response, 'मतदान स्थिति अपडेट नहीं हुई।'));
+      }
+      if (result.queued) {
+        toast.info('ऑफ़लाइन सेव किया गया — नेटवर्क आने पर सिंक होगा।');
+      }
 
       // If in fallback cache mode, update in-memory raw array
       if (allVotersCache.length > 0) {

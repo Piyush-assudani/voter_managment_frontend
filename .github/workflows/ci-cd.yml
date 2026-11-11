@@ -1,0 +1,43 @@
+name: VijaySetu Frontend CI/CD Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  secret-and-hygiene-gate:
+    name: Secret & Temp-Script Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject leaked secrets or temporary QA artifacts
+        run: |
+          if git ls-files | grep -E '(\.env($|\.)|dictator_qa|\.pem$|\.key$)'; then
+            echo "::error::Forbidden tracked secret or temporary file detected!"
+            exit 1
+          fi
+          if git grep -nE '(sk-or-v1-[A-Za-z0-9]{16,}|AIza[0-9A-Za-z_-]{20,}|gsk_[A-Za-z0-9]{16,}|mongodb\+srv://[^/\s]+:[^@\s]+@|cloudinary://[0-9]+:[^@\s]+@)' -- ':(exclude).github/workflows/ci-cd.yml'; then
+            echo "::error::Hardcoded credential detected in frontend code!"
+            exit 1
+          fi
+
+  typecheck-and-build:
+    name: TypeScript Check & Production Build
+    needs: secret-and-hygiene-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: TypeScript typecheck
+        run: ./node_modules/.bin/tsc --noEmit
+      - name: Production Next.js build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: npm run build
+

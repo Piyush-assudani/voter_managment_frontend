@@ -743,9 +743,9 @@ export default function AdminPanel() {
   const [newTmplQuickReply1, setNewTmplQuickReply1] = useState<string>('मतदान पर्ची मिली ✅');
   const [newTmplQuickReply2, setNewTmplQuickReply2] = useState<string>('सहायता चाहिए 📞');
   const [newTmplCallBtnText, setNewTmplCallBtnText] = useState<string>('हेल्पलाइन पर कॉल करें');
-  const [newTmplCallBtnPhone, setNewTmplCallBtnPhone] = useState<string>('+919413879444');
+  const [newTmplCallBtnPhone, setNewTmplCallBtnPhone] = useState<string>('');
   const [newTmplUrlBtnText, setNewTmplUrlBtnText] = useState<string>('वेबसाइट देखें');
-  const [newTmplUrlBtnLink, setNewTmplUrlBtnLink] = useState<string>('https://vijaysetu.com');
+  const [newTmplUrlBtnLink, setNewTmplUrlBtnLink] = useState<string>('');
   const [creatingTemplate, setCreatingTemplate] = useState<boolean>(false);
   const [previewMode, setPreviewMode] = useState<'active' | 'draft'>('active');
 
@@ -4433,16 +4433,16 @@ export default function AdminPanel() {
                   <div style={{ width: '100%', maxWidth: '560px' }}>
                     <VoterSlipTemplate
                       voter={{
-                        epic: 'RLJ1213180',
-                        nameHi: 'जबरा राम',
-                        nameEn: 'Jabra Ram',
-                        relativeNameHi: 'नरिगा राम',
-                        relativeNameEn: 'Nariga Ram',
+                        epic: 'EPIC0000000',
+                        nameHi: 'मतदाता नाम (सैंपल)',
+                        nameEn: 'Sample Voter',
+                        relativeNameHi: 'संबंधी का नाम',
+                        relativeNameEn: 'Relative Name',
                         relationType: 'पिता',
                         age: 28,
                         gender: 'पुरुष',
-                        houseNo: '279',
-                        wardNo: selectedPreviewWard || (organizations.find((o) => o.id === brandingTargetOrgId)?.wards?.[0] || '82'),
+                        houseNo: '01',
+                        wardNo: selectedPreviewWard || (organizations.find((o) => o.id === brandingTargetOrgId)?.wards?.[0] || '1'),
                         partNo: '1',
                         serialNo: 1,
                       }}
@@ -5000,16 +5000,16 @@ export default function AdminPanel() {
                     <div style={{ width: '100%', maxWidth: '520px' }}>
                       <VoterSlipTemplate
                         voter={{
-                          epic: 'RLJ1213180',
-                          nameHi: 'जबरा राम',
-                          nameEn: 'Jabra Ram',
-                          relativeNameHi: 'नरिगा राम',
-                          relativeNameEn: 'Nariga Ram',
+                          epic: 'EPIC0000000',
+                          nameHi: 'मतदाता नाम (सैंपल)',
+                          nameEn: 'Sample Voter',
+                          relativeNameHi: 'संबंधी का नाम',
+                          relativeNameEn: 'Relative Name',
                           relationType: 'पिता',
                           age: 28,
                           gender: 'पुरुष',
-                          houseNo: '279',
-                          wardNo: selectedPreviewWard || (organizations.find((o) => o.id === brandingTargetOrgId)?.wards?.[0] || '82'),
+                          houseNo: '01',
+                          wardNo: selectedPreviewWard || (organizations.find((o) => o.id === brandingTargetOrgId)?.wards?.[0] || '1'),
                           partNo: '1',
                           serialNo: 1,
                         }}
@@ -5533,7 +5533,7 @@ export default function AdminPanel() {
                             setNewTmplName(e.target.value);
                             setPreviewMode('draft');
                           }}
-                          placeholder="e.g. छगन रावतराम या voter_slip_campaign"
+                          placeholder="e.g. voter_slip_campaign"
                           style={{
                             width: '100%',
                             padding: '8px 10px',
@@ -5937,7 +5937,7 @@ export default function AdminPanel() {
                                 type="text"
                                 value={newTmplCallBtnPhone}
                                 onChange={(e) => setNewTmplCallBtnPhone(e.target.value)}
-                                placeholder="+919413879444"
+                                placeholder="+91XXXXXXXXXX"
                                 style={{
                                   width: '100%',
                                   padding: '6px 10px',

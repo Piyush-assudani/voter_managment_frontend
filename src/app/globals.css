@@ -9,6 +9,11 @@
   --line: #e2e8f0;
   --green: #047857;
   --green-soft: #ecfdf5;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --keyboard-inset: 0px;
 }
 
 * {
@@ -23,6 +28,21 @@ p, span, h1, h2, h3, h4, h5, h6, label, div, td, th {
 
 input, select, textarea, button {
   max-width: 100%;
+}
+
+input, select, textarea {
+  scroll-margin-bottom: 120px;
+}
+
+/* Prevent accidental iOS Safari auto-zoom while preserving full accessibility zoom */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
+html.keyboard-open body {
+  padding-bottom: max(16px, var(--keyboard-inset, 0px));
 }
 
 .table-responsive {

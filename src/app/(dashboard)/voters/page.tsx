@@ -3428,7 +3428,7 @@ export default function VoterDirectoryPage() {
                   <input
                     value={tagFormData.familyHead}
                     onChange={(e) => setTagFormData({ ...tagFormData, familyHead: e.target.value })}
-                    placeholder="उदा: जीवराज नाथू कुम्हार का घर"
+                    placeholder="उदा: परिवार / मुखिया का नाम लिखें"
                     style={{
                       width: '100%',
                       height: '42px',
@@ -3980,7 +3980,7 @@ export default function VoterDirectoryPage() {
                     <input
                       value={editFormData.familyId}
                       onChange={(e) => setEditFormData({ ...editFormData, familyId: e.target.value })}
-                      placeholder="उदा: जीवराज नाथू कुम्हार"
+                      placeholder="उदा: परिवार आईडी या मुखिया का नाम"
                       style={{ marginTop: '4px', height: '38px' }}
                     />
                   </label>

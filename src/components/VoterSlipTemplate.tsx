@@ -297,10 +297,10 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
     )
   );
 
-  const fallbackName = isRealVoter ? '—' : 'जबरा राम';
-  const fallbackRelative = isRealVoter ? '—' : 'नरिगा राम';
-  const fallbackHouse = isRealVoter ? '—' : '279';
-  const fallbackEpic = isRealVoter ? '—' : 'RLJ1213180';
+  const fallbackName = isRealVoter ? '—' : 'मतदाता का नाम (नमूना)';
+  const fallbackRelative = isRealVoter ? '—' : 'संबंधी का नाम';
+  const fallbackHouse = isRealVoter ? '—' : '—';
+  const fallbackEpic = isRealVoter ? '—' : 'EPIC0000000';
   const fallbackSerial = isRealVoter ? '—' : '1';
 
   const voterName = formatName(voter.nameEn, voter.nameHi, fallbackName);

@@ -19,7 +19,8 @@ import {
   X,
   Eye,
 } from 'lucide-react';
-import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
+import { apiFetch, getApiError, decodeJwtPayload, resilientMutate } from '@/lib/api';
+import { queryOfflineVoters, saveOfflineVotersCache } from '@/lib/offlineSync';
 import { SortButton, SortState } from '@/components/SortButton';
 import { VoterPhotoModal } from '@/components/VoterPhotoModal';
 import { toast } from '@/components/Toast';
@@ -269,25 +270,64 @@ export default function PollDeskPage() {
     }
   }, []);
 
+  const getActiveOrgId = useCallback(() => {
+    if (typeof window === 'undefined') return 'default';
+    const token = window.localStorage.getItem('token');
+    if (!token) return 'default';
+    return decodeJwtPayload<{ user?: { organizationId?: string } }>(token)?.user?.organizationId || 'default';
+  }, []);
+
   const loadVoters = useCallback(async (wardsList: string[]) => {
     if (!wardsList || wardsList.length === 0) return;
     setLoading(true);
     setError('');
+    const orgId = getActiveOrgId();
     try {
       const wardQuery = wardsList.includes('all') ? 'all' : wardsList.join(',');
       const response = await apiFetch(`/voters/all?ward=${encodeURIComponent(wardQuery)}`, { cache: 'no-store' });
       if (!response.ok) throw new Error(await getApiError(response, 'वार्ड रिकॉर्ड लोड नहीं हो सके।'));
       const result: unknown = await response.json();
       if (!Array.isArray(result)) throw new Error('सर्वर से सूची का सही उत्तर नहीं मिला।');
-      setVoters(result as Voter[]);
+      const rows = result as Voter[];
+      setVoters(rows);
       setUpdatedAt(new Date());
+      void saveOfflineVotersCache(orgId, rows);
     } catch (loadError) {
+      try {
+        const cached = await queryOfflineVoters(orgId, '', 2000);
+        const wardSet = wardsList.includes('all') ? null : new Set(wardsList);
+        const filtered = cached
+          .filter((item) => !wardSet || wardSet.has(String(item.wardNo || '').trim()))
+          .map((item): Voter => ({
+            _id: item._id,
+            serialNo: item.serialNo || 0,
+            voted: Boolean(item.voted),
+            nameHi: item.nameHi || '',
+            nameEn: item.nameEn || '',
+            relativeNameHi: item.relativeNameHi || '',
+            epic: item.epic || '',
+            houseNo: item.houseNo || '',
+            age: 0,
+            gender: '',
+            phone: item.phone || '',
+            wardNo: item.wardNo || '',
+            partNo: item.partNo || '',
+          }));
+        if (filtered.length > 0) {
+          setVoters(filtered);
+          toast.info(`ऑफ़लाइन कैश से ${filtered.length} मतदाता लोड किए गए।`);
+          setError('');
+          return;
+        }
+      } catch {
+        // Ignore IndexedDB fallback errors
+      }
       setVoters([]);
       setError(loadError instanceof Error ? loadError.message : 'वार्ड रिकॉर्ड लोड नहीं हो सके।');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getActiveOrgId]);
 
   useEffect(() => {
     // If worker token has strictly assigned wards, respect them
@@ -443,14 +483,20 @@ export default function PollDeskPage() {
     if (savingIds.includes(voter._id)) return; // Prevent double-triggering on same voter
     setSavingIds((prev) => [...prev, voter._id]);
     setError('');
+    const nextVoted = !voter.voted;
     try {
-      const response = await apiFetch(`/voters/${encodeURIComponent(voter._id)}/vote`, {
+      const result = await resilientMutate(`/voters/${encodeURIComponent(voter._id)}/vote`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voted: !voter.voted }),
+        body: { voted: nextVoted },
+        idempotencyKey: `vote_${voter._id}_${nextVoted}`,
       });
-      if (!response.ok) throw new Error(await getApiError(response, 'मतदान स्थिति अपडेट नहीं हुई।'));
-      setVoters((current) => current.map((item) => item._id === voter._id ? { ...item, voted: !voter.voted } : item));
+      if (!result.queued && result.response && !result.response.ok) {
+        throw new Error(await getApiError(result.response, 'मतदान स्थिति अपडेट नहीं हुई।'));
+      }
+      setVoters((current) => current.map((item) => item._id === voter._id ? { ...item, voted: nextVoted } : item));
+      if (result.queued) {
+        toast.info('ऑफ़लाइन सेव किया गया — नेटवर्क आने पर सिंक होगा।');
+      }
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : 'मतदान स्थिति अपडेट नहीं हुई।');
     } finally {

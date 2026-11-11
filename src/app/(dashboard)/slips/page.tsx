@@ -761,6 +761,7 @@ export default function SlipsPage() {
 
   // Save Branding (Admin only)
   const handleSaveBranding = async () => {
+    if (savingBranding) return;
     setSavingBranding(true);
     setBrandingSaveMsg('');
     try {
@@ -820,6 +821,7 @@ export default function SlipsPage() {
 
   // Official WhatsApp Send (Meta Cloud API with Photo)
   const handleSendWhatsAppViaApi = async () => {
+    if (wpSending) return;
     void handleAutoSaveWpPhone(wpPhone);
     setWpSending(true);
     setWpMessage('पर्ची की फोटो और संदेश Meta API द्वारा भेजा जा रहा है...');
@@ -908,6 +910,7 @@ export default function SlipsPage() {
 
   // Direct WhatsApp (Mobile Share with Photo + Desktop Clipboard Paste + Android Native Bridge)
   const handleSendDirectWhatsApp = async () => {
+    if (wpSending) return;
     void handleAutoSaveWpPhone(wpPhone);
     setWpSending(true);
     try {

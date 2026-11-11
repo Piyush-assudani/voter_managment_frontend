@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Anek_Devanagari, Inter, Noto_Sans_Devanagari, Outfit } from 'next/font/google';
 import './globals.css';
 import { ContentProtection } from '@/components/ContentProtection';
+import { AppResilienceProvider } from '@/components/AppResilienceProvider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -31,9 +32,10 @@ const anekDevanagari = Anek_Devanagari({
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
   viewportFit: 'cover',
+  interactiveWidget: 'resizes-content',
   themeColor: '#047857',
 };
 
@@ -64,6 +66,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <ContentProtection />
+        <AppResilienceProvider />
         {children}
       </body>
     </html>
