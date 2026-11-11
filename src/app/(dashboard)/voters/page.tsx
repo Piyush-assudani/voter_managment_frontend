@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   AlertCircle,
   AlertTriangle,
+  Building2,
   Check,
   FileText,
   LoaderCircle,
@@ -50,6 +51,8 @@ interface Voter {
   gender: string;
   houseNo: string;
   wardNo: string;
+  panchayat?: string;
+  panchayatHi?: string;
   partNo: string;
   serialNo: number;
   phone: string;
@@ -75,6 +78,8 @@ interface Household {
   key: string;
   houseNo: string;
   wardNo: string;
+  panchayat?: string;
+  panchayatHi?: string;
   partNo: string;
   members: Voter[];
   memberCount: number;
@@ -166,6 +171,8 @@ export default function VoterDirectoryPage() {
   const [voiceActiveField, setVoiceActiveField] = useState<'search' | 'relative' | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const [houseQuery, setHouseQuery] = useState('');
+  const [panchayatFilter, setPanchayatFilter] = useState('');
+  const [panchayatsList, setPanchayatsList] = useState<Array<{ _id: string; count: number }>>([]);
   const [wardFilter, setWardFilter] = useState('');
   const [selectedCaste, setSelectedCaste] = useState('');
   const [selectedGender, setSelectedGender] = useState('');
@@ -211,7 +218,7 @@ export default function VoterDirectoryPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const pageSizeRef = useRef(50);
-  const filtersRef = useRef({ ward: '', supportStatus: '', isMigrant: '' });
+  const filtersRef = useRef({ ward: '', panchayat: '', supportStatus: '', isMigrant: '' });
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -398,10 +405,24 @@ export default function VoterDirectoryPage() {
     } catch {}
   }, []);
 
-  // Load Wards list and counts
-  const loadWardsSummary = useCallback(async () => {
+  // Load Panchayats list and counts
+  const loadPanchayatsSummary = useCallback(async () => {
     try {
-      const res = await apiFetch('/voters/wards-summary', { cache: 'no-store' });
+      const res = await apiFetch('/voters/panchayats-summary', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.panchayats)) {
+          setPanchayatsList(data.panchayats);
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Load Wards list and counts (optionally filtered by selected Gram Panchayat)
+  const loadWardsSummary = useCallback(async (targetPanchayat = '') => {
+    try {
+      const q = targetPanchayat ? `?panchayat=${encodeURIComponent(targetPanchayat)}` : '';
+      const res = await apiFetch(`/voters/wards-summary${q}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.wards)) {
@@ -434,16 +455,19 @@ export default function VoterDirectoryPage() {
   }, []);
 
   // Load issues / data quality summary for current org
-  const loadIssuesSummary = useCallback(async (targetWard = wardFilter) => {
+  const loadIssuesSummary = useCallback(async (targetWard = wardFilter, targetPanchayat = panchayatFilter) => {
     try {
-      const q = targetWard ? `?ward=${encodeURIComponent(targetWard)}` : '';
+      const params = new URLSearchParams();
+      if (targetWard) params.set('ward', targetWard);
+      if (targetPanchayat) params.set('panchayat', targetPanchayat);
+      const q = params.toString() ? `?${params.toString()}` : '';
       const res = await apiFetch(`/voters/issues-summary${q}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setIssuesSummary(data);
       }
     } catch {}
-  }, [wardFilter]);
+  }, [wardFilter, panchayatFilter]);
 
   // Load list of voters for a specific issue category in drawer
   const loadIssuesList = useCallback(async (category = issuesDrawerCategory, ward = wardFilter) => {
@@ -466,13 +490,14 @@ export default function VoterDirectoryPage() {
   }, [issuesDrawerCategory, wardFilter]);
 
   // Load paginated households for family directory mode
-  const loadHouseholds = useCallback(async (targetPage = 1, ward = '', search = '') => {
+  const loadHouseholds = useCallback(async (targetPage = 1, ward = '', search = '', panchayat = '') => {
     setHouseholdLoading(true);
     try {
       const params = new URLSearchParams({
         page: String(targetPage),
         limit: '30',
         ...(ward ? { ward } : {}),
+        ...(panchayat ? { panchayat } : {}),
         ...(search ? { search } : {}),
       });
       const res = await apiFetch(`/voters/households?${params.toString()}`, { cache: 'no-store' });
@@ -495,6 +520,7 @@ export default function VoterDirectoryPage() {
 
   useEffect(() => {
     void loadOrgDetails();
+    void loadPanchayatsSummary();
     void loadWardsSummary();
     void loadCastes();
     void loadSlipConfig();
@@ -532,6 +558,7 @@ export default function VoterDirectoryPage() {
     casteParam?: string,
     genderParam?: string,
     issueParam?: string,
+    panchayatParam?: string,
   ) => {
     const isSearching = Boolean((search && search.trim()) || (relative && relative.trim()));
     // When actively searching by name/EPIC/relative, release any family/house lock
@@ -560,12 +587,14 @@ export default function VoterDirectoryPage() {
     setPage(nextPage);
 
     const activeWard = selectedWard !== undefined ? selectedWard : filtersRef.current.ward;
+    const activePanchayat = panchayatParam !== undefined ? panchayatParam : filtersRef.current.panchayat;
     const activeCaste = casteParam !== undefined ? casteParam : selectedCaste;
     const activeGender = genderParam !== undefined ? genderParam : selectedGender;
     const activeIssue = issueParam !== undefined ? issueParam : issueFilter;
 
     const familyParams = new URLSearchParams();
     if (activeWard) familyParams.set('ward', activeWard);
+    if (activePanchayat) familyParams.set('panchayat', activePanchayat);
     if (householdPart) familyParams.set('part', householdPart);
 
     const path = effectiveHouse
@@ -573,6 +602,7 @@ export default function VoterDirectoryPage() {
       : `/voters?${new URLSearchParams({
           ...(search && search.trim() ? { search: search.trim() } : {}),
           ...(relative && relative.trim() ? { relative: relative.trim() } : {}),
+          ...(activePanchayat ? { panchayat: activePanchayat } : {}),
           ...(activeWard ? { ward: activeWard } : {}),
           ...(activeCaste ? { caste: activeCaste } : {}),
           ...(activeGender ? { gender: activeGender } : {}),
@@ -651,16 +681,21 @@ export default function VoterDirectoryPage() {
   // Client switch listener
   useEffect(() => {
     const handleClientChange = () => {
+      setPanchayatFilter('');
+      filtersRef.current.panchayat = '';
+      setWardFilter('');
+      filtersRef.current.ward = '';
       void loadOrgDetails();
+      void loadPanchayatsSummary();
       void loadWardsSummary();
       void loadCastes();
       void loadSlipConfig();
       void loadIssuesSummary();
-      void loadVoters();
+      void loadVoters('', '', 1, '', '', '', undefined, undefined, undefined, '');
     };
     window.addEventListener('client-changed', handleClientChange);
     return () => window.removeEventListener('client-changed', handleClientChange);
-  }, [loadOrgDetails, loadWardsSummary, loadCastes, loadSlipConfig, loadIssuesSummary, loadVoters]);
+  }, [loadOrgDetails, loadPanchayatsSummary, loadWardsSummary, loadCastes, loadSlipConfig, loadIssuesSummary, loadVoters]);
 
   useEffect(() => () => recognitionRef.current?.stop(), []);
 
@@ -700,16 +735,32 @@ export default function VoterDirectoryPage() {
     return `All ${wardsList.length} Wards`;
   }, [wardsList]);
 
+  // Handle Gram Panchayat selector change
+  const handlePanchayatChange = (newPanchayat: string) => {
+    setPanchayatFilter(newPanchayat);
+    filtersRef.current.panchayat = newPanchayat;
+    setWardFilter('');
+    filtersRef.current.ward = '';
+    setPage(1);
+    void loadWardsSummary(newPanchayat);
+    void loadIssuesSummary('', newPanchayat);
+    if (isFamilyMode) {
+      void loadHouseholds(1, '', searchQuery || houseQuery, newPanchayat);
+    } else {
+      void loadVoters(searchQuery.trim(), houseQuery.trim(), 1, '', '', relativeNameQuery.trim(), selectedCaste, selectedGender, issueFilter, newPanchayat);
+    }
+  };
+
   // Handle Ward selector change
   const handleWardChange = (newWard: string) => {
     setWardFilter(newWard);
     filtersRef.current.ward = newWard;
     setPage(1);
-    void loadIssuesSummary(newWard);
+    void loadIssuesSummary(newWard, panchayatFilter);
     if (isFamilyMode) {
-      void loadHouseholds(1, newWard, searchQuery || houseQuery);
+      void loadHouseholds(1, newWard, searchQuery || houseQuery, panchayatFilter);
     } else {
-      void loadVoters(searchQuery.trim(), houseQuery.trim(), 1, newWard, '', relativeNameQuery.trim(), selectedCaste, selectedGender, issueFilter);
+      void loadVoters(searchQuery.trim(), houseQuery.trim(), 1, newWard, '', relativeNameQuery.trim(), selectedCaste, selectedGender, issueFilter, panchayatFilter);
     }
   };
 
@@ -1564,8 +1615,32 @@ export default function VoterDirectoryPage() {
         </div>
       )}
 
-      {/* 3. Filter Bar (Ward, Caste from Database, Gender) */}
+      {/* 3. Filter Bar (Gram Panchayat, Ward, Caste from Database, Gender) */}
       <div className="smartbooth-ward-bar" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Gram Panchayat Filter */}
+        {panchayatsList.length > 0 && (
+          <div className="smartbooth-ward-select-wrapper" style={{ flex: '1 1 200px' }}>
+            <Building2 size={16} className="smartbooth-ward-icon" style={{ color: '#059669' }} />
+            <span className="smartbooth-ward-label">पंचायत:</span>
+            <select
+              value={panchayatFilter}
+              onChange={(e) => handlePanchayatChange(e.target.value)}
+              className="smartbooth-ward-select"
+              aria-label="ग्राम पंचायत चुनें"
+            >
+              <option value="">
+                सभी पंचायतें ({panchayatsList.length} पंचायतें)
+              </option>
+              {panchayatsList.map((p) => (
+                <option key={p._id} value={p._id}>
+                  {p._id} ({p.count.toLocaleString('en-IN')} मतदाता)
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={16} className="smartbooth-ward-arrow" />
+          </div>
+        )}
+
         {/* Ward Filter */}
         <div className="smartbooth-ward-select-wrapper" style={{ flex: '1 1 200px' }}>
           <MapPin size={16} className="smartbooth-ward-icon" />
@@ -1577,7 +1652,9 @@ export default function VoterDirectoryPage() {
             aria-label="वार्ड चुनें"
           >
             <option value="">
-              सभी वार्ड ({allWardsLabel} — कुल {(totalOrgVoters || totalRecords).toLocaleString('en-IN')} मतदाता)
+              {panchayatFilter
+                ? `${panchayatFilter} के सभी वार्ड (${(totalOrgVoters || totalRecords).toLocaleString('en-IN')} मतदाता)`
+                : `सभी वार्ड (${allWardsLabel} — कुल ${(totalOrgVoters || totalRecords).toLocaleString('en-IN')} मतदाता)`}
             </option>
             {wardsList.map((w) => (
               <option key={w._id} value={w._id}>
@@ -1884,6 +1961,15 @@ export default function VoterDirectoryPage() {
                   खोज फ़िल्टर साफ़ करें
                 </button>
               )}
+              {panchayatFilter && (
+                <button
+                  type="button"
+                  className="smartbooth-pill-btn smartbooth-pill-blue"
+                  onClick={() => handlePanchayatChange('')}
+                >
+                  पंचायत फ़िल्टर हटाएं
+                </button>
+              )}
               {wardFilter && (
                 <button
                   type="button"
@@ -2149,6 +2235,24 @@ export default function VoterDirectoryPage() {
                           className="sb-checkbox"
                           aria-label={`${voter.nameHi || voter.nameEn} चुनें`}
                         />
+                        {voter.panchayat && (
+                          <span
+                            className="sb-badge-panchayat"
+                            style={{
+                              background: '#ecfdf5',
+                              color: '#047857',
+                              border: '1px solid #a7f3d0',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              padding: '2px 7px',
+                              borderRadius: '4px',
+                              letterSpacing: '0.2px'
+                            }}
+                            title={`ग्राम पंचायत: ${voter.panchayat}`}
+                          >
+                            {voter.panchayat}
+                          </span>
+                        )}
                         <span className="sb-badge-ward">वार्ड {voter.wardNo || '—'}</span>
                         <span className="sb-badge-serial">क्र. {voter.serialNo || '—'}</span>
                         {!hidePartNo && voter.partNo && (

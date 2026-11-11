@@ -102,6 +102,8 @@ interface Tenant {
   modules: string[];
   enabledModules?: string[];
   wards: string[];
+  panchayats?: string[];
+  allowedPanchayats?: string[];
   isActive: boolean;
   activeWorkers: number;
   voterCount: number;
@@ -128,6 +130,8 @@ interface AdminVoter {
   relationType?: string;
   houseNo?: string;
   wardNo: string;
+  panchayat?: string;
+  panchayatHi?: string;
   partNo: string;
   serialNo: number;
   phone: string;
@@ -1041,6 +1045,7 @@ export default function AdminPanel() {
   const [loadingLeads, setLoadingLeads] = useState(false);
 
   // Form states for Excel import
+  const [excelPanchayat, setExcelPanchayat] = useState('');
   const [excelWard, setExcelWard] = useState('');
   const [excelCustomWard, setExcelCustomWard] = useState('');
   const [excelIsNewWard, setExcelIsNewWard] = useState(false);
@@ -1049,6 +1054,7 @@ export default function AdminPanel() {
   const [selectedExcelFiles, setSelectedExcelFiles] = useState<File[]>([]);
 
   // Form states for PDF import
+  const [pdfPanchayat, setPdfPanchayat] = useState('');
   const [pdfWard, setPdfWard] = useState('');
   const [pdfCustomWard, setPdfCustomWard] = useState('');
   const [pdfIsNewWard, setPdfIsNewWard] = useState(false);
@@ -1620,6 +1626,15 @@ export default function AdminPanel() {
     return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   }, [selectedTenant, masterDataWards, clientWardsSummary, voters, organizationId]);
 
+  const availablePanchayats = useMemo(() => {
+    const org = organizations.find((o) => o.id === organizationId);
+    const set = new Set<string>(org?.panchayats || []);
+    voters
+      .filter((voter) => !organizationId || voter.organizationId === organizationId)
+      .forEach((v) => v.panchayat && set.add(String(v.panchayat).trim()));
+    return Array.from(set).filter(Boolean).sort((a, b) => a.localeCompare(b));
+  }, [organizations, organizationId, voters]);
+
   const wards = useMemo(() => {
     const set = new Set<string>();
     (selectedTenant?.wards || []).forEach((w) => w && set.add(String(w).trim()));
@@ -1882,6 +1897,7 @@ export default function AdminPanel() {
       body.set('organizationId', organizationId);
       selectedExcelFiles.forEach((file) => body.append('files', file));
       if (targetWard) body.set('wardNo', targetWard);
+      if (excelPanchayat.trim()) body.set('panchayat', excelPanchayat.trim());
       if (excelBooth.trim()) body.set('boothNo', excelBooth.trim());
       if (excelDescription.trim()) body.set('listDescription', excelDescription.trim());
 
@@ -1991,6 +2007,7 @@ export default function AdminPanel() {
         body.append('pdf', file);
       });
       if (targetWard) body.set('wardNo', targetWard);
+      if (pdfPanchayat.trim()) body.set('panchayat', pdfPanchayat.trim());
       if (pdfBooth.trim()) body.set('boothNo', pdfBooth.trim());
       if (pdfDescription.trim()) body.set('listDescription', pdfDescription.trim());
       
@@ -7180,6 +7197,41 @@ export default function AdminPanel() {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '13px', fontWeight: '500', color: '#1a2620' }}>
+                        ग्राम पंचायत (Gram Panchayat) <span style={{ fontSize: '11px', color: '#7d8981' }}>(वैकल्पिक / स्वतः पहचान)</span>
+                      </label>
+                      {availablePanchayats.length > 0 ? (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <select
+                            value={pdfPanchayat}
+                            onChange={(e) => setPdfPanchayat(e.target.value)}
+                            style={{ flex: 1 }}
+                          >
+                            <option value="">ग्राम पंचायत चुनें (या स्वतः रहने दें)</option>
+                            {availablePanchayats.map((p) => (
+                              <option key={p} value={p}>{p}</option>
+                            ))}
+                          </select>
+                          <input
+                            type="text"
+                            placeholder="या नई पंचायत लिखें..."
+                            value={pdfPanchayat && !availablePanchayats.includes(pdfPanchayat) ? pdfPanchayat : ''}
+                            onChange={(e) => setPdfPanchayat(e.target.value)}
+                            style={{ flex: 1 }}
+                          />
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder="ग्राम पंचायत दर्ज करें (उदा. सांभरा, खेड़, आदि)"
+                          value={pdfPanchayat}
+                          onChange={(e) => setPdfPanchayat(e.target.value)}
+                          style={{ width: '100%' }}
+                        />
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '13px', fontWeight: '500', color: '#1a2620' }}>
                         वार्ड (Ward) <span style={{ fontSize: '11px', color: '#7d8981' }}>(एकल या कॉमा से क्रमबद्ध उदा. 17, 18)</span>
                       </label>
                       {!pdfIsNewWard ? (
@@ -7536,6 +7588,41 @@ export default function AdminPanel() {
                         {organizations.map((tenant, idx) => <option key={`${tenant.id}-${idx}`} value={tenant.id}>{tenant.name}</option>)}
                       </select>
                     </label>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '13px', fontWeight: '500', color: '#1a2620' }}>
+                        ग्राम पंचायत (Gram Panchayat) <span style={{ fontSize: '11px', color: '#7d8981' }}>(वैकल्पिक / एक्सेल से स्वतः)</span>
+                      </label>
+                      {availablePanchayats.length > 0 ? (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <select
+                            value={excelPanchayat}
+                            onChange={(e) => setExcelPanchayat(e.target.value)}
+                            style={{ flex: 1 }}
+                          >
+                            <option value="">ग्राम पंचायत चुनें (या स्वतः रहने दें)</option>
+                            {availablePanchayats.map((p) => (
+                              <option key={p} value={p}>{p}</option>
+                            ))}
+                          </select>
+                          <input
+                            type="text"
+                            placeholder="या नई पंचायत लिखें..."
+                            value={excelPanchayat && !availablePanchayats.includes(excelPanchayat) ? excelPanchayat : ''}
+                            onChange={(e) => setExcelPanchayat(e.target.value)}
+                            style={{ flex: 1 }}
+                          />
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder="ग्राम पंचायत दर्ज करें (उदा. सांभरा, खेड़, आदि)"
+                          value={excelPanchayat}
+                          onChange={(e) => setExcelPanchayat(e.target.value)}
+                          style={{ width: '100%' }}
+                        />
+                      )}
+                    </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '13px', fontWeight: '500', color: '#1a2620' }}>

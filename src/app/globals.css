@@ -5514,9 +5514,22 @@ img {
 }
 
 @media (max-width: 640px) {
+  .smartbooth-ward-bar {
+    gap: 6px;
+    margin-bottom: 12px;
+  }
   .smartbooth-ward-select-wrapper {
-    height: 44px;
-    padding: 0 10px;
+    height: 42px;
+    padding: 0 8px;
+    flex: 1 1 calc(50% - 4px) !important;
+    min-width: 130px;
+  }
+}
+
+@media (max-width: 360px) {
+  .smartbooth-ward-select-wrapper {
+    flex: 1 1 100% !important;
+    width: 100% !important;
   }
 }
 
