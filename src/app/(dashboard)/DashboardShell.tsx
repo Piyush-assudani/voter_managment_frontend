@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronDown,
   LogOut,
+  Settings,
 } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { apiFetch, decodeJwtPayload } from '@/lib/api';
@@ -25,6 +26,7 @@ const pageTitles = new Map([
   ['/workers', 'कार्यकर्ता प्रबंधन'],
   ['/history', 'भेजी गई पर्चियाँ (ऑडिट)'],
   ['/accounts', 'खाते व अनुमतियाँ'],
+  ['/settings', 'सेटिंग्स व पासवर्ड'],
   ['/admin', 'सुपर एडमिन कंसोल'],
 ]);
 
@@ -40,6 +42,7 @@ const pageModules = new Map([
   ['/workers', 'workers'],
   ['/history', 'history'],
   ['/accounts', 'accounts'],
+  ['/settings', 'home'],
   ['/admin', 'admin'],
 ]);
 
@@ -358,7 +361,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           >
             <div className="topbar-logo-box">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.webp" alt="VijaySetu Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/logo.png'; }} />
+              <img src="/logo.webp" alt="VijaySetu Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
 
             {/* Brand text: Always visible on homepage, or on md+ screens */}
@@ -561,6 +564,29 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                     )}
                   </div>
                 </div>
+
+                {/* Settings Link */}
+                <Link
+                  href="/settings"
+                  onClick={() => setProfileMenuOpen(false)}
+                  role="menuitem"
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    color: '#334155',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    marginBottom: '4px',
+                  }}
+                >
+                  <Settings size={15} strokeWidth={2.2} />
+                  <span>सेटिंग्स व पासवर्ड</span>
+                </Link>
 
                 {/* Logout Button */}
                 <button

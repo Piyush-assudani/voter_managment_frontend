@@ -4,6 +4,7 @@ import React from 'react';
 import { VoterSlipTemplate, SlipConfig, VoterSlipData } from '../components/VoterSlipTemplate';
 import { FamilyVoterSlipTemplate } from '../components/FamilyVoterSlipTemplate';
 import { downloadDataUrl, downloadBlob } from './fileDownload';
+import { toast } from '../components/Toast';
 
 export const generateSlipImage = async (
   voter: VoterSlipData,
@@ -89,7 +90,7 @@ export const generateSlipImage = async (
           logging: false,
           onclone: (clonedDoc) => {
             const style = clonedDoc.createElement('style');
-            style.innerHTML = `
+            style.textContent = `
               * {
                 -webkit-font-smoothing: antialiased !important;
                 -moz-osx-font-smoothing: grayscale !important;
@@ -280,7 +281,7 @@ export const downloadSlip = async (
     return true;
   } catch (err) {
     console.error('Failed to download slip:', err);
-    alert('पर्ची डाउनलोड नहीं हो सकी। कृपया दोबारा प्रयास करें।');
+    toast.error('पर्ची डाउनलोड नहीं हो सकी। कृपया दोबारा प्रयास करें।');
     return false;
   }
 };
@@ -364,7 +365,7 @@ export const generateFamilySlipImage = async (
           logging: false,
           onclone: (clonedDoc) => {
             const style = clonedDoc.createElement('style');
-            style.innerHTML = `
+            style.textContent = `
               * {
                 -webkit-font-smoothing: antialiased !important;
                 -moz-osx-font-smoothing: grayscale !important;
@@ -409,7 +410,7 @@ export const downloadFamilySlip = async (
     return true;
   } catch (err) {
     console.error('Failed to download family slip:', err);
-    alert('परिवार पर्ची डाउनलोड नहीं हो सकी। कृपया दोबारा प्रयास करें।');
+    toast.error('परिवार पर्ची डाउनलोड नहीं हो सकी। कृपया दोबारा प्रयास करें।');
     return false;
   }
 };
@@ -457,7 +458,7 @@ export const downloadBulkSlipsAsZip = async (
     return true;
   } catch (err) {
     console.error('Failed to create bulk zip:', err);
-    alert('बल्क ज़िप तैयार करने में समस्या आई। कृपया पुनः प्रयास करें।');
+    toast.error('बल्क ज़िप तैयार करने में समस्या आई। कृपया पुनः प्रयास करें।');
     return false;
   }
 };

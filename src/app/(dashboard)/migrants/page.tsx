@@ -25,6 +25,7 @@ import { downloadBlob } from '@/lib/fileDownload';
 import { SortButton, SortState } from '@/components/SortButton';
 import { isValidPhoneNumber, getCleanWhatsAppUrl } from '@/lib/phoneUtils';
 import { VoterPhotoModal } from '@/components/VoterPhotoModal';
+import { toast } from '@/components/Toast';
 
 interface Migrant {
   _id: string;
@@ -221,6 +222,7 @@ export default function MigrantsPage() {
       if (remove) {
         setVoters((current) => current.filter((item) => item._id !== voter._id));
         setNotice('प्रवासी चिह्न सफलतापूर्वक हटाया गया।');
+        toast.success('प्रवासी चिह्न सफलतापूर्वक हटाया गया।');
       } else {
         setVoters((current) =>
           current.map((item) =>
@@ -228,9 +230,12 @@ export default function MigrantsPage() {
           )
         );
         setNotice('स्थान विवरण सफलतापूर्वक सेव हुआ।');
+        toast.success('स्थान विवरण सफलतापूर्वक सेव हुआ।');
       }
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'प्रवासी रिकॉर्ड अपडेट नहीं हुआ।');
+      const msg = saveError instanceof Error ? saveError.message : 'प्रवासी रिकॉर्ड अपडेट नहीं हुआ।';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSavingId('');
     }
@@ -265,9 +270,13 @@ export default function MigrantsPage() {
         body: JSON.stringify({ voted: newVoted }),
       });
       if (!response.ok) throw new Error(await getApiError(response, 'मतदान स्थिति अपडेट नहीं हुई।'));
-      setNotice(newVoted ? 'मतदान दर्ज किया गया (दे दिया)।' : 'मतदान स्थिति शेष (बाकी) की गई।');
+      const voteMsg = newVoted ? 'मतदान दर्ज किया गया (दे दिया)।' : 'मतदान स्थिति शेष (बाकी) की गई।';
+      setNotice(voteMsg);
+      toast.success(voteMsg);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'मतदान स्थिति अपडेट नहीं हुई।');
+      const msg = err instanceof Error ? err.message : 'मतदान स्थिति अपडेट नहीं हुई।';
+      setError(msg);
+      toast.error(msg);
       // Rollback
       setVoters((prev) =>
         prev.map((v) => (v._id === voter._id ? { ...v, voted: voter.voted } : v))
@@ -291,8 +300,11 @@ export default function MigrantsPage() {
       const blob = await response.blob();
       const filename = `Migrant_Voters_${votedFilter}_${Date.now()}.xlsx`;
       await downloadBlob(blob, filename);
+      toast.success('प्रवासी मतदाता Excel डाउनलोड हो गई।');
     } catch (exportError) {
-      setError(exportError instanceof Error ? exportError.message : 'Excel एक्सपोर्ट नहीं हो सका।');
+      const msg = exportError instanceof Error ? exportError.message : 'Excel एक्सपोर्ट नहीं हो सका।';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setExporting(false);
     }

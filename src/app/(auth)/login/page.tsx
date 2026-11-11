@@ -36,9 +36,12 @@ export default function LoginPage() {
       window.localStorage.setItem('token', result.token);
       window.location.href = '/';
     } catch (loginError) {
-      setError(loginError instanceof Error
+      const errMsg = loginError instanceof Error
         ? loginError.message
-        : 'सर्वर से कनेक्ट नहीं हो सका। कृपया फिर कोशिश करें।');
+        : 'सर्वर से कनेक्ट नहीं हो सका। कृपया फिर कोशिश करें।';
+      setError(errMsg);
+      const { toast } = await import('@/components/Toast');
+      toast.error(errMsg);
     } finally {
       setLoading(false);
     }
@@ -49,7 +52,7 @@ export default function LoginPage() {
       <section className="auth-card">
         <div className="auth-brand">
           <span className="auth-mark" style={{ padding: '6px', overflow: 'hidden' }}>
-            <img src="/logo.webp" alt="VijaySetu Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/logo.png'; }} />
+            <img src="/logo.webp" alt="VijaySetu Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </span>
           <span><strong style={{ fontFamily: 'inherit' }}>VijaySetu</strong><small>FIELD OPERATIONS</small></span>
         </div>

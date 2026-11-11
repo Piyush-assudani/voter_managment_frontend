@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Eye, EyeOff, KeyRound, LoaderCircle, Pencil, Plus, RefreshCw, Search, ShieldCheck, UserRoundX, X } from 'lucide-react';
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
+import { toast } from '@/components/Toast';
 
 const accessModules = [
   ['voters', 'मतदाता सूची'],
@@ -254,17 +255,21 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
         body: JSON.stringify(payload),
       });
       if (!response.ok) throw new Error(await getApiError(response, 'खाता सेव नहीं हुआ।'));
-      setNotice(dialogMode === 'password'
+      const okMsg = dialogMode === 'password'
         ? 'पासवर्ड अपडेट हुआ।'
         : dialogMode === 'permissions'
           ? 'अनुमतियाँ अपडेट हुईं।'
-          : editing ? 'खाता अपडेट हुआ।' : 'खाता बनाया गया।');
+          : editing ? 'खाता अपडेट हुआ।' : 'खाता बनाया गया।';
+      setNotice(okMsg);
+      toast.success(okMsg);
       setEditing(null);
       setFormOpen(false);
       setDialogMode(null);
       await load();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'खाता सेव नहीं हुआ।');
+      const errMsg = saveError instanceof Error ? saveError.message : 'खाता सेव नहीं हुआ।';
+      setError(errMsg);
+      toast.error(errMsg);
     } finally {
       setSaving(false);
     }
@@ -282,9 +287,12 @@ export default function AccountsManager({ embeddedOrganizationId }: { embeddedOr
       });
       if (!response.ok) throw new Error(await getApiError(response, 'खाता बंद नहीं हुआ।'));
       setNotice('खाता बंद कर दिया गया।');
+      toast.success('खाता बंद कर दिया गया।');
       await load();
     } catch (disableError) {
-      setError(disableError instanceof Error ? disableError.message : 'खाता बंद नहीं हुआ।');
+      const errMsg = disableError instanceof Error ? disableError.message : 'खाता बंद नहीं हुआ।';
+      setError(errMsg);
+      toast.error(errMsg);
     }
   };
 

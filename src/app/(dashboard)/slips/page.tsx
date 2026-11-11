@@ -31,6 +31,7 @@ import { SortButton, SortState } from '@/components/SortButton';
 import { WhatsAppLogo } from '@/components/WhatsAppLogo';
 import { WhatsAppWebHelperModal } from '@/components/WhatsAppWebHelperModal';
 import { attachEnglishNames, matchesVoterQuery } from '@/lib/transliteration';
+import { toast } from '@/components/Toast';
 
 interface Voter {
   _id: string;
@@ -700,7 +701,7 @@ export default function SlipsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 15 * 1024 * 1024) {
-      alert('फाइल 15MB से छोटी होनी चाहिए।');
+      toast.error('फाइल 15MB से छोटी होनी चाहिए।');
       return;
     }
     const reader = new FileReader();
@@ -788,13 +789,14 @@ export default function SlipsPage() {
         window.dispatchEvent(new CustomEvent('slip-config-changed', { detail: editingConfig }));
       }
       setBrandingSaveMsg('पर्ची ब्रांडिंग सफलतापूर्वक अपडेट हो गई!');
+      toast.success('पर्ची ब्रांडिंग सफलतापूर्वक अपडेट हो गई!');
       setTimeout(() => {
         setIsCustomizing(false);
         setBrandingSaveMsg('');
       }, 1100);
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'ब्रांडिंग सहेजने में त्रुटि हुई';
-      alert(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setSavingBranding(false);
     }
@@ -1003,13 +1005,14 @@ export default function SlipsPage() {
     if (slipMode === 'family' && selectedHousehold) {
       setIsDownloading(true);
       try {
-        await downloadFamilySlip(selectedHousehold.members, slipConfig, {
+        const ok = await downloadFamilySlip(selectedHousehold.members, slipConfig, {
           houseNo: selectedHousehold.houseNo,
           wardNo: selectedHousehold.wardNo,
           partNo: selectedHousehold.partNo,
         });
+        if (ok) toast.success('परिवार पर्ची डाउनलोड हो गई।');
       } catch {
-        alert('परिवार पर्ची डाउनलोड नहीं हो सकी');
+        toast.error('परिवार पर्ची डाउनलोड नहीं हो सकी');
       } finally {
         setIsDownloading(false);
       }
@@ -1020,9 +1023,10 @@ export default function SlipsPage() {
           ...slipConfig,
           slipFormat: selectedSlipFormat,
         };
-        await downloadSlip(selectedVoter, effectiveConfig, printContainerRef.current);
+        const ok = await downloadSlip(selectedVoter, effectiveConfig, printContainerRef.current);
+        if (ok) toast.success('मतदाता पर्ची डाउनलोड हो गई।');
       } catch {
-        alert('पर्ची इमेज डाउनलोड नहीं हो सकी');
+        toast.error('पर्ची इमेज डाउनलोड नहीं हो सकी');
       } finally {
         setIsDownloading(false);
       }
@@ -1059,7 +1063,7 @@ export default function SlipsPage() {
       }
 
       if (allVoters.length === 0) {
-        alert('कोई मतदाता नहीं मिला');
+        toast.warning('कोई मतदाता नहीं मिला');
         return;
       }
 
@@ -1068,11 +1072,12 @@ export default function SlipsPage() {
         ...slipConfig,
         slipFormat: selectedSlipFormat,
       };
-      await downloadBulkSlipsAsZip(allVoters, effectiveConfig, (current, total) => {
+      const zipOk = await downloadBulkSlipsAsZip(allVoters, effectiveConfig, (current, total) => {
         setBulkZipProgress({ current, total });
       });
+      if (zipOk) toast.success(`${allVoters.length} पर्चियों की ZIP फ़ाइल तैयार होकर डाउनलोड हुई।`);
     } catch {
-      alert('बल्क ZIP डाउनलोड करने में समस्या आई');
+      toast.error('बल्क ZIP डाउनलोड करने में समस्या आई');
     } finally {
       setIsDownloadingBulkZip(false);
     }
@@ -1081,9 +1086,7 @@ export default function SlipsPage() {
   return (
     <div className={`work-page slips-studio-page ${bulkMode ? `slips-bulk-print-mode slips-per-a4-${perA4} slips-format-${selectedSlipFormat}` : 'slips-single-print-mode'}`}>
       {/* Print & Screen CSS styling */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
+      <style>{`
         /* ================= SCREEN STYLING FOR BULK PREVIEW ================= */
         @media screen {
           .slips-bulk-sheets-wrapper {
@@ -1677,7 +1680,7 @@ export default function SlipsPage() {
             box-shadow: none !important;
           }
         }
-      ` }} />
+      `}</style>
 
       {/* Page Header */}
       <div className="page-intro no-print" style={{ marginBottom: '16px' }}>

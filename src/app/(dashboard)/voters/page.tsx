@@ -38,6 +38,7 @@ import { FamilyVoterSlipTemplate } from '@/components/FamilyVoterSlipTemplate';
 import { WhatsAppLogo } from '@/components/WhatsAppLogo';
 import { WhatsAppWebHelperModal } from '@/components/WhatsAppWebHelperModal';
 import { attachEnglishNames, transliterateHindiToEnglish, matchesVoterQuery } from '@/lib/transliteration';
+import { toast } from '@/components/Toast';
 
 interface Voter {
   _id: string;
@@ -1089,7 +1090,7 @@ export default function VoterDirectoryPage() {
     const h = (houseNo || '').trim().replace(/^#/, '');
     const invalidHouses = ['-', '—', "'—", "'0", '0', '00', '000', 'NA', 'N/A', 'लागू नहीं', 'null', 'undefined'];
     if (!h || invalidHouses.includes(h.toUpperCase())) {
-      alert('इस मतदाता के पास मान्य मकान संख्या दर्ज नहीं है।');
+      toast.warning('इस मतदाता के पास मान्य मकान संख्या दर्ज नहीं है।');
       return;
     }
     setFamilySlipMessage('');
@@ -1125,7 +1126,7 @@ export default function VoterDirectoryPage() {
     }
 
     if (members.length === 0) {
-      alert(`वार्ड ${wardNo || '—'} के मकान #${h} में कोई मतदाता सदस्य नहीं मिले।`);
+      toast.warning(`वार्ड ${wardNo || '—'} के मकान #${h} में कोई मतदाता सदस्य नहीं मिले।`);
       return;
     }
 
@@ -1145,13 +1146,14 @@ export default function VoterDirectoryPage() {
     if (!familySlipData) return;
     setIsDownloadingFamilySlip(true);
     try {
-      await downloadFamilySlip(familySlipData.members, slipConfig, {
+      const ok = await downloadFamilySlip(familySlipData.members, slipConfig, {
         houseNo: familySlipData.houseNo,
         wardNo: familySlipData.wardNo,
         partNo: familySlipData.partNo,
       });
+      if (ok) toast.success('परिवार पर्ची डाउनलोड हो गई।');
     } catch {
-      alert('परिवार पर्ची डाउनलोड नहीं हो सकी');
+      toast.error('परिवार पर्ची डाउनलोड नहीं हो सकी');
     } finally {
       setIsDownloadingFamilySlip(false);
     }
@@ -1208,7 +1210,7 @@ export default function VoterDirectoryPage() {
     const h = (houseNo || '').trim().replace(/^#/, '');
     const invalidHouses = ['-', '—', "'—", "'0", '0', '00', '000', 'NA', 'N/A', 'लागू नहीं', 'null', 'undefined'];
     if (!h || invalidHouses.includes(h.toUpperCase())) {
-      alert('इस मतदाता के पास मान्य मकान संख्या दर्ज नहीं है।');
+      toast.warning('इस मतदाता के पास मान्य मकान संख्या दर्ज नहीं है।');
       return;
     }
     setIsFamilyMode(false);
@@ -1267,7 +1269,9 @@ export default function VoterDirectoryPage() {
       }
 
       const data = await res.json();
-      setActionMessage(data.message || `${selectedIds.length} मतदाताओं का विवरण अपडेट हो गया।`);
+      const msg = data.message || `${selectedIds.length} मतदाताओं का विवरण अपडेट हो गया।`;
+      setActionMessage(msg);
+      toast.success(msg);
       setVoters((prev) =>
         prev.map((v) => (selectedIds.includes(v._id) ? { ...v, ...updates } : v))
       );
@@ -1282,7 +1286,7 @@ export default function VoterDirectoryPage() {
       });
       setTimeout(() => setActionMessage(''), 5000);
     } catch (err: any) {
-      alert(err.message || 'बल्क टैग अपडेट में त्रुटि आई।');
+      toast.error(err.message || 'बल्क टैग अपडेट में त्रुटि आई।');
     } finally {
       setIsBulkSubmitting(false);
     }
@@ -1305,7 +1309,9 @@ export default function VoterDirectoryPage() {
       }
 
       const data = await res.json();
-      setActionMessage(`${selectedIds.length} मतदाताओं को जाति "${finalCaste}" सफलतापूर्वक असाइन कर दी गई।`);
+      const casteMsg = data?.message || `${selectedIds.length} मतदाताओं को जाति "${finalCaste}" सफलतापूर्वक असाइन कर दी गई।`;
+      setActionMessage(casteMsg);
+      toast.success(casteMsg);
       setVoters((prev) =>
         prev.map((v) => (selectedIds.includes(v._id) ? { ...v, caste: finalCaste } : v))
       );
@@ -1317,7 +1323,7 @@ export default function VoterDirectoryPage() {
       }
       setTimeout(() => setActionMessage(''), 5000);
     } catch (err: any) {
-      alert(err.message || 'जाति असाइन करने में त्रुटि आई।');
+      toast.error(err.message || 'जाति असाइन करने में त्रुटि आई।');
     } finally {
       setIsBulkSubmitting(false);
     }

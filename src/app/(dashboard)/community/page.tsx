@@ -38,6 +38,7 @@ import { apiFetch, decodeJwtPayload, getApiError } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
 import { VoterPhotoModal } from '@/components/VoterPhotoModal';
+import { toast } from '@/components/Toast';
 import {
   getVoterDisplayName,
   getVoterRelativeDisplay,
@@ -275,7 +276,9 @@ export default function CommunityPage() {
       }
     } catch (searchError) {
       setVoters([]);
-      setError(searchError instanceof Error ? searchError.message : 'समुदाय खोज पूरी नहीं हो सकी।');
+      const msg = searchError instanceof Error ? searchError.message : 'समुदाय खोज पूरी नहीं हो सकी।';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -370,7 +373,9 @@ export default function CommunityPage() {
       if (!response.ok) throw new Error(await getApiError(response, 'घर के अन्य रिकॉर्ड नहीं मिले।'));
       setFamily((await response.json()) as Voter[]);
     } catch (familyError) {
-      setError(familyError instanceof Error ? familyError.message : 'घर के अन्य रिकॉर्ड नहीं मिले।');
+      const msg = familyError instanceof Error ? familyError.message : 'घर के अन्य रिकॉर्ड नहीं मिले।';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setFamilyLoading(false);
     }
@@ -399,8 +404,11 @@ export default function CommunityPage() {
       const blob = await response.blob();
       const filename = `Caste_${selectedCaste || 'List'}_${votedFilter}_${Date.now()}.xlsx`;
       await downloadBlob(blob, filename);
+      toast.success('सामुदायिक सूची Excel डाउनलोड हो गई।');
     } catch (exportError) {
-      setError(exportError instanceof Error ? exportError.message : 'Excel एक्सपोर्ट नहीं हो सका।');
+      const msg = exportError instanceof Error ? exportError.message : 'Excel एक्सपोर्ट नहीं हो सका।';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setExporting(false);
     }
@@ -1085,7 +1093,7 @@ export default function CommunityPage() {
               />
               <input
                 type="text"
-                placeholder="उदा. राठौड़, शेखावत, जाट, शर्मा, गुर्जर, मुस्लिम, कुमावत..."
+                placeholder="उदा. सामान्य, ओबीसी, एससी/एसटी, वार्ड-वार..."
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);

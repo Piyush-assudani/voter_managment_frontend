@@ -18,8 +18,8 @@ import {
 export default function ShowcasePage() {
   const [config, setConfig] = useState<SlipConfig>({
     ...defaultSlipConfig,
-    candidateName: 'विजय कुमार राठौड़',
-    candidateNameEn: 'Vijay Kumar Rathore',
+    candidateName: 'प्रत्याशी का नाम',
+    candidateNameEn: 'Candidate Name',
     partyName: 'लोकप्रिय जन प्रतिनिधि प्रत्याशी',
     partySymbolName: 'कमल का फूल',
     wardPollingStations: {
@@ -33,11 +33,11 @@ export default function ShowcasePage() {
 
   // Sample voter for live preview
   const sampleVoter: VoterSlipData = {
-    epic: 'VJY8923412',
-    nameHi: 'रमेश कुमार शर्मा',
-    nameEn: 'Ramesh Kumar Sharma',
-    relativeNameHi: 'रामस्वरूप शर्मा',
-    relativeNameEn: 'Ramswaroop Sharma',
+    epic: 'VJY0001024',
+    nameHi: 'मतदाता नमूना',
+    nameEn: 'Sample Voter',
+    relativeNameHi: 'अभिभावक का नाम',
+    relativeNameEn: 'Guardian Name',
     relationType: 'पिता',
     age: 42,
     gender: 'M',
@@ -231,32 +231,10 @@ export default function ShowcasePage() {
       </header>
 
       {/* Main Container */}
-      <main
-        style={{
-          maxWidth: '1440px',
-          margin: '0 auto',
-          padding: '24px 20px',
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.35fr) minmax(360px, 0.85fr)',
-          gap: '24px',
-          alignItems: 'start',
-        }}
-      >
+      <main className="max-w-[1440px] mx-auto px-3 sm:px-5 py-4 sm:py-6 grid grid-cols-1 lg:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.85fr)] gap-5 sm:gap-6 items-start">
         {/* Left Column: Editor Component */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div
-            style={{
-              background: '#ffffff',
-              padding: '16px 20px',
-              borderRadius: '14px',
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px',
-            }}
-          >
+        <div className="flex flex-col gap-4 min-w-0">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 style={{ fontSize: '15px', fontWeight: 800, color: '#1e293b', margin: 0 }}>
                 ⚡ 1-क्लिक बल्क पोलिंग स्टेशन असाइनमेंट
@@ -293,15 +271,7 @@ export default function ShowcasePage() {
         </div>
 
         {/* Right Column: Live Voter Slip Preview */}
-        <div
-          style={{
-            position: 'sticky',
-            top: '20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-          }}
-        >
+        <div className="lg:sticky lg:top-5 flex flex-col gap-4 min-w-0">
           {/* Slip Header Box */}
           <div
             style={{
@@ -361,12 +331,7 @@ export default function ShowcasePage() {
             {/* Render VoterSlipTemplate */}
             <div
               id="voter-slip-preview-container"
-              style={{
-                transform: 'scale(0.92)',
-                transformOrigin: 'top center',
-                display: 'flex',
-                justifyContent: 'center',
-              }}
+              className="w-full overflow-x-auto flex justify-center"
             >
               <VoterSlipTemplate
                 voter={sampleVoter}

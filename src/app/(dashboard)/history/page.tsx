@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, ChevronLeft, ChevronRight, Download, LoaderCircle, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
+import { toast } from '@/components/Toast';
 
 interface Dispatch {
   id: string;
@@ -101,8 +102,11 @@ export default function DispatchHistoryPage() {
       const response = await apiFetch(`/features/export.xlsx?${params}`);
       if (!response.ok) throw new Error(await getApiError(response, 'Export could not be downloaded.'));
       await downloadBlob(await response.blob(), 'dispatch-history.xlsx');
+      toast.success('Dispatch इतिहास Excel डाउनलोड हो गया।');
     } catch (downloadError) {
-      setError(downloadError instanceof Error ? downloadError.message : 'Export could not be downloaded.');
+      const msg = downloadError instanceof Error ? downloadError.message : 'Export could not be downloaded.';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setExporting(false);
     }
@@ -123,9 +127,12 @@ export default function DispatchHistoryPage() {
       }
       setSelectedIds((prev) => prev.filter((item) => item !== id));
       setNotice({ type: 'success', message: 'रिकॉर्ड सफलतापूर्वक हटा दिया गया।' });
+      toast.success('रिकॉर्ड सफलतापूर्वक हटा दिया गया।');
       await load();
     } catch (err) {
-      setNotice({ type: 'error', message: err instanceof Error ? err.message : 'रिकॉर्ड हटाया नहीं जा सका।' });
+      const msg = err instanceof Error ? err.message : 'रिकॉर्ड हटाया नहीं जा सका।';
+      setNotice({ type: 'error', message: msg });
+      toast.error(msg);
     } finally {
       setDeletingId(null);
     }
@@ -148,11 +155,15 @@ export default function DispatchHistoryPage() {
         throw new Error(await getApiError(response, 'रिकॉर्ड हटाए नहीं जा सके।'));
       }
       const resData = await response.json().catch(() => ({}));
+      const msg = resData.message || `${selectedIds.length} रिकॉर्ड हटा दिए गए।`;
       setSelectedIds([]);
-      setNotice({ type: 'success', message: resData.message || `${selectedIds.length} रिकॉर्ड हटा दिए गए।` });
+      setNotice({ type: 'success', message: msg });
+      toast.success(msg);
       await load();
     } catch (err) {
-      setNotice({ type: 'error', message: err instanceof Error ? err.message : 'रिकॉर्ड हटाए नहीं जा सके।' });
+      const msg = err instanceof Error ? err.message : 'रिकॉर्ड हटाए नहीं जा सके।';
+      setNotice({ type: 'error', message: msg });
+      toast.error(msg);
     } finally {
       setIsBulkDeleting(false);
     }
@@ -175,9 +186,12 @@ export default function DispatchHistoryPage() {
       }
       setSelectedIds([]);
       setNotice({ type: 'success', message: 'सारा dispatch इतिहास साफ़ कर दिया गया।' });
+      toast.success('सारा dispatch इतिहास साफ़ कर दिया गया।');
       await load();
     } catch (err) {
-      setNotice({ type: 'error', message: err instanceof Error ? err.message : 'इतिहास साफ़ नहीं किया जा सका।' });
+      const msg = err instanceof Error ? err.message : 'इतिहास साफ़ नहीं किया जा सका।';
+      setNotice({ type: 'error', message: msg });
+      toast.error(msg);
     } finally {
       setIsBulkDeleting(false);
     }

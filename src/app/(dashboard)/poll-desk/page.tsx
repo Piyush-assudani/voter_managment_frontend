@@ -496,9 +496,13 @@ export default function PollDeskPage() {
       setVoters((current) => current.map((item) => item._id === voter._id ? { ...item, voted: nextVoted } : item));
       if (result.queued) {
         toast.info('ऑफ़लाइन सेव किया गया — नेटवर्क आने पर सिंक होगा।');
+      } else {
+        toast.success(nextVoted ? 'मतदान दर्ज किया गया।' : 'मतदान स्थिति शेष (बाकी) की गई।');
       }
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : 'मतदान स्थिति अपडेट नहीं हुई।');
+      const msg = updateError instanceof Error ? updateError.message : 'मतदान स्थिति अपडेट नहीं हुई।';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSavingIds((prev) => prev.filter((id) => id !== voter._id));
     }
@@ -513,11 +517,15 @@ export default function PollDeskPage() {
     if (!Number.isNaN(asNum) && asNum > 0) {
       const voter = partVoters.find((item) => Number(item.serialNo) === asNum);
       if (!voter) {
-        setError(`क्रमांक ${trimmed} इस बूथ/वार्ड में नहीं मिला।`);
+        const msg = `क्रमांक ${trimmed} इस बूथ/वार्ड में नहीं मिला।`;
+        setError(msg);
+        toast.warning(msg);
         return;
       }
       if (voter.voted) {
-        setError(`क्रमांक ${voter.serialNo} पर मतदान पहले से दर्ज है।`);
+        const msg = `क्रमांक ${voter.serialNo} पर मतदान पहले से दर्ज है।`;
+        setError(msg);
+        toast.info(msg);
         return;
       }
       void toggleVote(voter);

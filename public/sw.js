@@ -1,9 +1,9 @@
 // VijaySetu PWA Service Worker
-const CACHE_NAME = 'vijaysetu-cache-v1';
+const CACHE_NAME = 'vijaysetu-cache-v2';
 const PRECACHE_ASSETS = [
   '/',
   '/manifest.json',
-  '/logo.png',
+  '/logo.webp',
   '/icon-192.png',
   '/icon-512.png',
 ];

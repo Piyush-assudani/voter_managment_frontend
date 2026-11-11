@@ -1,30 +1,35 @@
 import type { Metadata, Viewport } from 'next';
-import { Anek_Devanagari, Inter, Noto_Sans_Devanagari, Outfit } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 import { ContentProtection } from '@/components/ContentProtection';
 import { AppResilienceProvider } from '@/components/AppResilienceProvider';
+import ToastContainer from '@/components/Toast';
 
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
+const inter = localFont({
+  src: '../../public/fonts/Inter-latin.woff2',
+  weight: '400 800',
   variable: '--font-inter',
   display: 'swap',
 });
-const notoSansDevanagari = Noto_Sans_Devanagari({
-  subsets: ['devanagari', 'latin'],
-  weight: ['400', '500', '600', '700', '800', '900'],
+const notoSansDevanagari = localFont({
+  src: [
+    { path: '../../public/fonts/NotoSansDevanagari-devanagari.woff2', weight: '400 900' },
+    { path: '../../public/fonts/NotoSansDevanagari-latin.woff2', weight: '400 900' },
+  ],
   variable: '--font-noto-sans-devanagari',
   display: 'swap',
 });
-const outfit = Outfit({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800', '900'],
+const outfit = localFont({
+  src: '../../public/fonts/Outfit-latin.woff2',
+  weight: '400 900',
   variable: '--font-outfit',
   display: 'swap',
 });
-const anekDevanagari = Anek_Devanagari({
-  subsets: ['devanagari', 'latin'],
-  weight: ['400', '500', '600', '700', '800'],
+const anekDevanagari = localFont({
+  src: [
+    { path: '../../public/fonts/AnekDevanagari-devanagari.woff2', weight: '400 800' },
+    { path: '../../public/fonts/AnekDevanagari-latin.woff2', weight: '400 800' },
+  ],
   variable: '--font-anek-devanagari',
   display: 'swap',
 });
@@ -67,6 +72,7 @@ export default function RootLayout({
       >
         <ContentProtection />
         <AppResilienceProvider />
+        <ToastContainer />
         {children}
       </body>
     </html>

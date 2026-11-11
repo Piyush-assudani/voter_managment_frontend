@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { apiFetch, decodeJwtPayload, getApiError } from '@/lib/api';
 import { WhatsAppLogo } from '@/components/WhatsAppLogo';
+import { toast } from '@/components/Toast';
 
 interface Worker {
   id: number | string;
@@ -152,7 +153,9 @@ export default function WorkersPage() {
       setWorkers(data);
     } catch (loadError) {
       setWorkers([]);
-      setError(loadError instanceof Error ? loadError.message : 'कार्यकर्ता सूची लोड नहीं हुई।');
+      const msg = loadError instanceof Error ? loadError.message : 'कार्यकर्ता सूची लोड नहीं हुई।';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -235,7 +238,9 @@ export default function WorkersPage() {
       setVoters(list);
       setVotersSource(source);
     } catch (detailError) {
-      setError(detailError instanceof Error ? detailError.message : 'कार्यकर्ता की मतदाता सूची लोड नहीं हुई।');
+      const msg = detailError instanceof Error ? detailError.message : 'कार्यकर्ता की मतदाता सूची लोड नहीं हुई।';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setDetailLoading(false);
       setLoadingWorkerId(null);

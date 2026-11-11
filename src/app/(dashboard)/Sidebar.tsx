@@ -41,7 +41,7 @@ export default function Sidebar() {
     <aside className="w-80 bg-[#111827] border-r border-slate-800 flex flex-col h-full shadow-sm text-slate-100">
       <div className="p-6 border-b border-slate-800 flex items-center space-x-3">
         <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30 overflow-hidden">
-          <img src="/logo.webp" alt="Logo" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/logo.png'; }} />
+          <img src="/logo.webp" alt="Logo" className="w-full h-full object-cover" />
         </div>
         <div>
           <h1 className="font-bold text-xl text-white tracking-tight">VijaySetu</h1>
@@ -54,13 +54,13 @@ export default function Sidebar() {
           const isActive = pathname === item.href;
           return (
             <Link href={item.href} key={item.name}>
-              <div className={`flex items-start space-x-4 p-3 rounded-xl transition-all duration-200 group \${isActive ? 'bg-indigo-600/20 border border-indigo-500/30 shadow-sm' : 'hover:bg-slate-800/50 border border-transparent'}`}>
-                <div className={`mt-0.5 p-2 rounded-lg \${isActive ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-indigo-400 group-hover:shadow-sm'}`}>
+              <div className={`flex items-start space-x-4 p-3 rounded-xl transition-all duration-200 group ${isActive ? 'bg-indigo-600/20 border border-indigo-500/30 shadow-sm' : 'hover:bg-slate-800/50 border border-transparent'}`}>
+                <div className={`mt-0.5 p-2 rounded-lg ${isActive ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-indigo-400 group-hover:shadow-sm'}`}>
                   <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} />
                 </div>
                 <div>
-                  <h3 className={`font-semibold text-[15px] \${isActive ? 'text-indigo-200' : 'text-slate-300 group-hover:text-white'}`}>{item.name}</h3>
-                  <p className={`text-xs mt-0.5 \${isActive ? 'text-indigo-300/80' : 'text-slate-500'}`}>{item.description}</p>
+                  <h3 className={`font-semibold text-[15px] ${isActive ? 'text-indigo-200' : 'text-slate-300 group-hover:text-white'}`}>{item.name}</h3>
+                  <p className={`text-xs mt-0.5 ${isActive ? 'text-indigo-300/80' : 'text-slate-500'}`}>{item.description}</p>
                 </div>
               </div>
             </Link>

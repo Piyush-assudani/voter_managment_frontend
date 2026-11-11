@@ -366,7 +366,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
   const pollingStation = wardStation 
     || (voter.boothName && voter.boothName.trim()) 
     || merged.pollingStationFallback 
-    || (isRealVoter ? `भाग संख्या ${part}` : `${part} - सामुदायिक भवन, जाटा बास, महामंदिर, जोधपुर`);
+    || (isRealVoter ? `भाग संख्या ${part}` : `${part} - सामुदायिक भवन / मतदान केंद्र (नमूना)`);
 
 
 

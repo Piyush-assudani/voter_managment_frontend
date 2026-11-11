@@ -20,6 +20,7 @@ import {
   UsersRound,
 } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
+import { toast } from '@/components/Toast';
 
 type SupportStatus = 'core' | 'swing' | 'opposition' | 'unmarked';
 
@@ -98,7 +99,9 @@ export default function WarroomPage() {
       setData((await response.json()) as WarRoomData);
     } catch (loadError) {
       setData(null);
-      setError(loadError instanceof Error ? loadError.message : 'वॉर रूम डेटा लोड नहीं हुआ।');
+      const msg = loadError instanceof Error ? loadError.message : 'वॉर रूम डेटा लोड नहीं हुआ।';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

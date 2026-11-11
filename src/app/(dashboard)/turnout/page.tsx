@@ -290,6 +290,8 @@ export default function TurnoutPage() {
       }
       if (result.queued) {
         toast.info('ऑफ़लाइन सेव किया गया — नेटवर्क आने पर सिंक होगा।');
+      } else {
+        toast.success('मतदान सफलतापूर्वक दर्ज किया गया।');
       }
 
       // If in fallback cache mode, update in-memory raw array
@@ -331,7 +333,9 @@ export default function TurnoutPage() {
       // Background re-fetch to synchronize state if aggregated
       void loadSummary();
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : 'मतदान स्थिति अपडेट नहीं हुई।');
+      const msg = updateError instanceof Error ? updateError.message : 'मतदान स्थिति अपडेट नहीं हुई।';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSavingId('');
     }
@@ -349,8 +353,11 @@ export default function TurnoutPage() {
         await response.blob(),
         `pending-voters${pendingWard ? `-ward-${pendingWard}` : ''}.xlsx`
       );
+      toast.success('शेष मतदाता Excel डाउनलोड हो गई।');
     } catch (exportError) {
-      setError(exportError instanceof Error ? exportError.message : 'Excel एक्सपोर्ट नहीं हो सका।');
+      const msg = exportError instanceof Error ? exportError.message : 'Excel एक्सपोर्ट नहीं हो सका।';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setExporting(false);
     }

@@ -71,7 +71,8 @@ export function usePwaInstall() {
 
   const triggerInstall = async () => {
     if (isInstalled) {
-      alert('विजयसेतु ऐप आपके डिवाइस पर पहले से इंस्टॉल है!');
+      const { toast } = await import('@/components/Toast');
+      toast.info('विजयसेतु ऐप आपके डिवाइस पर पहले से इंस्टॉल है!');
       return;
     }
 
@@ -333,7 +334,7 @@ function PwaInstallInstructionsModal({ onClose, isIOS }: { onClose: () => void; 
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.webp" alt="VijaySetu" style={{ width: '34px', height: '34px', objectFit: 'contain' }} onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/logo.png'; }} />
+            <img src="/logo.webp" alt="VijaySetu" style={{ width: '34px', height: '34px', objectFit: 'contain' }} />
           </div>
           <div>
             <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>

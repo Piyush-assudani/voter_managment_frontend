@@ -1,8 +1,9 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import { KeyRound, LoaderCircle, CheckCircle, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, KeyRound, LoaderCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
+import { toast } from '@/components/Toast';
 
 export default function SettingsPage() {
   const [oldPassword, setOldPassword] = useState('');
@@ -23,12 +24,16 @@ export default function SettingsPage() {
     setSuccess('');
     
     if (newPassword !== confirmPassword) {
-      setError('नया पासवर्ड और पुष्टि पासवर्ड मेल नहीं खाते।');
+      const msg = 'नया पासवर्ड और पुष्टि पासवर्ड मेल नहीं खाते।';
+      setError(msg);
+      toast.error(msg);
       return;
     }
     
     if (newPassword.length < 8) {
-      setError('पासवर्ड कम से कम 8 अक्षरों का होना चाहिए।');
+      const msg = 'पासवर्ड कम से कम 8 अक्षरों का होना चाहिए।';
+      setError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -44,12 +49,16 @@ export default function SettingsPage() {
         throw new Error(await getApiError(response, 'पासवर्ड नहीं बदला जा सका।'));
       }
       
-      setSuccess('आपका पासवर्ड सफलतापूर्वक बदल दिया गया है।');
+      const okMsg = 'आपका पासवर्ड सफलतापूर्वक बदल दिया गया है।';
+      setSuccess(okMsg);
+      toast.success(okMsg);
       setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'पासवर्ड बदलने में त्रुटि।');
+      const errMsg = err instanceof Error ? err.message : 'पासवर्ड बदलने में त्रुटि।';
+      setError(errMsg);
+      toast.error(errMsg);
     } finally {
       setLoading(false);
     }
@@ -99,7 +108,7 @@ export default function SettingsPage() {
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm pr-10"
                 placeholder="पुराना पासवर्ड"
               />
-              <button type="button" onClick={() => setShowOld(!showOld)} className="absolute right-3 text-gray-400 hover:text-gray-600">
+              <button type="button" onClick={() => setShowOld(!showOld)} aria-label={showOld ? 'पासवर्ड छिपाएं' : 'पासवर्ड देखें'} className="absolute right-3 text-gray-400 hover:text-gray-600">
                 {showOld ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
@@ -116,7 +125,7 @@ export default function SettingsPage() {
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm pr-10"
                 placeholder="नया पासवर्ड (कम से कम 8 अक्षर)"
               />
-              <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 text-gray-400 hover:text-gray-600">
+              <button type="button" onClick={() => setShowNew(!showNew)} aria-label={showNew ? 'पासवर्ड छिपाएं' : 'पासवर्ड देखें'} className="absolute right-3 text-gray-400 hover:text-gray-600">
                 {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
@@ -133,7 +142,7 @@ export default function SettingsPage() {
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm pr-10"
                 placeholder="नया पासवर्ड दोबारा दर्ज करें"
               />
-              <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 text-gray-400 hover:text-gray-600">
+              <button type="button" onClick={() => setShowConfirm(!showConfirm)} aria-label={showConfirm ? 'पासवर्ड छिपाएं' : 'पासवर्ड देखें'} className="absolute right-3 text-gray-400 hover:text-gray-600">
                 {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>

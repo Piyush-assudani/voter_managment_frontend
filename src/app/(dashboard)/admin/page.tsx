@@ -6146,16 +6146,16 @@ export default function AdminPanel() {
 
                       const formattedBody = (rawBody || '').includes('{{7}}')
                         ? (rawBody || '')
-                            .replace(/\{\{1\}\}/g, 'रमेश कुमार')
-                            .replace(/\{\{2\}\}/g, 'देवेन्द्र सिंह राठौड़')
-                            .replace(/\{\{3\}\}/g, 'RJ/17/105/012345')
+                            .replace(/\{\{1\}\}/g, 'मतदाता का नाम')
+                            .replace(/\{\{2\}\}/g, 'प्रत्याशी का नाम')
+                            .replace(/\{\{3\}\}/g, 'VJY0001024')
                             .replace(/\{\{4\}\}/g, '12')
                             .replace(/\{\{5\}\}/g, '45')
                             .replace(/\{\{6\}\}/g, '142')
                             .replace(/\{\{7\}\}/g, 'राजकीय उच्च प्राथमिक विद्यालय')
                         : (rawBody || '')
-                            .replace(/\{\{1\}\}/g, 'रमेश कुमार')
-                            .replace(/\{\{2\}\}/g, 'RJ/17/105/012345')
+                            .replace(/\{\{1\}\}/g, 'मतदाता का नाम')
+                            .replace(/\{\{2\}\}/g, 'VJY0001024')
                             .replace(/\{\{3\}\}/g, '12')
                             .replace(/\{\{4\}\}/g, '45')
                             .replace(/\{\{5\}\}/g, '142')
@@ -8889,6 +8889,7 @@ export default function AdminPanel() {
                         className="password-eye-btn"
                         onClick={() => setShowTenantPassword((prev) => !prev)}
                         title={showTenantPassword ? 'पासवर्ड छिपाएं' : 'पासवर्ड देखें'}
+                        aria-label={showTenantPassword ? 'पासवर्ड छिपाएं' : 'पासवर्ड देखें'}
                       >
                         {showTenantPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
