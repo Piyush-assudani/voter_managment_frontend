@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Check,
   ChevronLeft,
@@ -15,6 +15,7 @@ import {
 import { apiFetch, decodeJwtPayload, getApiError, resilientMutate } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
 import { toast } from '@/components/Toast';
+import { useRealtimeEvents } from '@/lib/socket';
 
 interface Voter {
   _id: string;
@@ -234,6 +235,42 @@ export default function TurnoutPage() {
     return () => window.removeEventListener('client-changed', handleClientChange);
   }, [loadAll]);
 
+  const summaryRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleSummaryRefresh = useCallback(() => {
+    if (summaryRefreshTimerRef.current) clearTimeout(summaryRefreshTimerRef.current);
+    summaryRefreshTimerRef.current = setTimeout(() => {
+      void loadSummary().then((res) => {
+        if (res?.data) setSummary(res.data);
+      });
+    }, 450);
+  }, [loadSummary]);
+
+  useEffect(() => {
+    return () => {
+      if (summaryRefreshTimerRef.current) clearTimeout(summaryRefreshTimerRef.current);
+    };
+  }, []);
+
+  const { connected: liveConnected } = useRealtimeEvents({
+    'voter:voted': (evt) => {
+      if (evt.voted) {
+        setPendingVoters((cur) => cur.filter((v) => v._id !== evt.voterId));
+      } else {
+        void loadPendingVoters(currentPage, pendingWard);
+      }
+      if (allVotersCache.length > 0) {
+        setAllVotersCache((cur) => cur.map((v) => (v._id === evt.voterId ? { ...v, voted: evt.voted } : v)));
+      }
+      scheduleSummaryRefresh();
+    },
+    'voter:updated': () => {
+      scheduleSummaryRefresh();
+    },
+    'voters:bulk-updated': () => {
+      void loadAll();
+    },
+  });
+
   const handleWardChange = (ward: string) => {
     setPendingWard(ward);
     setCurrentPage(1);
@@ -375,11 +412,30 @@ export default function TurnoutPage() {
     <div className="work-page">
       <div className="page-intro">
         <div>
-          <div className="eyebrow-label">
+          <div className="eyebrow-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span className="eyebrow-mark" /> TURNOUT OVERVIEW
+            {liveConnected && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  fontSize: '10.5px',
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: '999px',
+                  background: '#ecfdf5',
+                  color: '#047857',
+                  border: '1px solid #a7f3d0',
+                }}
+              >
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                LIVE
+              </span>
+            )}
           </div>
           <h1>मतदान स्थिति</h1>
-          <p>मतदान की स्थिति का डेटाबेस-आधारित सारांश। डेटा रियल-टाइम नहीं है—आख़िरी अपडेट का समय नीचे है।</p>
+          <p>मतदान की स्थिति का रियल-टाइम सारांश — किसी भी बूथ से वोट दर्ज होते ही स्क्रीन स्वतः अपडेट होती है।</p>
         </div>
         <button className="button-secondary" type="button" onClick={() => void loadAll()} disabled={loading}>
           {loading ? <LoaderCircle size={15} className="spin" /> : <RefreshCw size={15} />}

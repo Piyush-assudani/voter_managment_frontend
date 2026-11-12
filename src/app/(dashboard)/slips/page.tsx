@@ -1232,13 +1232,15 @@ export default function SlipsPage() {
             padding: 0 !important;
           }
 
-          /* Strict A4 Sheet Pagination Container - centered on page with exact scissor margins */
+          /* Strict A4 Sheet Pagination Container - centered on page with safe printable height (prevents blank overflow pages) */
           .a4-sheet-page {
-            width: 200mm !important;
-            height: 288mm !important;
-            max-height: 288mm !important;
+            width: 198mm !important;
+            height: 274mm !important;
+            max-height: 274mm !important;
             page-break-after: always !important;
             break-after: page !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
             overflow: hidden !important;
             box-sizing: border-box !important;
             margin: 0 auto !important;
@@ -1291,57 +1293,57 @@ export default function SlipsPage() {
           /* 4 in 1 A4: 2 columns × 2 rows (strictly 4 per sheet, generous scissor cutting space) */
           .slips-per-a4-4 .a4-sheet-grid {
             display: grid !important;
-            grid-template-columns: repeat(2, 96mm) !important;
-            grid-template-rows: repeat(2, 136mm) !important;
+            grid-template-columns: repeat(2, 95mm) !important;
+            grid-template-rows: repeat(2, 132mm) !important;
             gap: 6mm 6mm !important;
-            width: 200mm !important;
-            height: 280mm !important;
-            max-height: 280mm !important;
+            width: 196mm !important;
+            height: 270mm !important;
+            max-height: 270mm !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
             margin: 0 auto !important;
             padding: 0 !important;
           }
           .slips-per-a4-4 .slips-bulk-print-item {
-            width: 96mm !important;
-            height: 136mm !important;
-            max-height: 136mm !important;
+            width: 95mm !important;
+            height: 132mm !important;
+            max-height: 132mm !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             overflow: hidden !important;
           }
           .slips-per-a4-4 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.70 !important;
-            width: 560px !important;
-            max-width: 560px !important;
+            zoom: 0.64 !important;
+            width: 540px !important;
+            max-width: 540px !important;
           }
 
           /* 8 in 1 A4: 2 columns × 4 rows (strictly 8 per sheet, 4mm scissor cutting margin) */
           .slips-per-a4-8 .a4-sheet-grid {
             display: grid !important;
-            grid-template-columns: repeat(2, 96mm) !important;
-            grid-template-rows: repeat(4, 67mm) !important;
-            gap: 4mm 8mm !important;
-            width: 200mm !important;
-            height: 280mm !important;
-            max-height: 280mm !important;
+            grid-template-columns: repeat(2, 95mm) !important;
+            grid-template-rows: repeat(4, 65mm) !important;
+            gap: 3mm 6mm !important;
+            width: 196mm !important;
+            height: 270mm !important;
+            max-height: 270mm !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
             margin: 0 auto !important;
             padding: 0 !important;
           }
           .slips-per-a4-8 .slips-bulk-print-item {
-            width: 96mm !important;
-            height: 67mm !important;
-            max-height: 67mm !important;
+            width: 95mm !important;
+            height: 65mm !important;
+            max-height: 65mm !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             overflow: hidden !important;
           }
           .slips-per-a4-8 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.52 !important;
+            zoom: 0.48 !important;
             width: 530px !important;
             max-width: 530px !important;
           }
@@ -1378,24 +1380,24 @@ export default function SlipsPage() {
             font-size: 11.5px !important;
           }
 
-          /* 12 in 1 A4: 3 columns × 4 rows (strictly 12 per sheet, 4mm scissor cutting gap, NO cut-off, perfectly centered) */
+          /* 12 in 1 A4: 3 columns × 4 rows (strictly 12 per sheet, 3mm scissor cutting gap, NO cut-off, perfectly centered) */
           .slips-per-a4-12 .a4-sheet-grid {
             display: grid !important;
-            grid-template-columns: repeat(3, 64mm) !important;
-            grid-template-rows: repeat(4, 67mm) !important;
-            gap: 4mm 4mm !important;
-            width: 200mm !important;
-            height: 280mm !important;
-            max-height: 280mm !important;
+            grid-template-columns: repeat(3, 63mm) !important;
+            grid-template-rows: repeat(4, 65mm) !important;
+            gap: 3mm 3.5mm !important;
+            width: 196mm !important;
+            height: 270mm !important;
+            max-height: 270mm !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
             margin: 0 auto !important;
             padding: 0 !important;
           }
           .slips-per-a4-12 .slips-bulk-print-item {
-            width: 64mm !important;
-            height: 67mm !important;
-            max-height: 67mm !important;
+            width: 63mm !important;
+            height: 65mm !important;
+            max-height: 65mm !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
@@ -1403,9 +1405,9 @@ export default function SlipsPage() {
             background: transparent !important;
           }
           .slips-per-a4-12 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.52 !important;
-            width: 530px !important;
-            max-width: 530px !important;
+            zoom: 0.43 !important;
+            width: 520px !important;
+            max-width: 520px !important;
           }
 
           /* Dedicated Compact Styles for 12-in-1 Slips to Prevent Overflow and Cut-off */
@@ -1547,21 +1549,21 @@ export default function SlipsPage() {
           /* 16 in 1 A4: 4 columns × 4 rows (16 per sheet, ultra-compact) */
           .slips-per-a4-16 .a4-sheet-grid {
             display: grid !important;
-            grid-template-columns: repeat(4, 48mm) !important;
-            grid-template-rows: repeat(4, 67mm) !important;
-            gap: 2mm 2mm !important;
-            width: 200mm !important;
-            height: 280mm !important;
-            max-height: 280mm !important;
+            grid-template-columns: repeat(4, 47mm) !important;
+            grid-template-rows: repeat(4, 65mm) !important;
+            gap: 2.5mm 2.5mm !important;
+            width: 196mm !important;
+            height: 270mm !important;
+            max-height: 270mm !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
             margin: 0 auto !important;
             padding: 0 !important;
           }
           .slips-per-a4-16 .slips-bulk-print-item {
-            width: 48mm !important;
-            height: 67mm !important;
-            max-height: 67mm !important;
+            width: 47mm !important;
+            height: 65mm !important;
+            max-height: 65mm !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
@@ -1569,12 +1571,12 @@ export default function SlipsPage() {
             background: transparent !important;
           }
           .slips-per-a4-16 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.44 !important;
-            width: 530px !important;
-            max-width: 530px !important;
+            zoom: 0.34 !important;
+            width: 500px !important;
+            max-width: 500px !important;
           }
           .slips-per-a4-16.slips-format-compact .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.50 !important;
+            zoom: 0.35 !important;
           }
           .slips-per-a4-16 .voter-slip-inner-card {
             padding: 5px 8px !important;
@@ -1633,13 +1635,13 @@ export default function SlipsPage() {
 
           /* Compact Format Specific Print Rules (No header/footer, voter details only) */
           .slips-format-compact.slips-per-a4-4 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.85 !important;
+            zoom: 0.65 !important;
           }
           .slips-format-compact.slips-per-a4-8 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.68 !important;
+            zoom: 0.62 !important;
           }
           .slips-format-compact.slips-per-a4-12 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.60 !important;
+            zoom: 0.44 !important;
           }
           .slips-format-compact .voter-slip-inner-card {
             box-shadow: none !important;

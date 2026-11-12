@@ -24,6 +24,7 @@ import { queryOfflineVoters, saveOfflineVotersCache } from '@/lib/offlineSync';
 import { SortButton, SortState } from '@/components/SortButton';
 import { VoterPhotoModal } from '@/components/VoterPhotoModal';
 import { toast } from '@/components/Toast';
+import { useRealtimeEvents } from '@/lib/socket';
 import {
   DisplayLanguage,
   getGenderLabel,
@@ -422,6 +423,31 @@ export default function PollDeskPage() {
     window.addEventListener('client-changed', handleClientChange);
     return () => window.removeEventListener('client-changed', handleClientChange);
   }, [loadWardsSummary, loadVoters]);
+
+  useRealtimeEvents({
+    'voter:voted': (evt) => {
+      setVoters((cur) =>
+        cur.map((v) => (v._id === evt.voterId ? { ...v, voted: evt.voted } : v))
+      );
+    },
+    'voter:updated': (evt) => {
+      setVoters((cur) =>
+        cur.map((v) =>
+          v._id === evt.voterId
+            ? {
+                ...v,
+                voted: evt.voted ?? v.voted,
+                phone: evt.phone ?? v.phone,
+                nameHi: evt.nameHi ?? v.nameHi,
+              }
+            : v
+        )
+      );
+    },
+    'voters:bulk-updated': () => {
+      void loadVoters(selectedWards);
+    },
+  });
 
   const [sort, setSort] = useState<SortState>({ field: 'serialNo', direction: 'asc' });
   const handleSort = (field: string) => {

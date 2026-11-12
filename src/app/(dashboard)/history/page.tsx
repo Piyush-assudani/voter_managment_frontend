@@ -1,10 +1,11 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { CheckCircle2, ChevronLeft, ChevronRight, Download, LoaderCircle, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
 import { toast } from '@/components/Toast';
+import { useRealtimeEvents } from '@/lib/socket';
 
 interface Dispatch {
   id: string;
@@ -86,6 +87,31 @@ export default function DispatchHistoryPage() {
     window.addEventListener('client-changed', handleClientChange);
     return () => window.removeEventListener('client-changed', handleClientChange);
   }, [load]);
+
+  const dispatchRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (dispatchRefreshTimerRef.current) clearTimeout(dispatchRefreshTimerRef.current);
+    };
+  }, []);
+
+  useRealtimeEvents({
+    'dispatch:updated': (evt) => {
+      setData((cur) => {
+        if (!cur) return cur;
+        return {
+          ...cur,
+          dispatches: cur.dispatches.map((d) =>
+            d.id === evt.dispatchId ? { ...d, status: evt.status } : d
+          ),
+        };
+      });
+      if (dispatchRefreshTimerRef.current) clearTimeout(dispatchRefreshTimerRef.current);
+      dispatchRefreshTimerRef.current = setTimeout(() => {
+        void load(search, status, currentPage);
+      }, 800);
+    },
+  });
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

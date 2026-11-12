@@ -39,6 +39,7 @@ import { WhatsAppLogo } from '@/components/WhatsAppLogo';
 import { WhatsAppWebHelperModal } from '@/components/WhatsAppWebHelperModal';
 import { attachEnglishNames, transliterateHindiToEnglish, matchesVoterQuery } from '@/lib/transliteration';
 import { toast } from '@/components/Toast';
+import { useRealtimeEvents } from '@/lib/socket';
 
 interface Voter {
   _id: string;
@@ -708,6 +709,31 @@ export default function VoterDirectoryPage() {
     window.addEventListener('client-changed', handleClientChange);
     return () => window.removeEventListener('client-changed', handleClientChange);
   }, [loadOrgDetails, loadPanchayatsSummary, loadWardsSummary, loadCastes, loadSlipConfig, loadIssuesSummary, loadVoters]);
+
+  useRealtimeEvents({
+    'voter:voted': (evt) => {
+      setVoters((cur) =>
+        cur.map((v) => (v._id === evt.voterId ? { ...v, voted: evt.voted } : v))
+      );
+    },
+    'voter:updated': (evt) => {
+      setVoters((cur) =>
+        cur.map((v) =>
+          v._id === evt.voterId
+            ? {
+                ...v,
+                voted: evt.voted ?? v.voted,
+                isMigrant: evt.migrant ?? v.isMigrant,
+                caste: evt.caste ?? v.caste,
+                supportStatus: evt.supportLevel ?? v.supportStatus,
+                phone: evt.phone ?? v.phone,
+                nameHi: evt.nameHi ?? v.nameHi,
+              }
+            : v
+        )
+      );
+    },
+  });
 
   useEffect(() => () => recognitionRef.current?.stop(), []);
 

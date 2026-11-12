@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Calculator,
   CheckCircle2,
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { apiFetch, getApiError } from '@/lib/api';
 import { toast } from '@/components/Toast';
+import { useRealtimeEvents } from '@/lib/socket';
 
 type SupportStatus = 'core' | 'swing' | 'opposition' | 'unmarked';
 
@@ -118,6 +119,26 @@ export default function WarroomPage() {
     window.addEventListener('client-changed', handleClientChange);
     return () => window.removeEventListener('client-changed', handleClientChange);
   }, [loadData]);
+
+  const liveRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleLiveRefresh = useCallback(() => {
+    if (liveRefreshTimerRef.current) clearTimeout(liveRefreshTimerRef.current);
+    liveRefreshTimerRef.current = setTimeout(() => {
+      void loadData();
+    }, 600);
+  }, [loadData]);
+
+  useEffect(() => {
+    return () => {
+      if (liveRefreshTimerRef.current) clearTimeout(liveRefreshTimerRef.current);
+    };
+  }, []);
+
+  useRealtimeEvents({
+    'voter:voted': scheduleLiveRefresh,
+    'voter:updated': scheduleLiveRefresh,
+    'voters:bulk-updated': scheduleLiveRefresh,
+  });
 
   const supportTotals = useMemo(() => {
     const totals = { core: 0, swing: 0, opposition: 0, unmarked: 0 };
