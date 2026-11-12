@@ -2281,6 +2281,7 @@ export default function SlipsPage() {
                       onClick={() => {
                         setSelectedSlipFormat('compact');
                         setCachedSlipImageDataUrl(null);
+                        if (perA4 === 4) setPerA4(8);
                       }}
                       style={{
                         padding: '6px 12px',
@@ -2314,28 +2315,30 @@ export default function SlipsPage() {
                       gap: '4px',
                     }}
                   >
-                    <button
-                      type="button"
-                      onClick={() => setPerA4(4)}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        background: perA4 === 4 ? '#ffffff' : 'transparent',
-                        color: perA4 === 4 ? '#0f172a' : '#64748b',
-                        fontWeight: perA4 === 4 ? 800 : 600,
-                        fontSize: '12.5px',
-                        cursor: 'pointer',
-                        boxShadow: perA4 === 4 ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
-                        transition: 'all 0.15s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <span>4 / A4</span>
-                      <span style={{ fontSize: '10px', color: perA4 === 4 ? '#2563eb' : '#94a3b8', fontWeight: 700 }}>(2×2)</span>
-                    </button>
+                    {selectedSlipFormat !== 'compact' && (
+                      <button
+                        type="button"
+                        onClick={() => setPerA4(4)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: perA4 === 4 ? '#ffffff' : 'transparent',
+                          color: perA4 === 4 ? '#0f172a' : '#64748b',
+                          fontWeight: perA4 === 4 ? 800 : 600,
+                          fontSize: '12.5px',
+                          cursor: 'pointer',
+                          boxShadow: perA4 === 4 ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <span>4 / A4</span>
+                        <span style={{ fontSize: '10px', color: perA4 === 4 ? '#2563eb' : '#94a3b8', fontWeight: 700 }}>(2×2)</span>
+                      </button>
+                    )}
 
                     <button
                       type="button"
