@@ -1232,11 +1232,11 @@ export default function SlipsPage() {
             padding: 0 !important;
           }
 
-          /* Strict A4 Sheet Pagination Container - fills full printable A4 without overflowing onto blank page */
+          /* Strict A4 Sheet Pagination Container - fits safely inside both 5mm and 8mm @page margins (zero bottom clip, zero blank page) */
           .a4-sheet-page {
             width: 194mm !important;
-            height: 284mm !important;
-            max-height: 284mm !important;
+            height: 277mm !important;
+            max-height: 277mm !important;
             page-break-after: always !important;
             break-after: page !important;
             page-break-inside: avoid !important;
@@ -1716,17 +1716,28 @@ export default function SlipsPage() {
             font-size: 10.5px !important;
           }
           .slips-format-compact.slips-per-a4-4 .a4-sheet-grid {
-            grid-template-columns: repeat(2, 95.5mm) !important;
-            grid-template-rows: repeat(2, 140mm) !important;
-            gap: 2mm 3mm !important;
+            grid-template-columns: repeat(2, 95mm) !important;
+            grid-template-rows: repeat(2, 136mm) !important;
+            gap: 3mm 4mm !important;
             width: 194mm !important;
-            height: 282mm !important;
-            max-height: 282mm !important;
+            height: 275mm !important;
+            max-height: 275mm !important;
           }
           .slips-format-compact.slips-per-a4-4 .slips-bulk-print-item {
-            width: 95.5mm !important;
-            height: 140mm !important;
-            max-height: 140mm !important;
+            width: 95mm !important;
+            height: 136mm !important;
+            max-height: 136mm !important;
+          }
+          .slips-format-compact.slips-per-a4-4 .voter-slip-inner-card {
+            padding: 14px 16px !important;
+            gap: 10px !important;
+          }
+          .slips-format-compact.slips-per-a4-4 .voter-slip-voter-table {
+            justify-content: center !important;
+            gap: 10px !important;
+          }
+          .slips-format-compact.slips-per-a4-4 .voter-slip-voter-row {
+            padding: 4px 6px !important;
           }
           .slips-format-compact.slips-per-a4-4 .voter-slip-metric-num {
             font-size: 26px !important;
@@ -1736,17 +1747,17 @@ export default function SlipsPage() {
             font-size: 14px !important;
           }
           .slips-format-compact.slips-per-a4-8 .a4-sheet-grid {
-            grid-template-columns: repeat(2, 95.5mm) !important;
-            grid-template-rows: repeat(4, 69mm) !important;
-            gap: 2mm 3mm !important;
+            grid-template-columns: repeat(2, 95mm) !important;
+            grid-template-rows: repeat(4, 67mm) !important;
+            gap: 2.5mm 4mm !important;
             width: 194mm !important;
-            height: 282mm !important;
-            max-height: 282mm !important;
+            height: 275.5mm !important;
+            max-height: 275.5mm !important;
           }
           .slips-format-compact.slips-per-a4-8 .slips-bulk-print-item {
-            width: 95.5mm !important;
-            height: 69mm !important;
-            max-height: 69mm !important;
+            width: 95mm !important;
+            height: 67mm !important;
+            max-height: 67mm !important;
           }
           .slips-format-compact.slips-per-a4-8 .voter-slip-metric-num {
             font-size: 20px !important;
@@ -1755,19 +1766,19 @@ export default function SlipsPage() {
           .slips-format-compact.slips-per-a4-8 .voter-slip-voter-value {
             font-size: 12px !important;
           }
-          /* 12-per-A4 Compact: 2 columns × 6 rows, full 282mm height, 1.8mm vertical / 3mm horizontal cut gap */
+          /* 12-per-A4 Compact: 2 columns × 6 rows, 276mm safe height, 1.8mm vertical / 4mm horizontal cut gap */
           .slips-format-compact.slips-per-a4-12 .a4-sheet-grid {
-            grid-template-columns: repeat(2, 95.5mm) !important;
-            grid-template-rows: repeat(6, 45.5mm) !important;
-            gap: 1.8mm 3mm !important;
+            grid-template-columns: repeat(2, 95mm) !important;
+            grid-template-rows: repeat(6, 44.5mm) !important;
+            gap: 1.8mm 4mm !important;
             width: 194mm !important;
-            height: 282mm !important;
-            max-height: 282mm !important;
+            height: 276mm !important;
+            max-height: 276mm !important;
           }
           .slips-format-compact.slips-per-a4-12 .slips-bulk-print-item {
-            width: 95.5mm !important;
-            height: 45.5mm !important;
-            max-height: 45.5mm !important;
+            width: 95mm !important;
+            height: 44.5mm !important;
+            max-height: 44.5mm !important;
           }
           /* 16-per-A4 Compact: 2 columns × 8 rows, full 282mm height, 1.5mm vertical / 3mm horizontal cut gap */
           .slips-format-compact.slips-per-a4-16 .a4-sheet-grid {
@@ -2369,30 +2380,9 @@ export default function SlipsPage() {
                       }}
                     >
                       <span>12 / A4</span>
-                      <span style={{ fontSize: '10px', color: perA4 === 12 ? '#ea580c' : '#94a3b8', fontWeight: 700 }}>(3×4)</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPerA4(16)}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        background: perA4 === 16 ? '#ffffff' : 'transparent',
-                        color: perA4 === 16 ? '#16a34a' : '#64748b',
-                        fontWeight: perA4 === 16 ? 900 : 600,
-                        fontSize: '12.5px',
-                        cursor: 'pointer',
-                        boxShadow: perA4 === 16 ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
-                        transition: 'all 0.15s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <span>16 / A4</span>
-                      <span style={{ fontSize: '10px', color: perA4 === 16 ? '#16a34a' : '#94a3b8', fontWeight: 700 }}>(4×4)</span>
+                      <span style={{ fontSize: '10px', color: perA4 === 12 ? '#ea580c' : '#94a3b8', fontWeight: 700 }}>
+                        {selectedSlipFormat === 'compact' ? '(2×6)' : '(3×4)'}
+                      </span>
                     </button>
                   </div>
                 </div>
