@@ -1260,8 +1260,8 @@ export default function SlipsPage() {
 
           .slips-bulk-print-mode .slips-bulk-print-item {
             display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
+            align-items: stretch !important;
+            justify-content: stretch !important;
             position: static !important;
             break-inside: avoid !important;
             page-break-inside: avoid !important;
@@ -1278,8 +1278,12 @@ export default function SlipsPage() {
             position: relative !important;
             left: auto !important;
             top: auto !important;
-            margin: 0 auto !important;
+            margin: 0 !important;
             padding: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
             box-shadow: none !important;
             break-inside: avoid !important;
             page-break-inside: avoid !important;
@@ -1290,8 +1294,14 @@ export default function SlipsPage() {
             border-radius: 0 !important;
           }
           .slips-bulk-print-mode .voter-slip-inner-card {
+            flex: 1 1 auto !important;
+            height: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
             box-shadow: none !important;
             border-radius: 0 !important;
+            box-sizing: border-box !important;
           }
 
           /* 4 in 1 A4: 2 columns × 2 rows (strictly 4 per sheet, tight 3-4mm cut gap, full cell fill) */
