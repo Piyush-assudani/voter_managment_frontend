@@ -1651,92 +1651,145 @@ export default function SlipsPage() {
             font-size: 9px !important;
           }
 
-          /* Compact Format Specific Print Rules (SS2-style tight 2-column grid, 2-3mm scissor gap, zero wasted space) */
+          /* Compact Format Specific Print Rules (Native 1:1 mm sizing, height: 100%, 1mm row gap, 2mm col gap — exact SS2 density) */
+          .slips-format-compact .slips-bulk-print-item {
+            overflow: hidden !important;
+            align-items: stretch !important;
+            justify-content: stretch !important;
+          }
+          .slips-format-compact .slips-bulk-print-item .voter-slip-printable-card {
+            zoom: 1 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            margin: 0 !important;
+          }
           .slips-format-compact .voter-slip-inner-card {
-            padding: 7px 10px !important;
-            gap: 5px !important;
+            flex: 1 1 auto !important;
+            height: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            padding: 5px 8px !important;
+            gap: 3px !important;
             border-width: 1.5px !important;
-            border-radius: 6px !important;
+            border-radius: 5px !important;
             box-shadow: none !important;
+            box-sizing: border-box !important;
+          }
+          .slips-format-compact .voter-slip-metric-grid {
+            gap: 6px !important;
           }
           .slips-format-compact .voter-slip-metric-card {
-            padding: 3px 8px !important;
-            border-radius: 6px !important;
+            padding: 2px 6px !important;
+            border-radius: 5px !important;
           }
           .slips-format-compact .voter-slip-metric-label {
-            font-size: 9.5px !important;
+            font-size: 8.5px !important;
+            line-height: 1.1 !important;
           }
           .slips-format-compact .voter-slip-metric-num {
-            font-size: 18px !important;
+            font-size: 16px !important;
             line-height: 1.1 !important;
           }
           .slips-format-compact .voter-slip-voter-table {
-            padding: 3px 6px !important;
+            padding: 2px 5px !important;
             gap: 1px !important;
+            flex: 1 1 auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-evenly !important;
           }
           .slips-format-compact .voter-slip-voter-row {
-            padding: 2px 4px !important;
+            padding: 1px 3px !important;
             line-height: 1.18 !important;
           }
-          .slips-format-compact.slips-per-a4-4 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.65 !important;
-            width: 540px !important;
-            max-width: 540px !important;
+          .slips-format-compact .voter-slip-voter-label {
+            width: 92px !important;
+            min-width: 92px !important;
+            font-size: 10px !important;
+          }
+          .slips-format-compact .voter-slip-voter-value {
+            font-size: 10.5px !important;
+          }
+          .slips-format-compact.slips-per-a4-4 .a4-sheet-grid {
+            grid-template-columns: repeat(2, 97mm) !important;
+            grid-template-rows: repeat(2, 134mm) !important;
+            gap: 2mm 2mm !important;
+            width: 196mm !important;
+            height: 270mm !important;
+          }
+          .slips-format-compact.slips-per-a4-4 .slips-bulk-print-item {
+            width: 97mm !important;
+            height: 134mm !important;
+            max-height: 134mm !important;
+          }
+          .slips-format-compact.slips-per-a4-4 .voter-slip-metric-num {
+            font-size: 26px !important;
+          }
+          .slips-format-compact.slips-per-a4-4 .voter-slip-voter-label,
+          .slips-format-compact.slips-per-a4-4 .voter-slip-voter-value {
+            font-size: 14px !important;
           }
           .slips-format-compact.slips-per-a4-8 .a4-sheet-grid {
-            grid-template-columns: repeat(2, 96mm) !important;
-            grid-template-rows: repeat(4, 66mm) !important;
-            gap: 2mm 3mm !important;
+            grid-template-columns: repeat(2, 97mm) !important;
+            grid-template-rows: repeat(4, 67mm) !important;
+            gap: 1.5mm 2mm !important;
+            width: 196mm !important;
+            height: 272.5mm !important;
           }
           .slips-format-compact.slips-per-a4-8 .slips-bulk-print-item {
-            width: 96mm !important;
-            height: 66mm !important;
-            max-height: 66mm !important;
+            width: 97mm !important;
+            height: 67mm !important;
+            max-height: 67mm !important;
           }
-          .slips-format-compact.slips-per-a4-8 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.90 !important;
-            width: 395px !important;
-            max-width: 395px !important;
+          .slips-format-compact.slips-per-a4-8 .voter-slip-metric-num {
+            font-size: 20px !important;
           }
-          /* 12-per-A4 Compact: 2 columns × 6 rows (big readable text, ~2mm scissor gap, zero wasted space) */
+          .slips-format-compact.slips-per-a4-8 .voter-slip-voter-label,
+          .slips-format-compact.slips-per-a4-8 .voter-slip-voter-value {
+            font-size: 12px !important;
+          }
+          /* 12-per-A4 Compact: 2 columns × 6 rows, 1mm vertical gap, 2mm horizontal gap */
           .slips-format-compact.slips-per-a4-12 .a4-sheet-grid {
-            grid-template-columns: repeat(2, 96mm) !important;
-            grid-template-rows: repeat(6, 44mm) !important;
-            gap: 1.5mm 3mm !important;
-            width: 195mm !important;
-            height: 271.5mm !important;
-            max-height: 271.5mm !important;
+            grid-template-columns: repeat(2, 97mm) !important;
+            grid-template-rows: repeat(6, 44.5mm) !important;
+            gap: 1mm 2mm !important;
+            width: 196mm !important;
+            height: 272mm !important;
+            max-height: 272mm !important;
           }
           .slips-format-compact.slips-per-a4-12 .slips-bulk-print-item {
-            width: 96mm !important;
-            height: 44mm !important;
-            max-height: 44mm !important;
-            overflow: visible !important;
+            width: 97mm !important;
+            height: 44.5mm !important;
+            max-height: 44.5mm !important;
           }
-          .slips-format-compact.slips-per-a4-12 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.80 !important;
-            width: 440px !important;
-            max-width: 440px !important;
-          }
-          /* 16-per-A4 Compact: 2 columns × 8 rows (ultra-tight 2-col printed sheet) */
+          /* 16-per-A4 Compact: 2 columns × 8 rows, 1mm vertical gap, 2mm horizontal gap */
           .slips-format-compact.slips-per-a4-16 .a4-sheet-grid {
-            grid-template-columns: repeat(2, 96mm) !important;
-            grid-template-rows: repeat(8, 32.5mm) !important;
-            gap: 1.5mm 3mm !important;
-            width: 195mm !important;
-            height: 270.5mm !important;
-            max-height: 270.5mm !important;
+            grid-template-columns: repeat(2, 97mm) !important;
+            grid-template-rows: repeat(8, 33mm) !important;
+            gap: 1mm 2mm !important;
+            width: 196mm !important;
+            height: 271mm !important;
+            max-height: 271mm !important;
           }
           .slips-format-compact.slips-per-a4-16 .slips-bulk-print-item {
-            width: 96mm !important;
-            height: 32.5mm !important;
-            max-height: 32.5mm !important;
-            overflow: visible !important;
+            width: 97mm !important;
+            height: 33mm !important;
+            max-height: 33mm !important;
           }
-          .slips-format-compact.slips-per-a4-16 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.65 !important;
-            width: 540px !important;
-            max-width: 540px !important;
+          .slips-format-compact.slips-per-a4-16 .voter-slip-inner-card {
+            padding: 3px 6px !important;
+            gap: 2px !important;
+          }
+          .slips-format-compact.slips-per-a4-16 .voter-slip-metric-num {
+            font-size: 13px !important;
+          }
+          .slips-format-compact.slips-per-a4-16 .voter-slip-voter-label,
+          .slips-format-compact.slips-per-a4-16 .voter-slip-voter-value {
+            font-size: 9px !important;
           }
 
           /* ================= SINGLE SLIP PRINT MODE ================= */
