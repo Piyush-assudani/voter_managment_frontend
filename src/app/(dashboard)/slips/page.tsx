@@ -1269,7 +1269,7 @@ export default function SlipsPage() {
             padding: 0 !important;
             background: transparent !important;
             box-sizing: border-box !important;
-            overflow: hidden !important;
+            overflow: visible !important;
             border: none !important;
             box-shadow: none !important;
           }
@@ -1340,12 +1340,12 @@ export default function SlipsPage() {
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            overflow: hidden !important;
+            overflow: visible !important;
           }
           .slips-per-a4-8 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.49 !important;
-            width: 680px !important;
-            max-width: 680px !important;
+            zoom: 0.43 !important;
+            width: 760px !important;
+            max-width: 760px !important;
           }
           .slips-per-a4-8 .voter-slip-inner-card {
             padding: 6px 12px 7px 12px !important;

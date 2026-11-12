@@ -575,6 +575,135 @@ export default function PollDeskPage() {
 
   return (
     <div className="work-page poll-desk-expanded">
+      <style>{`
+        .poll-desk-expanded .desk-view-switcher {
+          display: inline-flex !important;
+          align-items: center !important;
+          flex-wrap: wrap !important;
+          gap: 4px !important;
+          padding: 4px !important;
+          background: #ecefeb !important;
+          border: 1px solid #dde4de !important;
+          border-radius: 10px !important;
+        }
+        .poll-desk-expanded .desk-view-tab {
+          display: inline-flex !important;
+          flex-direction: row !important;
+          align-items: center !important;
+          gap: 6px !important;
+          min-height: 32px !important;
+          padding: 0 12px !important;
+          border: 0 !important;
+          border-radius: 7px !important;
+          background: transparent !important;
+          color: #475569 !important;
+          font-size: 12.5px !important;
+          font-weight: 600 !important;
+          cursor: pointer !important;
+          white-space: nowrap !important;
+        }
+        .poll-desk-expanded .desk-view-tab.is-active {
+          background: #ffffff !important;
+          color: #166534 !important;
+          font-weight: 700 !important;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12) !important;
+        }
+        .poll-desk-expanded .desk-lang-switcher {
+          display: inline-flex !important;
+          align-items: center !important;
+          flex-wrap: wrap !important;
+          gap: 4px !important;
+          padding: 3px 4px !important;
+          background: #f1f5f9 !important;
+          border: 1px solid #e2e8f0 !important;
+          border-radius: 8px !important;
+        }
+        .poll-desk-expanded .desk-lang-caption {
+          display: inline-flex !important;
+          flex-direction: row !important;
+          align-items: center !important;
+          gap: 4px !important;
+          padding: 0 6px !important;
+          font-size: 12px !important;
+          font-weight: 700 !important;
+          color: #475569 !important;
+          white-space: nowrap !important;
+        }
+        .poll-desk-expanded .desk-lang-btn {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          min-height: 28px !important;
+          padding: 0 10px !important;
+          border: 0 !important;
+          border-radius: 6px !important;
+          background: transparent !important;
+          color: #475569 !important;
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          cursor: pointer !important;
+          white-space: nowrap !important;
+        }
+        .poll-desk-expanded .desk-lang-btn.is-active {
+          background: #ffffff !important;
+          color: #166534 !important;
+          font-weight: 700 !important;
+          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1) !important;
+        }
+        .poll-desk-expanded .filter-tabs {
+          display: inline-flex !important;
+          flex-wrap: wrap !important;
+          gap: 4px !important;
+          padding: 4px !important;
+          background: #ecefeb !important;
+          border-radius: 8px !important;
+        }
+        .poll-desk-expanded .filter-tabs button {
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 6px !important;
+          min-height: 30px !important;
+          padding: 0 11px !important;
+          font-size: 12.5px !important;
+          font-weight: 600 !important;
+          border-radius: 6px !important;
+          white-space: nowrap !important;
+        }
+        .poll-desk-expanded .filter-tabs button span {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          padding: 1px 6px !important;
+          border-radius: 999px !important;
+          background: rgba(15, 23, 42, 0.08) !important;
+          font-size: 11px !important;
+          font-weight: 700 !important;
+        }
+        .poll-desk-expanded .filter-tabs button.is-active span {
+          background: #dcfce7 !important;
+          color: #15803d !important;
+        }
+        .poll-desk-expanded .ward-pill-btn {
+          display: inline-flex !important;
+          align-items: center !important;
+          min-height: 30px !important;
+          padding: 4px 11px !important;
+          border-radius: 999px !important;
+          border: 1px solid #d5ded7 !important;
+          background: #ffffff !important;
+          color: #3f4e45 !important;
+          font-size: 12.5px !important;
+          font-weight: 600 !important;
+          cursor: pointer !important;
+          white-space: nowrap !important;
+        }
+        .poll-desk-expanded .ward-pill-btn.is-active {
+          background: #16a34a !important;
+          border-color: #16a34a !important;
+          color: #ffffff !important;
+          font-weight: 700 !important;
+        }
+      `}</style>
       {/* 1. TOP HEADER WITH VIEW SWITCHER */}
       <div className="page-intro" style={{ flexWrap: 'wrap', gap: '14px', alignItems: 'center' }}>
         <div>
