@@ -1651,18 +1651,92 @@ export default function SlipsPage() {
             font-size: 9px !important;
           }
 
-          /* Compact Format Specific Print Rules (No header/footer, voter details only) */
+          /* Compact Format Specific Print Rules (SS2-style tight 2-column grid, 2-3mm scissor gap, zero wasted space) */
+          .slips-format-compact .voter-slip-inner-card {
+            padding: 7px 10px !important;
+            gap: 5px !important;
+            border-width: 1.5px !important;
+            border-radius: 6px !important;
+            box-shadow: none !important;
+          }
+          .slips-format-compact .voter-slip-metric-card {
+            padding: 3px 8px !important;
+            border-radius: 6px !important;
+          }
+          .slips-format-compact .voter-slip-metric-label {
+            font-size: 9.5px !important;
+          }
+          .slips-format-compact .voter-slip-metric-num {
+            font-size: 18px !important;
+            line-height: 1.1 !important;
+          }
+          .slips-format-compact .voter-slip-voter-table {
+            padding: 3px 6px !important;
+            gap: 1px !important;
+          }
+          .slips-format-compact .voter-slip-voter-row {
+            padding: 2px 4px !important;
+            line-height: 1.18 !important;
+          }
           .slips-format-compact.slips-per-a4-4 .slips-bulk-print-item .voter-slip-printable-card {
             zoom: 0.65 !important;
+            width: 540px !important;
+            max-width: 540px !important;
+          }
+          .slips-format-compact.slips-per-a4-8 .a4-sheet-grid {
+            grid-template-columns: repeat(2, 96mm) !important;
+            grid-template-rows: repeat(4, 65mm) !important;
+            gap: 3mm 4mm !important;
+          }
+          .slips-format-compact.slips-per-a4-8 .slips-bulk-print-item {
+            width: 96mm !important;
+            height: 65mm !important;
+            max-height: 65mm !important;
           }
           .slips-format-compact.slips-per-a4-8 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.62 !important;
+            zoom: 0.63 !important;
+            width: 560px !important;
+            max-width: 560px !important;
+          }
+          /* 12-per-A4 Compact: 2 columns × 6 rows (matching tight 2-col printed sheet) */
+          .slips-format-compact.slips-per-a4-12 .a4-sheet-grid {
+            grid-template-columns: repeat(2, 96mm) !important;
+            grid-template-rows: repeat(6, 43mm) !important;
+            gap: 2mm 4mm !important;
+            width: 196mm !important;
+            height: 270mm !important;
+            max-height: 270mm !important;
+          }
+          .slips-format-compact.slips-per-a4-12 .slips-bulk-print-item {
+            width: 96mm !important;
+            height: 43mm !important;
+            max-height: 43mm !important;
+            overflow: visible !important;
           }
           .slips-format-compact.slips-per-a4-12 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.44 !important;
+            zoom: 0.62 !important;
+            width: 570px !important;
+            max-width: 570px !important;
           }
-          .slips-format-compact .voter-slip-inner-card {
-            box-shadow: none !important;
+          /* 16-per-A4 Compact: 2 columns × 8 rows (ultra-tight 2-col printed sheet) */
+          .slips-format-compact.slips-per-a4-16 .a4-sheet-grid {
+            grid-template-columns: repeat(2, 96mm) !important;
+            grid-template-rows: repeat(8, 32mm) !important;
+            gap: 2mm 4mm !important;
+            width: 196mm !important;
+            height: 270mm !important;
+            max-height: 270mm !important;
+          }
+          .slips-format-compact.slips-per-a4-16 .slips-bulk-print-item {
+            width: 96mm !important;
+            height: 32mm !important;
+            max-height: 32mm !important;
+            overflow: visible !important;
+          }
+          .slips-format-compact.slips-per-a4-16 .slips-bulk-print-item .voter-slip-printable-card {
+            zoom: 0.48 !important;
+            width: 720px !important;
+            max-width: 720px !important;
           }
 
           /* ================= SINGLE SLIP PRINT MODE ================= */
