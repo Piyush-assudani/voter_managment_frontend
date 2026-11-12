@@ -25,6 +25,8 @@ export interface SlipConfig {
   metricLabel?: string;
   slipFormat?: SlipFormat;
   whatsappTemplateName?: string;
+  votingDate?: string;
+  votingTime?: string;
 }
 
 export const defaultSlipConfig: SlipConfig = {
@@ -47,6 +49,8 @@ export const defaultSlipConfig: SlipConfig = {
   metricType: 'ward',
   showWardInsteadOfPart: true,
   slipFormat: 'full',
+  votingDate: '16.11.2026 (सोमवार)',
+  votingTime: 'प्रातः 7.00 से सायं 6.00 बजे तक',
 };
 
 export function normalizeImageSrc(src?: string | null): string {
@@ -571,6 +575,49 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
         }}
       >
         {/* ================= 1. TOP HEADER SECTION ================= */}
+        {isCompact && (
+          <div
+            className="voter-slip-compact-datetime"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '6px',
+              padding: '3px 8px',
+              background: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              borderRadius: '4px',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: '#1e3a8a',
+              lineHeight: 1.2,
+            }}
+          >
+            <span>
+              मतदान:{' '}
+              <InlineText
+                value={merged.votingDate}
+                fallback={defaultSlipConfig.votingDate}
+                placeholder="16.11.2026 (सोमवार)"
+                isEditable={isEditable}
+                onChange={(v) => updateField('votingDate', v)}
+                title="मतदान दिनांक बदलें"
+              />
+            </span>
+            <span>
+              समय:{' '}
+              <InlineText
+                value={merged.votingTime}
+                fallback={defaultSlipConfig.votingTime}
+                placeholder="प्रातः 7.00 से सायं 6.00 बजे तक"
+                isEditable={isEditable}
+                onChange={(v) => updateField('votingTime', v)}
+                title="मतदान समय बदलें"
+              />
+            </span>
+          </div>
+        )}
         {!isCompact && (merged.useHeaderGraphic ? (
           <div
             className="voter-slip-header-banner-card"
@@ -1839,6 +1886,46 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                   borderRadius: '4px',
                 }}
               />
+            </div>
+            <div
+              className="voter-slip-full-datetime"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '8px',
+                marginTop: '4px',
+                paddingTop: '4px',
+                borderTop: '1px dashed #cbd5e1',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                color: '#1e3a8a',
+                paddingLeft: isEditable ? '0' : '20px',
+              }}
+            >
+              <span>
+                मतदान दिनांक:{' '}
+                <InlineText
+                  value={merged.votingDate}
+                  fallback={defaultSlipConfig.votingDate}
+                  placeholder="16.11.2026 (सोमवार)"
+                  isEditable={isEditable}
+                  onChange={(v) => updateField('votingDate', v)}
+                  title="मतदान दिनांक बदलें"
+                />
+              </span>
+              <span>
+                समय:{' '}
+                <InlineText
+                  value={merged.votingTime}
+                  fallback={defaultSlipConfig.votingTime}
+                  placeholder="प्रातः 7.00 से सायं 6.00 बजे तक"
+                  isEditable={isEditable}
+                  onChange={(v) => updateField('votingTime', v)}
+                  title="मतदान समय बदलें"
+                />
+              </span>
             </div>
           </div>
         )}

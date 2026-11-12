@@ -1729,6 +1729,23 @@ export default function SlipsPage() {
           .slips-format-compact .voter-slip-voter-value {
             font-size: 10.5px !important;
           }
+          .slips-format-compact .voter-slip-compact-datetime {
+            padding: 1.5px 5px !important;
+            font-size: 8.5px !important;
+            line-height: 1.12 !important;
+            border-radius: 2px !important;
+            gap: 4px !important;
+          }
+          .slips-format-compact.slips-per-a4-8 .voter-slip-compact-datetime {
+            padding: 3px 7px !important;
+            font-size: 10.5px !important;
+          }
+          .voter-slip-full-datetime {
+            font-size: 10px !important;
+            margin-top: 2px !important;
+            padding-top: 2px !important;
+            gap: 4px !important;
+          }
           .slips-format-compact .voter-slip-compact-polling {
             padding: 2px 5px !important;
             font-size: 9.5px !important;
