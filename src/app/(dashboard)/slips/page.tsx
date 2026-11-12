@@ -1729,6 +1729,16 @@ export default function SlipsPage() {
           .slips-format-compact .voter-slip-voter-value {
             font-size: 10.5px !important;
           }
+          .slips-format-compact .voter-slip-compact-polling {
+            padding: 2px 5px !important;
+            font-size: 9.5px !important;
+            line-height: 1.15 !important;
+            border-radius: 2px !important;
+          }
+          .slips-format-compact.slips-per-a4-8 .voter-slip-compact-polling {
+            padding: 3px 7px !important;
+            font-size: 11px !important;
+          }
           .slips-format-compact.slips-per-a4-4 .a4-sheet-grid {
             grid-template-columns: repeat(2, 95mm) !important;
             grid-template-rows: repeat(2, 136mm) !important;

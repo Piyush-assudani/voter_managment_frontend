@@ -1749,7 +1749,27 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
         </div>
 
         {/* ================= 5. POLLING STATION CARD ================= */}
-        {!isCompact && (
+        {isCompact ? (
+          <div
+            className="voter-slip-compact-polling"
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: '6px',
+              padding: '4px 8px',
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: '4px',
+              fontSize: '12px',
+              lineHeight: 1.25,
+            }}
+          >
+            <span style={{ color: '#ea580c', fontWeight: 700, flexShrink: 0 }}>मतदान केंद्र:</span>
+            <strong style={{ color: '#0f172a', fontWeight: 800, minWidth: 0, wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+              {pollingStation}
+            </strong>
+          </div>
+        ) : (
           <div
             className="voter-slip-polling-box"
             style={{
