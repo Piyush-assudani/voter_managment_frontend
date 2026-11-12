@@ -1314,9 +1314,9 @@ export default function SlipsPage() {
             overflow: hidden !important;
           }
           .slips-per-a4-4 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.64 !important;
-            width: 540px !important;
-            max-width: 540px !important;
+            zoom: 0.65 !important;
+            width: 520px !important;
+            max-width: 520px !important;
           }
 
           /* 8 in 1 A4: 2 columns × 4 rows (strictly 8 per sheet, 4mm scissor cutting margin) */
@@ -1343,13 +1343,13 @@ export default function SlipsPage() {
             overflow: hidden !important;
           }
           .slips-per-a4-8 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.48 !important;
-            width: 530px !important;
-            max-width: 530px !important;
+            zoom: 0.49 !important;
+            width: 680px !important;
+            max-width: 680px !important;
           }
           .slips-per-a4-8 .voter-slip-inner-card {
-            padding: 8px 12px 10px 12px !important;
-            gap: 6px !important;
+            padding: 6px 12px 7px 12px !important;
+            gap: 4px !important;
             border-width: 2px !important;
             border-radius: 8px !important;
             box-shadow: none !important;
@@ -1357,27 +1357,45 @@ export default function SlipsPage() {
           }
           .slips-per-a4-8 .voter-slip-symbol-box,
           .slips-per-a4-8 .voter-slip-photo-box {
-            width: 82px !important;
-            min-width: 82px !important;
-            max-width: 82px !important;
-            height: 98px !important;
-            min-height: 98px !important;
-            max-height: 98px !important;
+            width: 74px !important;
+            min-width: 74px !important;
+            max-width: 74px !important;
+            height: 84px !important;
+            min-height: 84px !important;
+            max-height: 84px !important;
           }
           .slips-per-a4-8 .voter-slip-ribbon {
-            min-height: 40px !important;
-            padding: 5px 10px !important;
+            min-height: 32px !important;
+            padding: 3px 10px !important;
+          }
+          .slips-per-a4-8 .voter-slip-metric-card {
+            padding: 3px 8px !important;
           }
           .slips-per-a4-8 .voter-slip-metric-num {
-            font-size: 22px !important;
+            font-size: 20px !important;
+            line-height: 1.1 !important;
+          }
+          .slips-per-a4-8 .voter-slip-voter-table {
+            padding: 3px 8px !important;
+            gap: 1px !important;
+          }
+          .slips-per-a4-8 .voter-slip-voter-row {
+            padding: 2px 4px !important;
+            line-height: 1.2 !important;
           }
           .slips-per-a4-8 .voter-slip-voter-label {
-            width: 95px !important;
-            min-width: 95px !important;
+            width: 110px !important;
+            min-width: 110px !important;
             font-size: 11px !important;
           }
           .slips-per-a4-8 .voter-slip-voter-value {
             font-size: 11.5px !important;
+          }
+          .slips-per-a4-8 .voter-slip-polling-box {
+            padding: 4px 8px !important;
+          }
+          .slips-per-a4-8 .voter-slip-footer-appeal {
+            padding: 3px 8px !important;
           }
 
           /* 12 in 1 A4: 3 columns × 4 rows (strictly 12 per sheet, 3mm scissor cutting gap, NO cut-off, perfectly centered) */
@@ -1405,7 +1423,7 @@ export default function SlipsPage() {
             background: transparent !important;
           }
           .slips-per-a4-12 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.43 !important;
+            zoom: 0.41 !important;
             width: 520px !important;
             max-width: 520px !important;
           }
@@ -1571,7 +1589,7 @@ export default function SlipsPage() {
             background: transparent !important;
           }
           .slips-per-a4-16 .slips-bulk-print-item .voter-slip-printable-card {
-            zoom: 0.34 !important;
+            zoom: 0.33 !important;
             width: 500px !important;
             max-width: 500px !important;
           }
