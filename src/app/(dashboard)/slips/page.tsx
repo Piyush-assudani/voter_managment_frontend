@@ -1209,6 +1209,17 @@ export default function SlipsPage() {
       }
 
       try {
+        let slipImageDataUrl: string | undefined = undefined;
+        try {
+          const effectiveConfig: SlipConfig = {
+            ...slipConfig,
+            slipFormat: selectedSlipFormat,
+          };
+          slipImageDataUrl = await generateSlipImage(v, effectiveConfig);
+        } catch (imgErr) {
+          console.warn(`Could not render slip for voter ${v.serialNo}:`, imgErr);
+        }
+
         const res = await apiFetch('/whatsapp/send-slip', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1216,6 +1227,8 @@ export default function SlipsPage() {
             voterId: v._id,
             phoneNumber: phone,
             templateName: targetTemplate,
+            slipImageDataUrl,
+            isBulk: true,
           }),
         });
 
