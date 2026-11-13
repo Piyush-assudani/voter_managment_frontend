@@ -30,7 +30,8 @@ export const FamilyVoterSlipTemplate: React.FC<FamilyVoterSlipProps> = ({
 
   // Resolve metadata from props or first member
   const first = familyMembers[0] || {};
-  const effectiveHouse = houseNo || metadata?.houseNo || first.houseNo || '—';
+  const rawHouse = (houseNo || metadata?.houseNo || first.houseNo || '').toString().trim();
+  const effectiveHouse = (rawHouse && rawHouse !== '-' && rawHouse !== '—' && rawHouse !== '0') ? rawHouse : '—';
   const effectiveWard = (wardNo || metadata?.wardNo || first.wardNo || '').replace(/^(वार्ड|Ward)\s*/i, '') || '—';
   const effectivePart = partNo || metadata?.partNo || first.partNo || '—';
 
@@ -285,7 +286,12 @@ export const FamilyVoterSlipTemplate: React.FC<FamilyVoterSlipProps> = ({
                     : member.gender === 'M' || member.gender === 'Male' || member.gender === 'पुरुष'
                     ? 'पु'
                     : member.gender || '—';
-                  const mEpic = member.epic || '—';
+                  const rawEpic = (member.epic || '').toString().trim();
+                  const isPlaceholder = !rawEpic || rawEpic === '0' || rawEpic === '—' || rawEpic === '-' ||
+                    rawEpic.startsWith('VOTER_') || rawEpic.startsWith('UNREADABLE_') ||
+                    /^[A-Z0-9_]+-W\d+-\d+$/i.test(rawEpic) ||
+                    /^(SAVITA|KHERAJ|ANITA|DUMMY|SAMPLE)[-_]/i.test(rawEpic);
+                  const mEpic = isPlaceholder ? '—' : rawEpic;
 
                   const isEven = idx % 2 === 1;
 

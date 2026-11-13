@@ -95,10 +95,6 @@ export const generateSlipImage = async (
           logging: false,
           scrollX: 0,
           scrollY: 0,
-          x: 0,
-          y: 0,
-          width: nodeWidth,
-          height: nodeHeight,
           windowWidth: nodeWidth + 200,
           windowHeight: Math.max(1600, nodeHeight + 400),
           onclone: (clonedDoc) => {
@@ -144,6 +140,8 @@ export const generateSlipImage = async (
                 top: -2.5px !important;
               }
               .voter-slip-ribbon {
+                background: #1e3a8a !important;
+                background-image: linear-gradient(to right, #ea580c, #1e3a8a) !important;
                 min-height: 68px !important;
                 padding: 12px 14px !important;
                 overflow: visible !important;
@@ -400,10 +398,6 @@ export const generateFamilySlipImage = async (
           logging: false,
           scrollX: 0,
           scrollY: 0,
-          x: 0,
-          y: 0,
-          width: nodeWidth,
-          height: nodeHeight,
           windowWidth: nodeWidth + 200,
           windowHeight: Math.max(1600, nodeHeight + 400),
           onclone: (clonedDoc) => {

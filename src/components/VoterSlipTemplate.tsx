@@ -337,7 +337,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
   }, [merged.metricType, merged.showWardInsteadOfPart]);
 
   const rawHouse = (voter.houseNo || '').toString().trim();
-  const house = (rawHouse && rawHouse !== '0') ? rawHouse : fallbackHouse;
+  const house = (rawHouse && rawHouse !== '0' && rawHouse !== '-' && rawHouse !== '—') ? rawHouse : fallbackHouse;
 
   let ageGender = '';
   if (voter.age && voter.gender) {
@@ -350,7 +350,17 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
     ageGender = isRealVoter ? '—' : '28 वर्ष | पुरुष';
   }
 
-  const epic = (voter.epic && voter.epic.trim() && voter.epic.trim() !== '0' && !voter.epic.startsWith('VOTER_') && !voter.epic.startsWith('UNREADABLE_')) ? voter.epic.trim() : (isRealVoter ? '—' : fallbackEpic);
+  const isPlaceholderEpic = (e?: string | null): boolean => {
+    if (!e) return true;
+    const clean = e.trim();
+    if (!clean || clean === '0' || clean === '—' || clean === '-') return true;
+    if (clean.startsWith('VOTER_') || clean.startsWith('UNREADABLE_')) return true;
+    if (/^[A-Z0-9_]+-W\d+-\d+$/i.test(clean)) return true;
+    if (/^(SAVITA|KHERAJ|ANITA|DUMMY|SAMPLE)[-_]/i.test(clean)) return true;
+    return false;
+  };
+
+  const epic = (voter.epic && !isPlaceholderEpic(voter.epic)) ? voter.epic.trim() : (isRealVoter ? '—' : fallbackEpic);
 
   // Helper to find ward polling station with resilient key normalization
   const getMappedStation = () => {
@@ -1319,7 +1329,8 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
           <div
             className="voter-slip-ribbon"
             style={{
-              background: 'linear-gradient(90deg, #ea580c 0%, #c2410c 14%, #1d4ed8 40%, #1e3a8a 100%)',
+              background: '#1e3a8a',
+              backgroundImage: 'linear-gradient(to right, #ea580c, #1e3a8a)',
               borderRadius: '10px',
               padding: '12px 14px',
               minHeight: '68px',
