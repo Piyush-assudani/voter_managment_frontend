@@ -321,6 +321,8 @@ export default function SlipsPage() {
   const [bulkWpTab, setBulkWpTab] = useState<'broadcast' | 'list'>('broadcast');
   const [bulkWpSearchFilter, setBulkWpSearchFilter] = useState('');
   const [bulkWpDirectSentMap, setBulkWpDirectSentMap] = useState<Record<string, boolean>>({});
+  const [selectedBulkWpVoterIds, setSelectedBulkWpVoterIds] = useState<Set<string>>(new Set());
+  const [bulkWpSendingSingleId, setBulkWpSendingSingleId] = useState<string | null>(null);
 
   const bulkWpStopRef = useRef(false);
   const bulkWpPauseRef = useRef(false);
@@ -1125,11 +1127,42 @@ export default function SlipsPage() {
     setIsBulkWpPaused(false);
   }, []);
 
-  // Start Bulk WhatsApp Broadcast
+  // Selection helpers for customized bulk dispatch
+  const toggleSelectBulkWpVoter = (id: string) => {
+    setSelectedBulkWpVoterIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectBulkWpCount = (count: number) => {
+    const subset = bulkWpVotersList.slice(0, count).map((v) => v._id);
+    setSelectedBulkWpVoterIds(new Set(subset));
+    toast.info(`शुरुआती ${count} मतदाता चयनित किए गए`);
+  };
+
+  const selectAllBulkWpVoters = () => {
+    setSelectedBulkWpVoterIds(new Set(bulkWpVotersList.map((v) => v._id)));
+    toast.info(`सभी ${bulkWpVotersList.length} मतदाता चयनित किए गए`);
+  };
+
+  const deselectAllBulkWpVoters = () => {
+    setSelectedBulkWpVoterIds(new Set());
+    toast.info('सभी चयन हटा दिए गए');
+  };
+
+  // Start Bulk WhatsApp Broadcast (Supports custom selection or all)
   const startBulkWpBroadcast = async () => {
     if (isBulkWpRunning) return;
-    if (bulkWpVotersList.length === 0) {
-      toast.error('भेजने के लिए कोई मतदाता (फोन नंबर सहित) उपलब्ध नहीं है');
+    const targetVoters =
+      selectedBulkWpVoterIds.size > 0
+        ? bulkWpVotersList.filter((v) => selectedBulkWpVoterIds.has(v._id))
+        : bulkWpVotersList;
+
+    if (targetVoters.length === 0) {
+      toast.error('भेजने के लिए कोई मतदाता (फोन नंबर सहित) उपलब्ध या चयनित नहीं है');
       return;
     }
     if (whatsappQuota && whatsappQuota.whatsappCredits <= 0) {
@@ -1155,12 +1188,12 @@ export default function SlipsPage() {
         voterName: 'प्रसारण आरंभ',
         phone: '',
         status: 'info',
-        message: `कुल ${bulkWpVotersList.length} मतदाताओं को '${targetTemplate}' टेम्प्लेट से पर्ची प्रसारण शुरू किया गया...`,
+        message: `कुल ${targetVoters.length} चयनित मतदाताओं को '${targetTemplate}' टेम्प्लेट से पर्ची प्रसारण शुरू किया गया...`,
       },
       ...prev,
     ]);
 
-    for (let i = 0; i < bulkWpVotersList.length; i++) {
+    for (let i = 0; i < targetVoters.length; i++) {
       if (bulkWpStopRef.current) {
         setBulkWpLogs((prev) => [
           {
@@ -1181,7 +1214,7 @@ export default function SlipsPage() {
       }
       if (bulkWpStopRef.current) break;
 
-      const v = bulkWpVotersList[i];
+      const v = targetVoters[i];
       const voterName = v.nameHi || v.nameEn || 'मतदाता';
       const phone = v.phone || (v as any).mobileNo || '';
 
@@ -1200,7 +1233,7 @@ export default function SlipsPage() {
         ]);
         setBulkWpProgress({
           current: i + 1,
-          total: bulkWpVotersList.length,
+          total: targetVoters.length,
           sent: sentCount,
           failed: failedCount,
           skipped: skippedCount,
@@ -1261,6 +1294,7 @@ export default function SlipsPage() {
               },
               ...prev.slice(0, 100),
             ]);
+            setBulkWpDirectSentMap((prev) => ({ ...prev, [v._id]: true }));
           }
         } else {
           failedCount++;
@@ -1300,7 +1334,7 @@ export default function SlipsPage() {
 
       setBulkWpProgress({
         current: i + 1,
-        total: bulkWpVotersList.length,
+        total: targetVoters.length,
         sent: sentCount,
         failed: failedCount,
         skipped: skippedCount,
@@ -1313,6 +1347,68 @@ export default function SlipsPage() {
     setIsBulkWpRunning(false);
     setIsBulkWpPaused(false);
     toast.success(`थोक प्रसारण पूरा! सफल: ${sentCount}, विफल: ${failedCount}, छोड़े गए: ${skippedCount}`);
+  };
+
+  // Direct Meta API send for an individual voter directly from table
+  const handleSendSingleBulkWpVoter = async (v: Voter) => {
+    const phone = v.phone || (v as any).mobileNo || '';
+    if (!phone || phone.replace(/\D/g, '').length < 10) {
+      toast.error('वैध 10 अंकों का फोन नंबर नहीं है');
+      return;
+    }
+    setBulkWpSendingSingleId(v._id);
+    const voterName = v.nameHi || v.nameEn || 'मतदाता';
+    const targetTemplate = (bulkWpTemplate === 'custom' ? bulkWpCustomTemplate.trim() : bulkWpTemplate) || slipConfig?.whatsappTemplateName || 'kheraj14';
+    try {
+      let slipImageDataUrl: string | undefined = undefined;
+      try {
+        const effectiveConfig: SlipConfig = {
+          ...slipConfig,
+          slipFormat: selectedSlipFormat,
+        };
+        slipImageDataUrl = await generateSlipImage(v, effectiveConfig);
+      } catch (e) {
+        console.warn('Single slip render failed:', e);
+      }
+
+      const res = await apiFetch('/whatsapp/send-slip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          voterId: v._id,
+          phoneNumber: phone,
+          templateName: targetTemplate,
+          slipImageDataUrl,
+          forceSend: true,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.message || 'WhatsApp पर्ची नहीं भेजी जा सकी');
+      }
+      toast.success(`${voterName} को पर्ची WhatsApp पर भेज दी गई!`);
+      setBulkWpDirectSentMap((prev) => ({ ...prev, [v._id]: true }));
+      setBulkWpLogs((prev) => [
+        {
+          id: `single_${v._id}_${Date.now()}`,
+          time: new Date().toLocaleTimeString('hi-IN'),
+          voterName: `${voterName} (क्र. ${v.serialNo})`,
+          phone,
+          status: 'success',
+          message: `सफलतापूर्वक भेजा गया (${targetTemplate})`,
+        },
+        ...prev.slice(0, 100),
+      ]);
+      if (typeof data.remainingCredits === 'number') {
+        setWhatsappQuota((prev) =>
+          prev ? { ...prev, whatsappCredits: data.remainingCredits, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev
+        );
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'पर्ची नहीं भेजी जा सकी');
+    } finally {
+      setBulkWpSendingSingleId(null);
+    }
   };
 
   // Direct WhatsApp click for an individual voter from the bulk list
@@ -4515,9 +4611,64 @@ export default function SlipsPage() {
                 </div>
               )}
 
-              {/* Tab 2: Voter List with Direct WhatsApp Fail-Safe */}
+              {/* Tab 2: Voter List with Custom Selection & Direct WhatsApp Fail-Safe */}
               {bulkWpTab === 'list' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {/* Quick Selection Presets */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#475569' }}>त्वरित चयन:</span>
+                      <button
+                        type="button"
+                        onClick={() => selectBulkWpCount(1)}
+                        style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', background: selectedBulkWpVoterIds.size === 1 ? '#0284c7' : '#fff', color: selectedBulkWpVoterIds.size === 1 ? '#fff' : '#0f172a', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        1 को चुनें
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => selectBulkWpCount(2)}
+                        style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', background: selectedBulkWpVoterIds.size === 2 ? '#0284c7' : '#fff', color: selectedBulkWpVoterIds.size === 2 ? '#fff' : '#0f172a', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        2 को चुनें
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => selectBulkWpCount(5)}
+                        style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', background: selectedBulkWpVoterIds.size === 5 ? '#0284c7' : '#fff', color: selectedBulkWpVoterIds.size === 5 ? '#fff' : '#0f172a', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        5 को चुनें
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => selectBulkWpCount(10)}
+                        style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', background: selectedBulkWpVoterIds.size === 10 ? '#0284c7' : '#fff', color: selectedBulkWpVoterIds.size === 10 ? '#fff' : '#0f172a', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        10 को चुनें
+                      </button>
+                      <button
+                        type="button"
+                        onClick={selectAllBulkWpVoters}
+                        style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #86efac', background: '#f0fdf4', color: '#16a34a', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        ✓ सभी चुनें
+                      </button>
+                      <button
+                        type="button"
+                        onClick={deselectAllBulkWpVoters}
+                        style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        ✕ सब हटाएं
+                      </button>
+                    </div>
+
+                    <span style={{ fontSize: '11.5px', fontWeight: 700, color: selectedBulkWpVoterIds.size > 0 ? '#0284c7' : '#64748b' }}>
+                      {selectedBulkWpVoterIds.size > 0
+                        ? `चयनित: ${selectedBulkWpVoterIds.size} / ${bulkWpVotersList.length}`
+                        : `सभी चयनित (${bulkWpVotersList.length})`}
+                    </span>
+                  </div>
+
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <input
                       type="text"
@@ -4548,7 +4699,7 @@ export default function SlipsPage() {
 
                   <div
                     style={{
-                      maxHeight: '220px',
+                      maxHeight: '260px',
                       overflowY: 'auto',
                       border: '1px solid #e2e8f0',
                       borderRadius: '8px',
@@ -4558,11 +4709,23 @@ export default function SlipsPage() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                       <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left', color: '#475569' }}>
+                          <th style={{ padding: '6px 10px', width: '36px', textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedBulkWpVoterIds.size === bulkWpVotersList.length && bulkWpVotersList.length > 0}
+                              onChange={(e) => {
+                                if (e.target.checked) selectAllBulkWpVoters();
+                                else deselectAllBulkWpVoters();
+                              }}
+                              style={{ cursor: 'pointer' }}
+                              title="सभी चुनें / हटाएं"
+                            />
+                          </th>
                           <th style={{ padding: '6px 10px' }}>क्र.</th>
                           <th style={{ padding: '6px 10px' }}>नाम व EPIC</th>
                           <th style={{ padding: '6px 10px' }}>वार्ड / भाग</th>
                           <th style={{ padding: '6px 10px' }}>मोबाइल नंबर</th>
-                          <th style={{ padding: '6px 10px', textAlign: 'right' }}>डायरेक्ट WhatsApp</th>
+                          <th style={{ padding: '6px 10px', textAlign: 'right' }}>कार्यवाही</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -4581,8 +4744,19 @@ export default function SlipsPage() {
                           .map((v) => {
                             const p = v.phone || (v as any).mobileNo || '';
                             const isSent = bulkWpDirectSentMap[v._id];
+                            const isSelected = selectedBulkWpVoterIds.has(v._id);
+                            const isSending = bulkWpSendingSingleId === v._id;
+
                             return (
-                              <tr key={v._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <tr key={v._id} style={{ borderBottom: '1px solid #f1f5f9', background: isSelected ? '#f0f9ff' : 'transparent' }}>
+                                <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => toggleSelectBulkWpVoter(v._id)}
+                                    style={{ cursor: 'pointer' }}
+                                  />
+                                </td>
                                 <td style={{ padding: '6px 10px', fontWeight: 700, color: '#64748b' }}>{v.serialNo}</td>
                                 <td style={{ padding: '6px 10px' }}>
                                   <div style={{ fontWeight: 700, color: '#0f172a' }}>{v.nameHi || v.nameEn}</div>
@@ -4595,26 +4769,60 @@ export default function SlipsPage() {
                                   {p}
                                 </td>
                                 <td style={{ padding: '6px 10px', textAlign: 'right' }}>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDirectWpFromList(v)}
-                                    style={{
-                                      padding: '4px 8px',
-                                      borderRadius: '5px',
-                                      border: isSent ? '1px solid #bbf7d0' : '1px solid #22c55e',
-                                      background: isSent ? '#f0fdf4' : '#22c55e',
-                                      color: isSent ? '#16a34a' : '#fff',
-                                      fontWeight: 600,
-                                      fontSize: '11px',
-                                      cursor: 'pointer',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                    }}
-                                  >
-                                    <WhatsAppLogo size={12} color={isSent ? '#16a34a' : '#ffffff'} />
-                                    {isSent ? 'भेजा गया ✓' : 'चैट खोलें'}
-                                  </button>
+                                  <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                                    <button
+                                      type="button"
+                                      disabled={isSending}
+                                      onClick={() => void handleSendSingleBulkWpVoter(v)}
+                                      style={{
+                                        padding: '4px 10px',
+                                        borderRadius: '5px',
+                                        border: isSent ? '1px solid #86efac' : '1px solid #0284c7',
+                                        background: isSent ? '#f0fdf4' : '#0284c7',
+                                        color: isSent ? '#16a34a' : '#fff',
+                                        fontWeight: 700,
+                                        fontSize: '11px',
+                                        cursor: isSending ? 'not-allowed' : 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                      }}
+                                      title="इस मतदाता को अभी तुरंत Meta API से पर्ची भेजें"
+                                    >
+                                      {isSending ? (
+                                        <>
+                                          <LoaderCircle size={11} className="spin" />
+                                          भेज रहा...
+                                        </>
+                                      ) : isSent ? (
+                                        'पर्ची भेजी गई ✓'
+                                      ) : (
+                                        'Meta पर्ची भेजें'
+                                      )}
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDirectWpFromList(v)}
+                                      style={{
+                                        padding: '4px 8px',
+                                        borderRadius: '5px',
+                                        border: '1px solid #22c55e',
+                                        background: '#22c55e',
+                                        color: '#fff',
+                                        fontWeight: 600,
+                                        fontSize: '11px',
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                      }}
+                                      title="व्यक्तिगत WhatsApp चैट खोलें"
+                                    >
+                                      <WhatsAppLogo size={12} color="#ffffff" />
+                                      चैट
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -4669,7 +4877,9 @@ export default function SlipsPage() {
                       }}
                     >
                       <WhatsAppLogo size={16} color="#ffffff" />
-                      प्रसारण शुरू करें ({bulkWpVotersList.length} मतदाता)
+                      {selectedBulkWpVoterIds.size > 0
+                        ? `चयनित ${selectedBulkWpVoterIds.size} मतदाताओं को भेजें`
+                        : `प्रसारण शुरू करें (${bulkWpVotersList.length} मतदाता)`}
                     </button>
                   </>
                 ) : (
