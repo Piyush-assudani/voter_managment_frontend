@@ -88,7 +88,7 @@ export const generateSlipImage = async (
         const nodeHeight = Math.max(650, targetNode.scrollHeight || targetNode.offsetHeight || 800);
 
         const canvas = await html2canvas(targetNode, {
-          scale: 2.5,
+          scale: 3.0,
           useCORS: true,
           allowTaint: true,
           backgroundColor: '#ffffff',
@@ -105,9 +105,10 @@ export const generateSlipImage = async (
             const style = clonedDoc.createElement('style');
             style.textContent = `
               * {
-                -webkit-font-smoothing: antialiased !important;
-                -moz-osx-font-smoothing: grayscale !important;
-                text-rendering: optimizeLegibility !important;
+                -webkit-font-smoothing: subpixel-antialiased !important;
+                -moz-osx-font-smoothing: auto !important;
+                text-rendering: geometricPrecision !important;
+                image-rendering: -webkit-optimize-contrast !important;
               }
               .voter-slip-printable-card,
               .voter-slip-printable-card * {
@@ -289,7 +290,7 @@ export const generateSlipImage = async (
           },
         });
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        const dataUrl = canvas.toDataURL('image/png');
 
         root.unmount();
         if (document.body.contains(container)) document.body.removeChild(container);
@@ -397,7 +398,7 @@ export const generateFamilySlipImage = async (
         const nodeHeight = Math.max(650, targetNode.scrollHeight || targetNode.offsetHeight || 800);
 
         const canvas = await html2canvas(targetNode, {
-          scale: 2.5,
+          scale: 3.0,
           useCORS: true,
           allowTaint: true,
           backgroundColor: '#ffffff',
@@ -414,9 +415,10 @@ export const generateFamilySlipImage = async (
             const style = clonedDoc.createElement('style');
             style.textContent = `
               * {
-                -webkit-font-smoothing: antialiased !important;
-                -moz-osx-font-smoothing: grayscale !important;
-                text-rendering: optimizeLegibility !important;
+                -webkit-font-smoothing: subpixel-antialiased !important;
+                -moz-osx-font-smoothing: auto !important;
+                text-rendering: geometricPrecision !important;
+                image-rendering: -webkit-optimize-contrast !important;
                 font-family: ${resolvedFamilyFont} !important;
               }
               .family-slip-printable-card {
@@ -454,7 +456,7 @@ export const generateFamilySlipImage = async (
           },
         });
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        const dataUrl = canvas.toDataURL('image/png');
         root.unmount();
         if (document.body.contains(container)) document.body.removeChild(container);
         resolve(dataUrl);
