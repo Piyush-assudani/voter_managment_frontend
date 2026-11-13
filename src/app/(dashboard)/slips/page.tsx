@@ -19,6 +19,13 @@ import {
   Trash2,
   Building,
   UsersRound,
+  Play,
+  Pause,
+  Square,
+  CheckCircle2,
+  XCircle,
+  Smartphone,
+  CheckCheck,
 } from 'lucide-react';
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
 import { VoterSlipTemplate, SlipConfig, SlipFormat, defaultSlipConfig } from '@/components/VoterSlipTemplate';
@@ -48,6 +55,7 @@ interface Voter {
   partNo: string;
   serialNo: number;
   phone?: string;
+  mobileNo?: string;
   caste?: string;
   voted?: boolean;
   boothName?: string;
@@ -283,6 +291,40 @@ export default function SlipsPage() {
     waLink?: string;
   } | null>(null);
 
+  // Total voters with phone numbers
+  const [totalWithPhone, setTotalWithPhone] = useState(0);
+
+  // Bulk WhatsApp Broadcast State
+  const [isBulkWpModalOpen, setIsBulkWpModalOpen] = useState(false);
+  const [bulkWpWard, setBulkWpWard] = useState<string>('all');
+  const [bulkWpTemplate, setBulkWpTemplate] = useState<string>('');
+  const [bulkWpCustomTemplate, setBulkWpCustomTemplate] = useState<string>('');
+  const [bulkWpLoadingVoters, setBulkWpLoadingVoters] = useState(false);
+  const [bulkWpVotersList, setBulkWpVotersList] = useState<Voter[]>([]);
+  const [isBulkWpRunning, setIsBulkWpRunning] = useState(false);
+  const [isBulkWpPaused, setIsBulkWpPaused] = useState(false);
+  const [bulkWpProgress, setBulkWpProgress] = useState({
+    current: 0,
+    total: 0,
+    sent: 0,
+    failed: 0,
+    skipped: 0,
+  });
+  const [bulkWpLogs, setBulkWpLogs] = useState<Array<{
+    id: string;
+    time: string;
+    voterName: string;
+    phone: string;
+    status: 'success' | 'failed' | 'skipped' | 'info';
+    message: string;
+  }>>([]);
+  const [bulkWpTab, setBulkWpTab] = useState<'broadcast' | 'list'>('broadcast');
+  const [bulkWpSearchFilter, setBulkWpSearchFilter] = useState('');
+  const [bulkWpDirectSentMap, setBulkWpDirectSentMap] = useState<Record<string, boolean>>({});
+
+  const bulkWpStopRef = useRef(false);
+  const bulkWpPauseRef = useRef(false);
+
   // Modes: 'single' | 'family' | 'bulk'
   const [slipMode, setSlipMode] = useState<'single' | 'family' | 'bulk'>('single');
   const [bulkMode, setBulkMode] = useState(false);
@@ -478,6 +520,9 @@ export default function SlipsPage() {
         }
         if (typeof data.total === 'number' && data.total > 0) {
           setTotalVotersCount((prev) => (prev > 0 ? prev : data.total));
+        }
+        if (typeof data.totalWithPhone === 'number') {
+          setTotalWithPhone(data.totalWithPhone);
         }
       }
     } catch {}
@@ -995,6 +1040,289 @@ export default function SlipsPage() {
     } finally {
       setWpSending(false);
     }
+  };
+
+  // Fetch voters who have saved phone numbers for bulk broadcast
+  const fetchBulkWpVoters = useCallback(async (targetWard: string) => {
+    setBulkWpLoadingVoters(true);
+    try {
+      const params = new URLSearchParams({
+        hasPhone: 'true',
+        all: 'true',
+      });
+      if (targetWard && targetWard !== 'all') {
+        params.set('ward', targetWard);
+      }
+      const res = await apiFetch(`/voters?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        const list: Voter[] = Array.isArray(data) ? data : Array.isArray(data.data) ? data.data : [];
+        setBulkWpVotersList(list);
+        setBulkWpProgress({
+          current: 0,
+          total: list.length,
+          sent: 0,
+          failed: 0,
+          skipped: 0,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch bulk WhatsApp voters:', err);
+      toast.error('मतदाताओं की सूची लोड नहीं हो सकी');
+    } finally {
+      setBulkWpLoadingVoters(false);
+    }
+  }, []);
+
+  // Open Bulk WhatsApp Modal
+  const openBulkWpModal = useCallback(async (selectedWard?: string) => {
+    const wardToUse = selectedWard !== undefined ? selectedWard : (wardFilter || 'all');
+    setBulkWpWard(wardToUse);
+    const tmpl = slipConfig?.whatsappTemplateName || 'kheraj14';
+    setBulkWpTemplate(tmpl);
+    setBulkWpCustomTemplate('');
+    setIsBulkWpModalOpen(true);
+    setIsBulkWpRunning(false);
+    setIsBulkWpPaused(false);
+    setBulkWpTab('broadcast');
+    setBulkWpLogs([]);
+    setBulkWpProgress({ current: 0, total: 0, sent: 0, failed: 0, skipped: 0 });
+    bulkWpStopRef.current = false;
+    bulkWpPauseRef.current = false;
+    await fetchBulkWpVoters(wardToUse);
+  }, [wardFilter, slipConfig, fetchBulkWpVoters]);
+
+  // Close Bulk WhatsApp Modal
+  const closeBulkWpModal = useCallback(() => {
+    if (isBulkWpRunning) {
+      if (!window.confirm('प्रसारण अभी चल रहा है। क्या आप सचमुच इसे बंद करना चाहते हैं?')) {
+        return;
+      }
+      bulkWpStopRef.current = true;
+      setIsBulkWpRunning(false);
+      setIsBulkWpPaused(false);
+    }
+    setIsBulkWpModalOpen(false);
+  }, [isBulkWpRunning]);
+
+  // Pause Bulk Broadcast
+  const pauseBulkWpBroadcast = useCallback(() => {
+    bulkWpPauseRef.current = true;
+    setIsBulkWpPaused(true);
+  }, []);
+
+  // Resume Bulk Broadcast
+  const resumeBulkWpBroadcast = useCallback(() => {
+    bulkWpPauseRef.current = false;
+    setIsBulkWpPaused(false);
+  }, []);
+
+  // Stop Bulk Broadcast
+  const stopBulkWpBroadcast = useCallback(() => {
+    bulkWpStopRef.current = true;
+    bulkWpPauseRef.current = false;
+    setIsBulkWpRunning(false);
+    setIsBulkWpPaused(false);
+  }, []);
+
+  // Start Bulk WhatsApp Broadcast
+  const startBulkWpBroadcast = async () => {
+    if (isBulkWpRunning) return;
+    if (bulkWpVotersList.length === 0) {
+      toast.error('भेजने के लिए कोई मतदाता (फोन नंबर सहित) उपलब्ध नहीं है');
+      return;
+    }
+    if (whatsappQuota && whatsappQuota.whatsappCredits <= 0) {
+      toast.error('WhatsApp कोटा समाप्त हो चुका है। कृपया क्रेडिट रिचार्ज करें।');
+      return;
+    }
+
+    setIsBulkWpRunning(true);
+    setIsBulkWpPaused(false);
+    bulkWpStopRef.current = false;
+    bulkWpPauseRef.current = false;
+
+    let sentCount = 0;
+    let failedCount = 0;
+    let skippedCount = 0;
+
+    const targetTemplate = (bulkWpTemplate === 'custom' ? bulkWpCustomTemplate.trim() : bulkWpTemplate) || slipConfig?.whatsappTemplateName || 'kheraj14';
+
+    setBulkWpLogs((prev) => [
+      {
+        id: `start_${Date.now()}`,
+        time: new Date().toLocaleTimeString('hi-IN'),
+        voterName: 'प्रसारण आरंभ',
+        phone: '',
+        status: 'info',
+        message: `कुल ${bulkWpVotersList.length} मतदाताओं को '${targetTemplate}' टेम्प्लेट से पर्ची प्रसारण शुरू किया गया...`,
+      },
+      ...prev,
+    ]);
+
+    for (let i = 0; i < bulkWpVotersList.length; i++) {
+      if (bulkWpStopRef.current) {
+        setBulkWpLogs((prev) => [
+          {
+            id: `stop_${Date.now()}`,
+            time: new Date().toLocaleTimeString('hi-IN'),
+            voterName: 'प्रसारण रुका',
+            phone: '',
+            status: 'info',
+            message: 'प्रसारण उपयोगकर्ता द्वारा रोक दिया गया।',
+          },
+          ...prev.slice(0, 100),
+        ]);
+        break;
+      }
+
+      while (bulkWpPauseRef.current && !bulkWpStopRef.current) {
+        await new Promise((r) => setTimeout(r, 400));
+      }
+      if (bulkWpStopRef.current) break;
+
+      const v = bulkWpVotersList[i];
+      const voterName = v.nameHi || v.nameEn || 'मतदाता';
+      const phone = v.phone || (v as any).mobileNo || '';
+
+      if (!phone || phone.replace(/\D/g, '').length < 10) {
+        skippedCount++;
+        setBulkWpLogs((prev) => [
+          {
+            id: `skip_${v._id}_${Date.now()}`,
+            time: new Date().toLocaleTimeString('hi-IN'),
+            voterName: `${voterName} (क्र. ${v.serialNo})`,
+            phone: phone || '—',
+            status: 'skipped',
+            message: 'वैध 10 अंकों का फोन नंबर नहीं है',
+          },
+          ...prev.slice(0, 100),
+        ]);
+        setBulkWpProgress({
+          current: i + 1,
+          total: bulkWpVotersList.length,
+          sent: sentCount,
+          failed: failedCount,
+          skipped: skippedCount,
+        });
+        continue;
+      }
+
+      try {
+        const res = await apiFetch('/whatsapp/send-slip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            voterId: v._id,
+            phoneNumber: phone,
+            templateName: targetTemplate,
+          }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.success) {
+          if (data.deduplicated) {
+            skippedCount++;
+            setBulkWpLogs((prev) => [
+              {
+                id: `dedup_${v._id}_${Date.now()}`,
+                time: new Date().toLocaleTimeString('hi-IN'),
+                voterName: `${voterName} (क्र. ${v.serialNo})`,
+                phone,
+                status: 'skipped',
+                message: data.message || 'डुप्लीकेट नंबर (पहले ही भेजा जा चुका है)',
+              },
+              ...prev.slice(0, 100),
+            ]);
+          } else {
+            sentCount++;
+            setBulkWpLogs((prev) => [
+              {
+                id: `sent_${v._id}_${Date.now()}`,
+                time: new Date().toLocaleTimeString('hi-IN'),
+                voterName: `${voterName} (क्र. ${v.serialNo})`,
+                phone,
+                status: 'success',
+                message: `सफलतापूर्वक भेजा गया (${data.templateUsed || targetTemplate})`,
+              },
+              ...prev.slice(0, 100),
+            ]);
+          }
+        } else {
+          failedCount++;
+          const errMsg = data.message || (res.status === 422 ? 'Meta WhatsApp अस्वीकृत' : 'भेजने में विफल');
+          setBulkWpLogs((prev) => [
+            {
+              id: `fail_${v._id}_${Date.now()}`,
+              time: new Date().toLocaleTimeString('hi-IN'),
+              voterName: `${voterName} (क्र. ${v.serialNo})`,
+              phone,
+              status: 'failed',
+              message: errMsg,
+            },
+            ...prev.slice(0, 100),
+          ]);
+        }
+
+        if (typeof data.remainingCredits === 'number') {
+          setWhatsappQuota((prev) =>
+            prev ? { ...prev, whatsappCredits: data.remainingCredits, whatsappUsed: (prev.whatsappUsed || 0) + 1 } : prev
+          );
+        }
+      } catch (err: any) {
+        failedCount++;
+        setBulkWpLogs((prev) => [
+          {
+            id: `err_${v._id}_${Date.now()}`,
+            time: new Date().toLocaleTimeString('hi-IN'),
+            voterName: `${voterName} (क्र. ${v.serialNo})`,
+            phone,
+            status: 'failed',
+            message: err?.message || 'नेटवर्क त्रुटि',
+          },
+          ...prev.slice(0, 100),
+        ]);
+      }
+
+      setBulkWpProgress({
+        current: i + 1,
+        total: bulkWpVotersList.length,
+        sent: sentCount,
+        failed: failedCount,
+        skipped: skippedCount,
+      });
+
+      // 350ms delay between dispatches
+      await new Promise((r) => setTimeout(r, 350));
+    }
+
+    setIsBulkWpRunning(false);
+    setIsBulkWpPaused(false);
+    toast.success(`थोक प्रसारण पूरा! सफल: ${sentCount}, विफल: ${failedCount}, छोड़े गए: ${skippedCount}`);
+  };
+
+  // Direct WhatsApp click for an individual voter from the bulk list
+  const handleDirectWpFromList = (v: Voter) => {
+    const phone = v.phone || (v as any).mobileNo || '';
+    if (!phone) {
+      toast.error('इस मतदाता का कोई मोबाइल नंबर नहीं है');
+      return;
+    }
+    const voterName = v.nameHi || v.nameEn || 'मतदाता';
+    const ward = v.wardNo || '—';
+    const part = v.partNo || '—';
+    const serial = v.serialNo || '—';
+    const boothName = v.boothName || `भाग संख्या ${part}`;
+    const candidateName = slipConfig.candidateName || 'माननीय प्रत्याशी';
+
+    const msg = `🗳️ *आधिकारिक मतदाता सूचना पर्ची* 🗳️\n\nनमस्कार *${voterName}* जी,\nआपकी डिजिटल मतदाता सूचना पर्ची:\n\n• पहचान पत्र (EPIC): *${v.epic || '—'}*\n• नाम: *${voterName}*\n• प्रत्याशी: *${candidateName}*\n• वार्ड: *${ward}* · भाग: *${part}*\n• क्रमांक: *${serial}*\n• मतदान केंद्र: *${boothName}*\n\n🇮🇳 मतदान हमारा अधिकार एवं कर्तव्य है। कृपया पहचान पत्र साथ लाएं।\n*— कार्यालय ${candidateName}*`;
+
+    const clean = phone.replace(/\D/g, '').slice(-10);
+    const waUrl = `https://wa.me/91${clean}?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    setBulkWpDirectSentMap((prev) => ({ ...prev, [v._id]: true }));
+    toast.success(`${voterName} के लिए WhatsApp चैट खुल गई`);
   };
 
   const handlePrint = () => {
@@ -2043,6 +2371,29 @@ export default function SlipsPage() {
               )}
             </button>
           )}
+
+          <button
+            className="button-primary"
+            type="button"
+            onClick={() => void openBulkWpModal()}
+            style={{
+              background: 'linear-gradient(135deg, #25D366 0%, #16a34a 100%)',
+              borderColor: '#22c55e',
+              color: '#ffffff',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '7px',
+              padding: '7px 15px',
+              fontSize: '13px',
+              fontWeight: 700,
+              boxShadow: '0 2px 6px rgba(37, 211, 102, 0.3)',
+              cursor: 'pointer',
+            }}
+            title="जिन मतदाताओं के मोबाइल नंबर उपलब्ध हैं, उन सभी को एक साथ WhatsApp पर्ची भेजें"
+          >
+            <WhatsAppLogo size={16} color="#ffffff" />
+            <span>थोक WhatsApp पर्ची {totalWithPhone > 0 ? `(${totalWithPhone})` : ''}</span>
+          </button>
         </div>
       </div>
 
@@ -2265,6 +2616,29 @@ export default function SlipsPage() {
                     )}
                   </button>
                 )}
+
+                <button
+                  className="button-primary"
+                  type="button"
+                  onClick={() => void openBulkWpModal(wardFilter || 'all')}
+                  style={{
+                    background: 'linear-gradient(135deg, #25D366 0%, #16a34a 100%)',
+                    borderColor: '#22c55e',
+                    color: '#ffffff',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 16px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    boxShadow: '0 2px 6px rgba(37, 211, 102, 0.28)',
+                    cursor: 'pointer',
+                  }}
+                  title="सभी मतदाताओं को जिनके मोबाइल नंबर उपलब्ध हैं, एक साथ WhatsApp पर्ची भेजें"
+                >
+                  <WhatsAppLogo size={15} color="#ffffff" />
+                  <span>थोक WhatsApp पर्ची {totalWithPhone > 0 ? `(${totalWithPhone})` : ''}</span>
+                </button>
               </div>
             </div>
 
@@ -3838,6 +4212,500 @@ export default function SlipsPage() {
                   {savingBranding ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
                   ब्रांडिंग सहेजें (Save Branding)
                 </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* Bulk WhatsApp Broadcast Modal */}
+      {isBulkWpModalOpen && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeBulkWpModal();
+          }}
+        >
+          <section
+            className="form-modal"
+            role="dialog"
+            style={{
+              maxWidth: '680px',
+              width: '95%',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '20px',
+              borderRadius: '16px',
+            }}
+          >
+            {/* Modal Header */}
+            <div className="modal-heading" style={{ paddingBottom: '12px', borderBottom: '1px solid #e2e8f0' }}>
+              <div>
+                <span className="eyebrow-label" style={{ color: '#16a34a' }}>
+                  BULK WHATSAPP BROADCAST (META CLOUD API)
+                </span>
+                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '4px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <WhatsAppLogo size={20} color="#25D366" /> थोक WhatsApp पर्ची प्रसारण
+                </h2>
+                <p style={{ margin: 0, fontSize: '12.5px', color: '#64748b' }}>
+                  क्लाइंट: <strong>{orgName}</strong> · जिन मतदाताओं के मोबाइल नंबर उपलब्ध हैं, उन्हें स्वतः पर्ची भेजें
+                </p>
+              </div>
+              <button className="icon-button" type="button" onClick={closeBulkWpModal}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ overflowY: 'auto', flex: 1, padding: '16px 0', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Settings Strip: Ward Selector, Template Selector, Quota */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gap: '10px',
+                  background: '#f8fafc',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                }}
+              >
+                <div>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                    लक्ष्य वार्ड चुनें (Target Ward):
+                  </label>
+                  <select
+                    value={bulkWpWard}
+                    disabled={isBulkWpRunning || bulkWpLoadingVoters}
+                    onChange={(e) => {
+                      const w = e.target.value;
+                      setBulkWpWard(w);
+                      void fetchBulkWpVoters(w);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '7px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      color: '#0f172a',
+                      background: '#fff',
+                    }}
+                  >
+                    <option value="all">सभी वार्ड (All Wards)</option>
+                    {availableWards.map((w) => (
+                      <option key={w} value={w}>
+                        वार्ड संख्या {w}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                    Meta टेम्प्लेट (Template):
+                  </label>
+                  <select
+                    value={bulkWpTemplate}
+                    disabled={isBulkWpRunning}
+                    onChange={(e) => setBulkWpTemplate(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '7px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      color: '#0f172a',
+                      background: '#fff',
+                    }}
+                  >
+                    <option value="kheraj14">kheraj14 (स्वीकृत - फोटो + 6 चर)</option>
+                    <option value="kherajram">kherajram (स्वीकृत - 6 चर)</option>
+                    <option value="voter_campaign_appeal">voter_campaign_appeal (स्वीकृत - 7 चर)</option>
+                    <option value="chhagana_ravatarama_hudda_2">chhagana_ravatarama_hudda_2</option>
+                    <option value="custom">अन्य / कस्टम टेम्प्लेट नाम</option>
+                  </select>
+                </div>
+
+                {bulkWpTemplate === 'custom' && (
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                      कस्टम टेम्प्लेट का नाम:
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="उदा. kheraj14, my_campaign_slip"
+                      value={bulkWpCustomTemplate}
+                      disabled={isBulkWpRunning}
+                      onChange={(e) => setBulkWpCustomTemplate(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '7px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '12.5px',
+                        fontWeight: 600,
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Status & Metrics Summary Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>कुल मोबाइल नंबर</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>
+                    {bulkWpLoadingVoters ? <LoaderCircle size={14} className="spin" style={{ display: 'inline' }} /> : bulkWpVotersList.length}
+                  </div>
+                </div>
+
+                <div style={{ background: '#f0fdf4', padding: '10px 12px', borderRadius: '10px', border: '1px solid #bbf7d0', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', color: '#166534', fontWeight: 700 }}>सफल (Sent)</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#16a34a', marginTop: '2px' }}>
+                    {bulkWpProgress.sent}
+                  </div>
+                </div>
+
+                <div style={{ background: '#fef2f2', padding: '10px 12px', borderRadius: '10px', border: '1px solid #fecaca', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', color: '#991b1b', fontWeight: 700 }}>विफल (Failed)</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#dc2626', marginTop: '2px' }}>
+                    {bulkWpProgress.failed}
+                  </div>
+                </div>
+
+                <div style={{ background: '#eff6ff', padding: '10px 12px', borderRadius: '10px', border: '1px solid #bfdbfe', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', color: '#1e40af', fontWeight: 700 }}>शेष (Pending)</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#2563eb', marginTop: '2px' }}>
+                    {Math.max(0, bulkWpVotersList.length - bulkWpProgress.current)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress Bar (Visible when in progress or done) */}
+              {(isBulkWpRunning || bulkWpProgress.current > 0) && (
+                <div style={{ background: '#f1f5f9', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>
+                    <span style={{ color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {isBulkWpRunning ? (
+                        <>
+                          <LoaderCircle size={13} className="spin" style={{ color: '#16a34a' }} />
+                          {isBulkWpPaused ? 'प्रसारण रुका हुआ है (Paused)' : 'प्रसारण जारी है...'}
+                        </>
+                      ) : (
+                        'प्रसारण पूर्ण हुआ'
+                      )}
+                    </span>
+                    <span style={{ color: '#16a34a' }}>
+                      {bulkWpProgress.current} / {bulkWpVotersList.length} (
+                      {bulkWpVotersList.length > 0 ? Math.round((bulkWpProgress.current / bulkWpVotersList.length) * 100) : 0}%)
+                    </span>
+                  </div>
+                  <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        height: '100%',
+                        width: `${bulkWpVotersList.length > 0 ? (bulkWpProgress.current / bulkWpVotersList.length) * 100 : 0}%`,
+                        background: 'linear-gradient(90deg, #22c55e 0%, #16a34a 100%)',
+                        transition: 'width 0.25s ease',
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation Tabs: Logs vs Voter Table */}
+              <div style={{ display: 'flex', gap: '6px', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setBulkWpTab('broadcast')}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: bulkWpTab === 'broadcast' ? '#16a34a' : '#f1f5f9',
+                    color: bulkWpTab === 'broadcast' ? '#fff' : '#475569',
+                    fontWeight: 700,
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  📡 लाइव प्रसारण लॉग ({bulkWpLogs.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkWpTab('list')}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: bulkWpTab === 'list' ? '#16a34a' : '#f1f5f9',
+                    color: bulkWpTab === 'list' ? '#fff' : '#475569',
+                    fontWeight: 700,
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  📋 मतदाता सूची व डायरेक्ट WhatsApp ({bulkWpVotersList.length})
+                </button>
+              </div>
+
+              {/* Tab 1: Live Broadcast Activity Log */}
+              {bulkWpTab === 'broadcast' && (
+                <div
+                  style={{
+                    background: '#0f172a',
+                    borderRadius: '10px',
+                    padding: '12px',
+                    height: '220px',
+                    overflowY: 'auto',
+                    fontFamily: 'monospace',
+                    fontSize: '11.5px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  {bulkWpLogs.length === 0 ? (
+                    <div style={{ color: '#64748b', textAlign: 'center', margin: 'auto', fontFamily: 'sans-serif' }}>
+                      प्रसारण शुरू करने के लिए नीचे 'प्रसारण शुरू करें' बटन दबाएं।
+                    </div>
+                  ) : (
+                    bulkWpLogs.map((log) => (
+                      <div
+                        key={log.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '8px',
+                          color:
+                            log.status === 'success'
+                              ? '#4ade80'
+                              : log.status === 'failed'
+                              ? '#f87171'
+                              : log.status === 'skipped'
+                              ? '#fbbf24'
+                              : '#93c5fd',
+                          lineHeight: '1.4',
+                        }}
+                      >
+                        <span style={{ color: '#64748b', flexShrink: 0 }}>[{log.time}]</span>
+                        <strong style={{ color: '#f8fafc', flexShrink: 0 }}>{log.voterName}</strong>
+                        {log.phone && <span style={{ color: '#94a3b8', flexShrink: 0 }}>({log.phone}):</span>}
+                        <span>{log.message}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* Tab 2: Voter List with Direct WhatsApp Fail-Safe */}
+              {bulkWpTab === 'list' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      placeholder="सूची में खोजें (नाम, EPIC, फोन)..."
+                      value={bulkWpSearchFilter}
+                      onChange={(e) => setBulkWpSearchFilter(e.target.value)}
+                      style={{
+                        flex: 1,
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '12px',
+                      }}
+                    />
+                    <span style={{ fontSize: '11.5px', color: '#64748b', whiteSpace: 'nowrap' }}>
+                      दिख रहे: {bulkWpVotersList.filter((v) => {
+                        if (!bulkWpSearchFilter.trim()) return true;
+                        const q = bulkWpSearchFilter.toLowerCase();
+                        return (
+                          (v.nameHi || '').toLowerCase().includes(q) ||
+                          (v.nameEn || '').toLowerCase().includes(q) ||
+                          (v.epic || '').toLowerCase().includes(q) ||
+                          (v.phone || (v as any).mobileNo || '').includes(q)
+                        );
+                      }).length}
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      maxHeight: '220px',
+                      overflowY: 'auto',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      background: '#fff',
+                    }}
+                  >
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left', color: '#475569' }}>
+                          <th style={{ padding: '6px 10px' }}>क्र.</th>
+                          <th style={{ padding: '6px 10px' }}>नाम व EPIC</th>
+                          <th style={{ padding: '6px 10px' }}>वार्ड / भाग</th>
+                          <th style={{ padding: '6px 10px' }}>मोबाइल नंबर</th>
+                          <th style={{ padding: '6px 10px', textAlign: 'right' }}>डायरेक्ट WhatsApp</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bulkWpVotersList
+                          .filter((v) => {
+                            if (!bulkWpSearchFilter.trim()) return true;
+                            const q = bulkWpSearchFilter.toLowerCase();
+                            return (
+                              (v.nameHi || '').toLowerCase().includes(q) ||
+                              (v.nameEn || '').toLowerCase().includes(q) ||
+                              (v.epic || '').toLowerCase().includes(q) ||
+                              (v.phone || (v as any).mobileNo || '').includes(q)
+                            );
+                          })
+                          .slice(0, 150)
+                          .map((v) => {
+                            const p = v.phone || (v as any).mobileNo || '';
+                            const isSent = bulkWpDirectSentMap[v._id];
+                            return (
+                              <tr key={v._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                <td style={{ padding: '6px 10px', fontWeight: 700, color: '#64748b' }}>{v.serialNo}</td>
+                                <td style={{ padding: '6px 10px' }}>
+                                  <div style={{ fontWeight: 700, color: '#0f172a' }}>{v.nameHi || v.nameEn}</div>
+                                  <div style={{ fontSize: '11px', color: '#2563eb' }}>{v.epic}</div>
+                                </td>
+                                <td style={{ padding: '6px 10px', color: '#475569' }}>
+                                  वार्ड {v.wardNo || '—'} · भाग {v.partNo || '—'}
+                                </td>
+                                <td style={{ padding: '6px 10px', fontWeight: 600, color: '#0f172a' }}>
+                                  {p}
+                                </td>
+                                <td style={{ padding: '6px 10px', textAlign: 'right' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDirectWpFromList(v)}
+                                    style={{
+                                      padding: '4px 8px',
+                                      borderRadius: '5px',
+                                      border: isSent ? '1px solid #bbf7d0' : '1px solid #22c55e',
+                                      background: isSent ? '#f0fdf4' : '#22c55e',
+                                      color: isSent ? '#16a34a' : '#fff',
+                                      fontWeight: 600,
+                                      fontSize: '11px',
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                    }}
+                                  >
+                                    <WhatsAppLogo size={12} color={isSent ? '#16a34a' : '#ffffff'} />
+                                    {isSent ? 'भेजा गया ✓' : 'चैट खोलें'}
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Controls */}
+            <div
+              style={{
+                paddingTop: '14px',
+                borderTop: '1px solid #e2e8f0',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '10px',
+              }}
+            >
+              <div style={{ fontSize: '12px', color: '#64748b' }}>
+                {whatsappQuota ? (
+                  <span>
+                    उपलब्ध कोटा: <strong style={{ color: '#16a34a' }}>{whatsappQuota.whatsappCredits}</strong> क्रेडिट शेष
+                  </span>
+                ) : null}
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {!isBulkWpRunning ? (
+                  <>
+                    <button type="button" className="button-secondary" onClick={closeBulkWpModal}>
+                      रद्द करें
+                    </button>
+                    <button
+                      type="button"
+                      className="button-primary"
+                      onClick={() => void startBulkWpBroadcast()}
+                      disabled={bulkWpVotersList.length === 0 || bulkWpLoadingVoters}
+                      style={{
+                        background: 'linear-gradient(135deg, #25D366 0%, #16a34a 100%)',
+                        borderColor: '#22c55e',
+                        color: '#fff',
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 18px',
+                      }}
+                    >
+                      <WhatsAppLogo size={16} color="#ffffff" />
+                      प्रसारण शुरू करें ({bulkWpVotersList.length} मतदाता)
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {isBulkWpPaused ? (
+                      <button
+                        type="button"
+                        className="button-primary"
+                        onClick={resumeBulkWpBroadcast}
+                        style={{
+                          background: '#16a34a',
+                          borderColor: '#16a34a',
+                          color: '#fff',
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <Play size={15} /> जारी रखें (Resume)
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="button-secondary"
+                        onClick={pauseBulkWpBroadcast}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}
+                      >
+                        <Pause size={15} /> रोकें (Pause)
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      onClick={stopBulkWpBroadcast}
+                      style={{
+                        borderColor: '#fca5a5',
+                        background: '#fef2f2',
+                        color: '#dc2626',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontWeight: 700,
+                      }}
+                    >
+                      <Square size={14} /> प्रसारण समाप्त करें (Stop)
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </section>
