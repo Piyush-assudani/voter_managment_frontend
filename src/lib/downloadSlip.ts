@@ -12,16 +12,17 @@ export const generateSlipImage = async (
   _existingElement?: HTMLElement | null
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
-    // Fixed positioning at 0, 0 with opacity 0 ensures real layout engine metrics,
-    // perfect Devanagari text measuring, and zero viewport/crop clipping issues
+    // Offscreen positioning at left: -9999px with opacity 1 ensures real layout engine metrics,
+    // perfect Devanagari text measuring, full-height rendering and zero scroll/viewport clipping issues
     const container = document.createElement('div');
-    container.style.position = 'fixed';
+    container.style.position = 'absolute';
     container.style.top = '0';
-    container.style.left = '0';
+    container.style.left = '-9999px';
     container.style.width = '600px';
     container.style.minWidth = '600px';
     container.style.maxWidth = '600px';
-    container.style.opacity = '0';
+    container.style.opacity = '1';
+    container.style.visibility = 'visible';
     container.style.pointerEvents = 'none';
     container.style.zIndex = '-99999';
     container.style.background = '#ffffff';
@@ -76,18 +77,30 @@ export const generateSlipImage = async (
         );
 
         // Allow layout and web fonts to settle completely (extra time for Hindi fonts)
-        await new Promise((res) => setTimeout(res, 200));
+        await new Promise((res) => setTimeout(res, 250));
 
         const targetNode = ref.current;
         const resolvedFont =
           window.getComputedStyle(targetNode).fontFamily ||
           '"Noto Sans Devanagari", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
+        const nodeWidth = Math.max(600, targetNode.offsetWidth || 600);
+        const nodeHeight = Math.max(650, targetNode.scrollHeight || targetNode.offsetHeight || 800);
+
         const canvas = await html2canvas(targetNode, {
           scale: 2.5,
           useCORS: true,
           allowTaint: true,
           backgroundColor: '#ffffff',
           logging: false,
+          scrollX: 0,
+          scrollY: 0,
+          x: 0,
+          y: 0,
+          width: nodeWidth,
+          height: nodeHeight,
+          windowWidth: nodeWidth + 200,
+          windowHeight: Math.max(1600, nodeHeight + 400),
           onclone: (clonedDoc) => {
             const style = clonedDoc.createElement('style');
             style.textContent = `
@@ -108,6 +121,10 @@ export const generateSlipImage = async (
                 overflow: visible !important;
                 height: auto !important;
                 max-height: none !important;
+                width: ${nodeWidth}px !important;
+                max-width: ${nodeWidth}px !important;
+                padding: 16px !important;
+                position: static !important;
               }
               .voter-slip-inner-card {
                 overflow: visible !important;
@@ -245,12 +262,25 @@ export const generateSlipImage = async (
             `;
             clonedDoc.head.appendChild(style);
 
-            // Ensure cards in clone stay at full width
+            // Ensure cards in clone stay at full width and normal static document flow
             const allSlipCards = clonedDoc.querySelectorAll('.voter-slip-printable-card');
             allSlipCards.forEach((el) => {
-              (el as HTMLElement).style.width = '600px';
-              (el as HTMLElement).style.maxWidth = '600px';
-              (el as HTMLElement).style.padding = '16px';
+              const card = el as HTMLElement;
+              card.style.position = 'static';
+              card.style.width = `${nodeWidth}px`;
+              card.style.maxWidth = `${nodeWidth}px`;
+              card.style.height = 'auto';
+              card.style.overflow = 'visible';
+              card.style.padding = '16px';
+              if (card.parentElement) {
+                card.parentElement.style.position = 'static';
+                card.parentElement.style.left = '0';
+                card.parentElement.style.top = '0';
+                card.parentElement.style.opacity = '1';
+                card.parentElement.style.visibility = 'visible';
+                card.parentElement.style.overflow = 'visible';
+                card.parentElement.style.height = 'auto';
+              }
             });
           },
         });
@@ -293,13 +323,14 @@ export const generateFamilySlipImage = async (
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
     const container = document.createElement('div');
-    container.style.position = 'fixed';
+    container.style.position = 'absolute';
     container.style.top = '0';
-    container.style.left = '0';
+    container.style.left = '-9999px';
     container.style.width = '660px';
     container.style.minWidth = '660px';
     container.style.maxWidth = '660px';
-    container.style.opacity = '0';
+    container.style.opacity = '1';
+    container.style.visibility = 'visible';
     container.style.pointerEvents = 'none';
     container.style.zIndex = '-99999';
     container.style.background = '#ffffff';
@@ -351,18 +382,30 @@ export const generateFamilySlipImage = async (
           })
         );
 
-        await new Promise((res) => setTimeout(res, 200));
+        await new Promise((res) => setTimeout(res, 250));
 
         const targetNode = ref.current;
         const resolvedFamilyFont =
           window.getComputedStyle(targetNode).fontFamily ||
           '"Noto Sans Devanagari", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
+        const nodeWidth = Math.max(660, targetNode.offsetWidth || 660);
+        const nodeHeight = Math.max(650, targetNode.scrollHeight || targetNode.offsetHeight || 800);
+
         const canvas = await html2canvas(targetNode, {
           scale: 2.5,
           useCORS: true,
           allowTaint: true,
           backgroundColor: '#ffffff',
           logging: false,
+          scrollX: 0,
+          scrollY: 0,
+          x: 0,
+          y: 0,
+          width: nodeWidth,
+          height: nodeHeight,
+          windowWidth: nodeWidth + 200,
+          windowHeight: Math.max(1600, nodeHeight + 400),
           onclone: (clonedDoc) => {
             const style = clonedDoc.createElement('style');
             style.textContent = `
@@ -373,13 +416,35 @@ export const generateFamilySlipImage = async (
                 font-family: ${resolvedFamilyFont} !important;
               }
               .family-slip-printable-card {
-                width: 660px !important;
-                max-width: 660px !important;
+                width: ${nodeWidth}px !important;
+                max-width: ${nodeWidth}px !important;
                 padding: 16px !important;
                 overflow: visible !important;
+                position: static !important;
+                height: auto !important;
               }
             `;
             clonedDoc.head.appendChild(style);
+
+            const allPrintCards = clonedDoc.querySelectorAll('.family-slip-printable-card');
+            allPrintCards.forEach((el) => {
+              const card = el as HTMLElement;
+              card.style.position = 'static';
+              card.style.width = `${nodeWidth}px`;
+              card.style.maxWidth = `${nodeWidth}px`;
+              card.style.height = 'auto';
+              card.style.overflow = 'visible';
+              card.style.padding = '16px';
+              if (card.parentElement) {
+                card.parentElement.style.position = 'static';
+                card.parentElement.style.left = '0';
+                card.parentElement.style.top = '0';
+                card.parentElement.style.opacity = '1';
+                card.parentElement.style.visibility = 'visible';
+                card.parentElement.style.overflow = 'visible';
+                card.parentElement.style.height = 'auto';
+              }
+            });
           },
         });
 
