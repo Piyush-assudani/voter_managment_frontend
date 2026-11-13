@@ -84,8 +84,14 @@ export const generateSlipImage = async (
           window.getComputedStyle(targetNode).fontFamily ||
           '"Noto Sans Devanagari", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
-        const nodeWidth = Math.max(600, targetNode.offsetWidth || 600);
-        const nodeHeight = Math.max(650, targetNode.scrollHeight || targetNode.offsetHeight || 800);
+        const innerCard = targetNode.querySelector('.voter-slip-inner-card') as HTMLElement;
+        const innerHeight = innerCard
+          ? Math.ceil(innerCard.getBoundingClientRect().height || innerCard.scrollHeight || innerCard.offsetHeight)
+          : Math.ceil(targetNode.getBoundingClientRect().height || targetNode.offsetHeight);
+
+        const pad = 6;
+        const nodeWidth = 600;
+        const nodeHeight = innerHeight + (pad * 2);
 
         const canvas = await html2canvas(targetNode, {
           scale: 3.0,
@@ -100,7 +106,7 @@ export const generateSlipImage = async (
           width: nodeWidth,
           height: nodeHeight,
           windowWidth: nodeWidth,
-          windowHeight: nodeHeight + 200,
+          windowHeight: nodeHeight,
           onclone: (clonedDoc) => {
             const style = clonedDoc.createElement('style');
             style.textContent = `
@@ -119,12 +125,13 @@ export const generateSlipImage = async (
                 font-feature-settings: "kern" 1, "liga" 1, "calt" 1 !important;
               }
               .voter-slip-printable-card {
-                overflow: visible !important;
-                height: auto !important;
-                max-height: none !important;
+                overflow: hidden !important;
+                height: ${nodeHeight}px !important;
+                max-height: ${nodeHeight}px !important;
                 width: ${nodeWidth}px !important;
                 max-width: ${nodeWidth}px !important;
-                padding: 16px !important;
+                padding: ${pad}px !important;
+                box-sizing: border-box !important;
                 position: static !important;
               }
               .voter-slip-inner-card {
@@ -273,7 +280,7 @@ export const generateSlipImage = async (
               clonedDoc.body.style.margin = '0';
               clonedDoc.body.style.padding = '0';
               clonedDoc.body.style.background = '#ffffff';
-              clonedDoc.body.style.overflow = 'visible';
+              clonedDoc.body.style.overflow = 'hidden';
               clonedDoc.body.appendChild(card);
               card.style.position = 'static';
               card.style.margin = '0 auto';
@@ -281,9 +288,10 @@ export const generateSlipImage = async (
               card.style.top = '0';
               card.style.width = `${nodeWidth}px`;
               card.style.maxWidth = `${nodeWidth}px`;
-              card.style.height = 'auto';
-              card.style.overflow = 'visible';
-              card.style.padding = '16px';
+              card.style.height = `${nodeHeight}px`;
+              card.style.boxSizing = 'border-box';
+              card.style.overflow = 'hidden';
+              card.style.padding = `${pad}px`;
               card.style.opacity = '1';
               card.style.visibility = 'visible';
             }
