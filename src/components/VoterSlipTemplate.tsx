@@ -367,8 +367,8 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
   };
 
   const wardStation = getMappedStation();
-  const pollingStation = wardStation 
-    || (voter.boothName && voter.boothName.trim()) 
+  const pollingStation = (voter.boothName && voter.boothName.trim())
+    || wardStation 
     || merged.pollingStationFallback 
     || (isRealVoter ? `भाग संख्या ${part}` : `${part} - सामुदायिक भवन / मतदान केंद्र (नमूना)`);
 
@@ -1855,7 +1855,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             </div>
             <div style={{ paddingLeft: isEditable ? '0' : '20px' }}>
               <InlineText
-                value={isEditable ? (wardStation || merged.pollingStationFallback) : pollingStation}
+                value={isEditable ? ((voter.boothName && voter.boothName.trim()) || wardStation || merged.pollingStationFallback) : pollingStation}
                 fallback={pollingStation}
                 placeholder="मतदान केंद्र पता / नाम"
                 isEditable={isEditable}

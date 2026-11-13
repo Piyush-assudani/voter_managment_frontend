@@ -3792,7 +3792,7 @@ export default function SlipsPage() {
                         serialNo: 1,
                       }),
                       wardNo: previewWard || selectedVoter?.wardNo || availableWards[0] || '82',
-                      boothName: '', // Dynamically resolves to wardPollingStations[previewWard]!
+                      boothName: selectedVoter?.boothName || voters[0]?.boothName || '',
                     }}
                     config={editingConfig}
                     format={editingConfig.slipFormat || 'full'}
