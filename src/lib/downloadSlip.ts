@@ -42,9 +42,15 @@ export const generateSlipImage = async (
       })
     );
 
-    setTimeout(async () => {
+    const renderSlip = async () => {
       try {
-        if (!ref.current) throw new Error('Template not mounted');
+        // Poll until ref.current is mounted by React layout engine (up to 3000ms)
+        let attempts = 0;
+        while (!ref.current && attempts < 60) {
+          await new Promise((r) => setTimeout(r, 40));
+          attempts++;
+        }
+        if (!ref.current) throw new Error('Template not mounted after 2400ms');
 
         // Wait for all web fonts (especially Devanagari) to be fully loaded
         if (document.fonts) {
@@ -71,13 +77,13 @@ export const generateSlipImage = async (
             return new Promise((res) => {
               img.onload = () => res(true);
               img.onerror = () => res(true);
-              setTimeout(() => res(true), 1500);
+              setTimeout(() => res(true), 1200);
             });
           })
         );
 
         // Allow layout and web fonts to settle completely (extra time for Hindi fonts)
-        await new Promise((res) => setTimeout(res, 250));
+        await new Promise((res) => setTimeout(res, 180));
 
         const targetNode = ref.current;
         const resolvedFont =
@@ -273,7 +279,6 @@ export const generateSlipImage = async (
             clonedDoc.head.appendChild(style);
 
             // Isolate card directly into clonedDoc.body at (0, 0)
-            // This guarantees zero vertical scroll, layout offset, or iframe height clipping
             const card = clonedDoc.querySelector('.voter-slip-printable-card') as HTMLElement;
             if (card) {
               clonedDoc.body.innerHTML = '';
@@ -308,7 +313,9 @@ export const generateSlipImage = async (
         if (document.body.contains(container)) document.body.removeChild(container);
         reject(err);
       }
-    }, 280);
+    };
+
+    void renderSlip();
   });
 };
 

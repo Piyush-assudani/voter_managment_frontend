@@ -1250,7 +1250,40 @@ export default function SlipsPage() {
           };
           slipImageDataUrl = await generateSlipImage(v, effectiveConfig);
         } catch (imgErr) {
-          console.warn(`Could not render slip for voter ${v.serialNo}:`, imgErr);
+          console.warn(`Render try 1 failed for voter ${v.serialNo}, retrying:`, imgErr);
+          try {
+            await new Promise((r) => setTimeout(r, 200));
+            const effectiveConfig: SlipConfig = {
+              ...slipConfig,
+              slipFormat: selectedSlipFormat,
+            };
+            slipImageDataUrl = await generateSlipImage(v, effectiveConfig);
+          } catch (retryErr) {
+            console.error(`Render try 2 failed for voter ${v.serialNo}:`, retryErr);
+          }
+        }
+
+        if (!slipImageDataUrl) {
+          failedCount++;
+          setBulkWpLogs((prev) => [
+            {
+              id: `err_img_${v._id}_${Date.now()}`,
+              time: new Date().toLocaleTimeString('hi-IN'),
+              voterName: `${voterName} (क्र. ${v.serialNo})`,
+              phone,
+              status: 'failed',
+              message: 'पर्ची इमेज तैयार नहीं हो सकी (कैंडिडेट फोटो भेजने से रोका गया)',
+            },
+            ...prev.slice(0, 100),
+          ]);
+          setBulkWpProgress({
+            current: i + 1,
+            total: targetVoters.length,
+            sent: sentCount,
+            failed: failedCount,
+            skipped: skippedCount,
+          });
+          continue;
         }
 
         const res = await apiFetch('/whatsapp/send-slip', {
@@ -1368,7 +1401,21 @@ export default function SlipsPage() {
         };
         slipImageDataUrl = await generateSlipImage(v, effectiveConfig);
       } catch (e) {
-        console.warn('Single slip render failed:', e);
+        console.warn('Single slip render try 1 failed, retrying:', e);
+        try {
+          await new Promise((r) => setTimeout(r, 200));
+          const effectiveConfig: SlipConfig = {
+            ...slipConfig,
+            slipFormat: selectedSlipFormat,
+          };
+          slipImageDataUrl = await generateSlipImage(v, effectiveConfig);
+        } catch (retryErr) {
+          console.error('Single slip render try 2 failed:', retryErr);
+        }
+      }
+
+      if (!slipImageDataUrl) {
+        throw new Error('मतदाता पर्ची की इमेज तैयार नहीं हो सकी। कृपया दोबारा क्लिक करें।');
       }
 
       const res = await apiFetch('/whatsapp/send-slip', {
