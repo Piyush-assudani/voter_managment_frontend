@@ -12,23 +12,23 @@ export const generateSlipImage = async (
   _existingElement?: HTMLElement | null
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
-    // Offscreen positioning at left: -9999px with opacity 1 ensures real layout engine metrics,
-    // perfect Devanagari text measuring, full-height rendering and zero scroll/viewport clipping issues
+    // Fixed positioning at 0, 0 prepended to body guarantees (0, 0) coordinates in layout engine
+    // and zero scroll/viewport/offset clipping issues
     const container = document.createElement('div');
-    container.style.position = 'absolute';
+    container.style.position = 'fixed';
     container.style.top = '0';
-    container.style.left = '-9999px';
+    container.style.left = '0';
     container.style.width = '600px';
     container.style.minWidth = '600px';
     container.style.maxWidth = '600px';
-    container.style.opacity = '1';
+    container.style.opacity = '0';
     container.style.visibility = 'visible';
     container.style.pointerEvents = 'none';
     container.style.zIndex = '-99999';
     container.style.background = '#ffffff';
     container.style.overflow = 'visible';
     container.dir = 'ltr';
-    document.body.appendChild(container);
+    document.body.prepend(container);
 
     const root = createRoot(container);
     const ref = React.createRef<HTMLDivElement>();
@@ -95,8 +95,8 @@ export const generateSlipImage = async (
           logging: false,
           scrollX: 0,
           scrollY: 0,
-          windowWidth: nodeWidth + 200,
-          windowHeight: Math.max(1600, nodeHeight + 400),
+          windowWidth: 1000,
+          windowHeight: 2500,
           onclone: (clonedDoc) => {
             const style = clonedDoc.createElement('style');
             style.textContent = `
@@ -260,26 +260,28 @@ export const generateSlipImage = async (
             `;
             clonedDoc.head.appendChild(style);
 
-            // Ensure cards in clone stay at full width and normal static document flow
-            const allSlipCards = clonedDoc.querySelectorAll('.voter-slip-printable-card');
-            allSlipCards.forEach((el) => {
-              const card = el as HTMLElement;
+            // Isolate card directly into clonedDoc.body at (0, 0)
+            // This guarantees zero vertical scroll, layout offset, or iframe height clipping
+            const card = clonedDoc.querySelector('.voter-slip-printable-card') as HTMLElement;
+            if (card) {
+              clonedDoc.body.innerHTML = '';
+              clonedDoc.body.style.margin = '0';
+              clonedDoc.body.style.padding = '0';
+              clonedDoc.body.style.background = '#ffffff';
+              clonedDoc.body.style.overflow = 'visible';
+              clonedDoc.body.appendChild(card);
               card.style.position = 'static';
+              card.style.margin = '0 auto';
+              card.style.left = '0';
+              card.style.top = '0';
               card.style.width = `${nodeWidth}px`;
               card.style.maxWidth = `${nodeWidth}px`;
               card.style.height = 'auto';
               card.style.overflow = 'visible';
               card.style.padding = '16px';
-              if (card.parentElement) {
-                card.parentElement.style.position = 'static';
-                card.parentElement.style.left = '0';
-                card.parentElement.style.top = '0';
-                card.parentElement.style.opacity = '1';
-                card.parentElement.style.visibility = 'visible';
-                card.parentElement.style.overflow = 'visible';
-                card.parentElement.style.height = 'auto';
-              }
-            });
+              card.style.opacity = '1';
+              card.style.visibility = 'visible';
+            }
           },
         });
 
@@ -321,20 +323,20 @@ export const generateFamilySlipImage = async (
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
     const container = document.createElement('div');
-    container.style.position = 'absolute';
+    container.style.position = 'fixed';
     container.style.top = '0';
-    container.style.left = '-9999px';
+    container.style.left = '0';
     container.style.width = '660px';
     container.style.minWidth = '660px';
     container.style.maxWidth = '660px';
-    container.style.opacity = '1';
+    container.style.opacity = '0';
     container.style.visibility = 'visible';
     container.style.pointerEvents = 'none';
     container.style.zIndex = '-99999';
     container.style.background = '#ffffff';
     container.style.overflow = 'visible';
     container.dir = 'ltr';
-    document.body.appendChild(container);
+    document.body.prepend(container);
 
     const root = createRoot(container);
     const ref = React.createRef<HTMLDivElement>();
@@ -398,8 +400,8 @@ export const generateFamilySlipImage = async (
           logging: false,
           scrollX: 0,
           scrollY: 0,
-          windowWidth: nodeWidth + 200,
-          windowHeight: Math.max(1600, nodeHeight + 400),
+          windowWidth: 1000,
+          windowHeight: 2500,
           onclone: (clonedDoc) => {
             const style = clonedDoc.createElement('style');
             style.textContent = `
@@ -420,25 +422,27 @@ export const generateFamilySlipImage = async (
             `;
             clonedDoc.head.appendChild(style);
 
-            const allPrintCards = clonedDoc.querySelectorAll('.family-slip-printable-card');
-            allPrintCards.forEach((el) => {
-              const card = el as HTMLElement;
+            // Isolate family card directly into clonedDoc.body at (0, 0)
+            const card = clonedDoc.querySelector('.family-slip-printable-card') as HTMLElement;
+            if (card) {
+              clonedDoc.body.innerHTML = '';
+              clonedDoc.body.style.margin = '0';
+              clonedDoc.body.style.padding = '0';
+              clonedDoc.body.style.background = '#ffffff';
+              clonedDoc.body.style.overflow = 'visible';
+              clonedDoc.body.appendChild(card);
               card.style.position = 'static';
+              card.style.margin = '0 auto';
+              card.style.left = '0';
+              card.style.top = '0';
               card.style.width = `${nodeWidth}px`;
               card.style.maxWidth = `${nodeWidth}px`;
               card.style.height = 'auto';
               card.style.overflow = 'visible';
               card.style.padding = '16px';
-              if (card.parentElement) {
-                card.parentElement.style.position = 'static';
-                card.parentElement.style.left = '0';
-                card.parentElement.style.top = '0';
-                card.parentElement.style.opacity = '1';
-                card.parentElement.style.visibility = 'visible';
-                card.parentElement.style.overflow = 'visible';
-                card.parentElement.style.height = 'auto';
-              }
-            });
+              card.style.opacity = '1';
+              card.style.visibility = 'visible';
+            }
           },
         });
 

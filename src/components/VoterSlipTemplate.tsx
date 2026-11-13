@@ -1330,7 +1330,6 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             className="voter-slip-ribbon"
             style={{
               background: '#1e3a8a',
-              backgroundImage: 'linear-gradient(to right, #ea580c, #1e3a8a)',
               borderRadius: '10px',
               padding: '12px 14px',
               minHeight: '68px',
