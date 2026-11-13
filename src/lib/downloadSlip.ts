@@ -95,8 +95,12 @@ export const generateSlipImage = async (
           logging: false,
           scrollX: 0,
           scrollY: 0,
-          windowWidth: 1000,
-          windowHeight: 2500,
+          x: 0,
+          y: 0,
+          width: nodeWidth,
+          height: nodeHeight,
+          windowWidth: nodeWidth,
+          windowHeight: nodeHeight + 200,
           onclone: (clonedDoc) => {
             const style = clonedDoc.createElement('style');
             style.textContent = `
@@ -400,8 +404,12 @@ export const generateFamilySlipImage = async (
           logging: false,
           scrollX: 0,
           scrollY: 0,
-          windowWidth: 1000,
-          windowHeight: 2500,
+          x: 0,
+          y: 0,
+          width: nodeWidth,
+          height: nodeHeight,
+          windowWidth: nodeWidth,
+          windowHeight: nodeHeight + 200,
           onclone: (clonedDoc) => {
             const style = clonedDoc.createElement('style');
             style.textContent = `
