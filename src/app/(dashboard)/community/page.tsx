@@ -36,6 +36,7 @@ import {
 import Link from 'next/link';
 import { apiFetch, decodeJwtPayload, getApiError } from '@/lib/api';
 import { downloadBlob } from '@/lib/fileDownload';
+import { isGujaratiPanelActive } from '@/lib/branding';
 import { createSpeechRecognition, SpeechRecognitionLike } from '@/lib/speech';
 import { VoterPhotoModal } from '@/components/VoterPhotoModal';
 import { toast } from '@/components/Toast';
@@ -144,6 +145,10 @@ export default function CommunityPage() {
   const [otherStat, setOtherStat] = useState<CasteStat | null>(null);
   const [selectedCaste, setSelectedCaste] = useState<string | null>(null);
   const [votedFilter, setVotedFilter] = useState<'all' | 'voted' | 'pending'>('all');
+  // Caste-wise PDF report (Gujarati panels only)
+  const [showPdfReport, setShowPdfReport] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState('');
+  useEffect(() => { setShowPdfReport(isGujaratiPanelActive()); }, []);
   const [casteSearchTerm, setCasteSearchTerm] = useState('');
 
   // ── Family View & Family Edit Modal States ──
@@ -378,6 +383,31 @@ export default function CommunityPage() {
       toast.error(msg);
     } finally {
       setFamilyLoading(false);
+    }
+  };
+
+  // 7b. Caste-wise PDF report (real PDF file, Gujarati, with photos)
+  const exportPdf = async () => {
+    if (!voters.length || pdfBusy) return;
+    setPdfBusy('0%');
+    try {
+      const { buildCasteReportPdf } = await import('@/lib/casteReportPdf');
+      const votedCount = voters.filter((v) => v.voted).length;
+      const statusLabel = votedFilter === 'voted' ? ' · ફક્ત મત આપનાર' : votedFilter === 'pending' ? ' · ફક્ત બાકી' : '';
+      const blob = await buildCasteReportPdf({
+        title: `${selectedCaste || query.trim() || 'શોધ પરિણામ'} — જ્ઞાતિ મુજબ મતદાર યાદી`,
+        subtitle: `કુલ મતદારો: ${voters.length} · મત આપ્યો: ${votedCount} · બાકી: ${voters.length - votedCount}${ward.trim() ? ` · વોર્ડ: ${ward.trim()}` : ''}${statusLabel}`,
+        voters,
+        onProgress: (done, total) => setPdfBusy(`${Math.round((done / total) * 100)}%`),
+      });
+      await downloadBlob(blob, `Caste_${selectedCaste || 'List'}_${votedFilter}_${Date.now()}.pdf`);
+      toast.success('PDF રિપોર્ટ ડાઉનલોડ થઈ ગયો.');
+    } catch (pdfError) {
+      const msg = pdfError instanceof Error ? pdfError.message : 'PDF बन नहीं सका।';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setPdfBusy('');
     }
   };
 
@@ -673,6 +703,19 @@ export default function CommunityPage() {
             {exporting ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />}
             Excel एक्सपोर्ट
           </button>
+
+          {showPdfReport && (
+            <button
+              className="button-secondary"
+              type="button"
+              onClick={() => void exportPdf()}
+              disabled={!voters.length || Boolean(pdfBusy)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              {pdfBusy ? <LoaderCircle size={15} className="spin" /> : <Download size={15} />}
+              {pdfBusy ? `PDF ${pdfBusy}` : 'PDF ડાઉનલોડ'}
+            </button>
+          )}
         </div>
       </div>
 

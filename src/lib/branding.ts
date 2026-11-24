@@ -29,3 +29,21 @@ export function getClientBranding(orgId?: string | null): ClientBranding {
 export function formatPhone(phone: string): string {
   return `+91 ${phone.slice(0, 5)} ${phone.slice(5)}`;
 }
+
+/**
+ * True when the dashboard is showing a client whose panel is in Gujarati
+ * (tenant user of that org, or an admin who selected it). Synchronous so slip
+ * templates can use it while rendering.
+ */
+export function isGujaratiPanelActive(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const token = window.localStorage.getItem('token') || '';
+    const payload = JSON.parse(decodeURIComponent(escape(atob((token.split('.')[1] || '').replace(/-/g, '+').replace(/_/g, '/')))));
+    const user = payload?.user || {};
+    const orgId = user.role === 'admin' ? window.localStorage.getItem('selectedClientOrgId') : user.organizationId;
+    return Boolean(getClientBranding(orgId).gujaratiUi) && !window.location.pathname.startsWith('/admin');
+  } catch {
+    return false;
+  }
+}

@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { decodeJwtPayload } from '@/lib/api';
+import { isGujaratiPanelActive } from '@/lib/branding';
 
 declare global {
   interface Window {
@@ -164,6 +165,16 @@ export const ContentProtection: React.FC = () => {
     styleEl.innerHTML = '@media print { body { display: none !important; } }';
     document.head.appendChild(styleEl);
 
+    // Gujarati client panels (lib/branding.ts) are allowed to print their slips.
+    const handleBeforePrint = () => {
+      if (isGujaratiPanelActive()) styleEl.media = 'not all';
+    };
+    const handleAfterPrint = () => {
+      styleEl.media = 'all';
+    };
+    window.addEventListener('beforeprint', handleBeforePrint);
+    window.addEventListener('afterprint', handleAfterPrint);
+
     document.addEventListener('contextmenu', handleContextMenu, { capture: true });
     document.addEventListener('copy', handleCopy, { capture: true });
     document.addEventListener('cut', handleCut, { capture: true });
@@ -172,6 +183,8 @@ export const ContentProtection: React.FC = () => {
 
     return () => {
       styleEl.remove();
+      window.removeEventListener('beforeprint', handleBeforePrint);
+      window.removeEventListener('afterprint', handleAfterPrint);
       document.removeEventListener('contextmenu', handleContextMenu, { capture: true });
       document.removeEventListener('copy', handleCopy, { capture: true });
       document.removeEventListener('cut', handleCut, { capture: true });

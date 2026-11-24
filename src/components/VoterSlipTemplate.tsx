@@ -1,5 +1,6 @@
 import React from 'react';
 import { ImageCropModal } from './ImageCropModal';
+import { isGujaratiPanelActive } from '@/lib/branding';
 
 export type SlipFormat = 'full' | 'compact';
 
@@ -239,6 +240,9 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
   const merged: SlipConfig = { ...defaultSlipConfig, ...config };
   const isCompact = (format || merged.slipFormat) === 'compact';
   const isRibbonHidden = Boolean(merged.hideEvmRibbon);
+  // Gujarati panel: printed/downloaded slips never show editor placeholders or another
+  // party's defaults (lotus/BJP) when a field is left empty.
+  const cleanPrint = !isEditable && isGujaratiPanelActive();
   const symbolFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const candidateFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const bannerFileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -883,7 +887,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                       display: 'block',
                     }}
                   />
-                ) : (
+                ) : cleanPrint ? null : (
                   /* Upload placeholder only - NO auto-generated vectors! */
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', padding: '2px' }}>
                     <svg width={isRibbonHidden ? "46" : "34"} height={isRibbonHidden ? "46" : "34"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -988,8 +992,8 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               >
                 <InlineText
                   value={merged.partySymbolName}
-                  fallback="कमल का फूल"
-                  placeholder="चिन्ह नाम"
+                  fallback={cleanPrint ? '' : 'कमल का फूल'}
+                  placeholder={cleanPrint ? '' : 'चिन्ह नाम'}
                   isEditable={isEditable}
                   onChange={(v) => updateField('partySymbolName', v)}
                   title="चुनाव चिन्ह का नाम बदलें (उदा. कमल, हाथ, पतंग, बल्ला)"
@@ -1140,7 +1144,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
               ) : (
                 <>
                   {/* Line 1: Party Name */}
-                  <div
+                  {(!cleanPrint || merged.partyName) && (<div
                     className="voter-slip-party-headline"
                     style={{
                       color: '#ea580c',
@@ -1153,7 +1157,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                     }}
                   >
                     {merged.partyName || 'भारतीय जनता पार्टी (भाजपा) प्रत्याशी'}
-                  </div>
+                  </div>)}
 
                   {/* Line 2: Appeal Headline */}
                   {merged.appealHeadline && (
@@ -1175,7 +1179,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                   )}
 
                   {/* Line 3: Candidate Name (Hindi Prominent + English Subtitle) */}
-                  <div
+                  {(!cleanPrint || merged.candidateName || merged.candidateNameEn) && (<div
                     className="voter-slip-candidate-name"
                     style={{
                       color: '#1e3a8a',
@@ -1193,7 +1197,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                         ({merged.candidateNameEn})
                       </div>
                     )}
-                  </div>
+                  </div>)}
 
                   {/* Line 4: Subtitle */}
                   <div
@@ -1250,7 +1254,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                   alt={merged.candidateName || 'Candidate'}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
-              ) : (
+              ) : cleanPrint ? null : (
                 /* Candidate Portrait Placeholder */
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', padding: '4px' }}>
                   <svg width={isRibbonHidden ? "56" : "44"} height={isRibbonHidden ? "56" : "44"} viewBox="0 0 24 24" fill="currentColor">
@@ -1507,7 +1511,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             </div>
 
             {/* Right Symbol Mini Pill */}
-            <div
+            {(!cleanPrint || merged.partySymbolName || merged.partySymbolImage) && (<div
               className="voter-slip-ribbon-pill"
               style={{
                 background: '#ffffff',
@@ -1549,9 +1553,9 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                 }}
                 title={merged.partySymbolName || 'कमल का फूल'}
               >
-                {merged.partySymbolName || 'कमल का फूल'}
+                {merged.partySymbolName || (cleanPrint ? '' : 'कमल का फूल')}
               </span>
-            </div>
+            </div>)}
 
             {/* Remove ribbon button when editable */}
             {isEditable && (
@@ -1960,7 +1964,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
         {/* ================= 6. BOTTOM APPEAL FOOTER ================= */}
         {!isCompact && (
           <div className="voter-slip-footer-appeal" style={{ textAlign: 'center', marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <div style={{ color: '#ea580c', fontSize: '15.5px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            {(!cleanPrint || merged.footerAppeal) && (<div style={{ color: '#ea580c', fontSize: '15.5px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
               <InlineText
                 value={merged.footerAppeal}
                 fallback={`${merged.partySymbolName || 'कमल'} का बटन दबाएं और भारी मतों से विजयी बनाएं`}
@@ -1979,7 +1983,7 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
                   borderRadius: '4px',
                 }}
               />
-            </div>
+            </div>)}
             <div style={{ color: '#475569', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
               <span>कृपया मतदान के दिन अपना पहचान पत्र (Voter ID / आधार कार्ड) साथ लाएं।</span>
             </div>

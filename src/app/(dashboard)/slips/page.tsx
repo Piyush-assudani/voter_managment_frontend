@@ -1858,11 +1858,11 @@ export default function SlipsPage() {
             box-shadow: none !important;
             width: 100% !important;
           }
-          .slips-per-a4-8 .voter-slip-symbol-box,
           .slips-per-a4-8 .voter-slip-voter-photo {
             width: 64px !important;
             height: 80px !important;
           }
+          .slips-per-a4-8 .voter-slip-symbol-box,
           .slips-per-a4-8 .voter-slip-photo-box {
             width: 74px !important;
             min-width: 74px !important;
@@ -1948,11 +1948,11 @@ export default function SlipsPage() {
           .slips-per-a4-12 .voter-slip-header-row {
             gap: 6px !important;
           }
-          .slips-per-a4-12 .voter-slip-symbol-box,
           .slips-per-a4-12 .voter-slip-voter-photo {
             width: 56px !important;
             height: 70px !important;
           }
+          .slips-per-a4-12 .voter-slip-symbol-box,
           .slips-per-a4-12 .voter-slip-photo-box {
             width: 78px !important;
             min-width: 78px !important;
@@ -2132,11 +2132,11 @@ export default function SlipsPage() {
           .slips-per-a4-16 .voter-slip-voter-value {
             font-size: 9.5px !important;
           }
-          .slips-per-a4-16 .voter-slip-symbol-box,
           .slips-per-a4-16 .voter-slip-voter-photo {
             width: 46px !important;
             height: 58px !important;
           }
+          .slips-per-a4-16 .voter-slip-symbol-box,
           .slips-per-a4-16 .voter-slip-photo-box {
             width: 65px !important;
             min-width: 65px !important;
@@ -2382,6 +2382,64 @@ export default function SlipsPage() {
             width: 100% !important;
             box-shadow: none !important;
           }
+        }
+
+        /* ===== Gujarati panel (html[lang="gu"], set only for Gujarati clients): bulk sheet fit ===== */
+        html[lang="gu"] .slips-bulk-print-item .voter-slip-inner-card > * {
+          flex-shrink: 0 !important;
+        }
+        html[lang="gu"] .slips-bulk-print-item .voter-slip-ribbon-content > div {
+          line-height: 1.25 !important;
+        }
+        html[lang="gu"] .slips-per-a4-8 .voter-slip-voter-label,
+        html[lang="gu"] .slips-per-a4-12 .voter-slip-voter-label {
+          width: 118px !important;
+          min-width: 118px !important;
+          font-size: 13.5px !important;
+        }
+        html[lang="gu"] .slips-per-a4-8 .voter-slip-voter-value,
+        html[lang="gu"] .slips-per-a4-12 .voter-slip-voter-value {
+          font-size: 15px !important;
+        }
+        html[lang="gu"] .slips-per-a4-8 .voter-slip-voter-row,
+        html[lang="gu"] .slips-per-a4-12 .voter-slip-voter-row {
+          padding: 1px 4px !important;
+          line-height: 1.15 !important;
+        }
+        html[lang="gu"] .slips-per-a4-8 .voter-slip-voter-photo {
+          width: 70px !important;
+          height: 88px !important;
+        }
+        html[lang="gu"] .slips-per-a4-8 .voter-slip-inner-card,
+        html[lang="gu"] .slips-per-a4-12 .voter-slip-inner-card {
+          gap: 3px !important;
+        }
+        html[lang="gu"] .slips-per-a4-8 .voter-slip-polling-box {
+          padding: 3px 8px !important;
+          gap: 2px !important;
+        }
+        html[lang="gu"] .slips-per-a4-4 .voter-slip-voter-row {
+          padding: 3px 4px !important;
+          line-height: 1.2 !important;
+        }
+        html[lang="gu"] .slips-per-a4-4 .voter-slip-voter-label {
+          width: 130px !important;
+          min-width: 130px !important;
+          font-size: 15px !important;
+        }
+        html[lang="gu"] .slips-per-a4-4 .voter-slip-voter-value {
+          font-size: 16.5px !important;
+        }
+        html[lang="gu"] .slips-per-a4-4 .voter-slip-voter-photo {
+          width: 100px !important;
+          height: 125px !important;
+        }
+        html[lang="gu"] .slips-per-a4-4 .voter-slip-inner-card {
+          gap: 6px !important;
+        }
+        html[lang="gu"] .slips-bulk-print-item .voter-slip-footer-appeal {
+          gap: 1px !important;
+          margin-top: 0 !important;
         }
       `}</style>
 

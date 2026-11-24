@@ -5,6 +5,37 @@ import { VoterSlipTemplate, SlipConfig, VoterSlipData } from '../components/Vote
 import { FamilyVoterSlipTemplate } from '../components/FamilyVoterSlipTemplate';
 import { downloadDataUrl, downloadBlob } from './fileDownload';
 import { toast } from '../components/Toast';
+import { isGujaratiPanelActive } from './branding';
+
+/** Crop empty white rows below the slip (Gujarati panel slips are shorter than the measured box). */
+function trimBottomWhitespace(canvas: HTMLCanvasElement): HTMLCanvasElement {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return canvas;
+  const { width, height } = canvas;
+  const data = ctx.getImageData(0, 0, width, height).data;
+  let last = height - 1;
+  for (; last > 0; last--) {
+    const row = last * width * 4;
+    let dark = 0;
+    for (let x = 0; x < width; x += 4) {
+      const i = row + x * 4;
+      if (data[i] < 235 || data[i + 1] < 235 || data[i + 2] < 235) dark++;
+      if (dark > 3) break;
+    }
+    if (dark > 3) break;
+  }
+  const keep = Math.min(height, last + Math.round(height * 0.012) + 1);
+  if (keep >= height - 2) return canvas;
+  const out = document.createElement('canvas');
+  out.width = width;
+  out.height = keep;
+  const octx = out.getContext('2d');
+  if (!octx) return canvas;
+  octx.fillStyle = '#ffffff';
+  octx.fillRect(0, 0, width, keep);
+  octx.drawImage(canvas, 0, 0);
+  return out;
+}
 
 export const generateSlipImage = async (
   voter: VoterSlipData,
@@ -97,7 +128,8 @@ export const generateSlipImage = async (
 
         const pad = 6;
         const nodeWidth = 600;
-        const nodeHeight = innerHeight + (pad * 2);
+        // Gujarati panel: render with spare room, then trim the blank rows (measured height is unreliable there).
+        const nodeHeight = (innerHeight + (pad * 2)) + (isGujaratiPanelActive() ? 400 : 0);
 
         const canvas = await html2canvas(targetNode, {
           scale: 3.0,
@@ -303,7 +335,7 @@ export const generateSlipImage = async (
           },
         });
 
-        const dataUrl = canvas.toDataURL('image/png');
+        const dataUrl = (isGujaratiPanelActive() ? trimBottomWhitespace(canvas) : canvas).toDataURL('image/png');
 
         root.unmount();
         if (document.body.contains(container)) document.body.removeChild(container);
@@ -410,7 +442,8 @@ export const generateFamilySlipImage = async (
           '"Noto Sans Devanagari", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
         const nodeWidth = Math.max(660, targetNode.offsetWidth || 660);
-        const nodeHeight = Math.max(650, targetNode.scrollHeight || targetNode.offsetHeight || 800);
+        // Gujarati panel: render with spare room, then trim the blank rows (measured height is unreliable there).
+        const nodeHeight = (Math.max(650, targetNode.scrollHeight || targetNode.offsetHeight || 800)) + (isGujaratiPanelActive() ? 400 : 0);
 
         const canvas = await html2canvas(targetNode, {
           scale: 3.0,
@@ -471,7 +504,7 @@ export const generateFamilySlipImage = async (
           },
         });
 
-        const dataUrl = canvas.toDataURL('image/png');
+        const dataUrl = (isGujaratiPanelActive() ? trimBottomWhitespace(canvas) : canvas).toDataURL('image/png');
         root.unmount();
         if (document.body.contains(container)) document.body.removeChild(container);
         resolve(dataUrl);
