@@ -27,6 +27,7 @@ export const FamilyVoterSlipTemplate: React.FC<FamilyVoterSlipProps> = ({
   isInline = false,
 }) => {
   const merged = { ...defaultSlipConfig, ...config };
+  const hasPhotos = familyMembers.some((m) => Boolean(m.photoUrl));
 
   // Resolve metadata from props or first member
   const first = familyMembers[0] || {};
@@ -261,6 +262,7 @@ export const FamilyVoterSlipTemplate: React.FC<FamilyVoterSlipProps> = ({
               <tr style={{ background: '#1e3a8a', color: '#ffffff' }}>
                 <th style={{ padding: '7px 8px', fontWeight: 700, width: '38px', textAlign: 'center' }}>क्र.</th>
                 <th style={{ padding: '7px 8px', fontWeight: 700, width: '56px', textAlign: 'center' }}>सूची क्र.</th>
+                {hasPhotos && <th style={{ padding: '7px 6px', fontWeight: 700, width: '50px', textAlign: 'center' }}>फोटो</th>}
                 <th style={{ padding: '7px 10px', fontWeight: 700 }}>मतदाता का नाम</th>
                 <th style={{ padding: '7px 10px', fontWeight: 700 }}>संबंध व रिश्तेदार</th>
                 <th style={{ padding: '7px 8px', fontWeight: 700, width: '70px', textAlign: 'center' }}>आयु/लिंग</th>
@@ -270,7 +272,7 @@ export const FamilyVoterSlipTemplate: React.FC<FamilyVoterSlipProps> = ({
             <tbody>
               {familyMembers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: '16px', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={hasPhotos ? 7 : 6} style={{ padding: '16px', textAlign: 'center', color: '#64748b' }}>
                     इस परिवार के कोई मतदाता रिकॉर्ड उपलब्ध नहीं हैं।
                   </td>
                 </tr>
@@ -281,7 +283,7 @@ export const FamilyVoterSlipTemplate: React.FC<FamilyVoterSlipProps> = ({
                   const mRelType = member.relationType ? `${member.relationType}: ` : 'पिता/पति: ';
                   const mSerial = member.serialNo || '—';
                   const mAge = member.age ? `${member.age} वर्ष` : '—';
-                  const mGender = member.gender === 'F' || member.gender === 'Female' || member.gender === 'महिला'
+                  const mGender = member.gender === 'F' || member.gender === 'Female' || member.gender === 'महिला' || member.gender === 'स्त्री'
                     ? 'म'
                     : member.gender === 'M' || member.gender === 'Male' || member.gender === 'पुरुष'
                     ? 'पु'
@@ -309,6 +311,18 @@ export const FamilyVoterSlipTemplate: React.FC<FamilyVoterSlipProps> = ({
                       <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 900, color: '#1e3a8a', fontSize: '13px' }}>
                         {mSerial}
                       </td>
+                      {hasPhotos && (
+                        <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                          {member.photoUrl ? (
+                            <img
+                              src={member.photoUrl}
+                              alt=""
+                              crossOrigin="anonymous"
+                              style={{ width: '40px', height: '50px', objectFit: 'cover', border: '1px solid #334155', borderRadius: '2px', display: 'inline-block' }}
+                            />
+                          ) : '—'}
+                        </td>
+                      )}
                       <td style={{ padding: '7px 10px', fontWeight: 800, color: '#0f172a', fontSize: '13px' }}>
                         {mName}
                       </td>

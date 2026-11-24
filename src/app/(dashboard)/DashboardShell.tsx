@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { apiFetch, decodeJwtPayload } from '@/lib/api';
+import { getClientBranding, formatPhone } from '@/lib/branding';
 import { listPendingMutations } from '@/lib/offlineSync';
 import { PwaInstallHeaderBtn, PwaInstallFooterBtn } from '@/components/PwaInstall';
 
@@ -56,6 +57,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [userInfo, setUserInfo] = useState<{ role?: string; name?: string; email?: string; organizationId?: string; organizationName?: string }>({});
   const [clients, setClients] = useState<Array<{ id: string; name: string; candidateName?: string; voterCount?: number }>>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
+  // Branding follows the client being viewed (own org for tenants, selected client for admins).
+  const branding = getClientBranding(userInfo.role === 'admin' ? selectedClientId : userInfo.organizationId);
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [pendingOfflineCount, setPendingOfflineCount] = useState(0);
@@ -631,7 +634,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
       {/* Footer */}
       <footer className="app-footer" style={{ justifyContent: 'center', textAlign: 'center', flexWrap: 'wrap', gap: '10px', padding: '14px 16px', display: 'flex', alignItems: 'center' }}>
-        <span>&copy; 2026 VijaySetu &bull; Roots Reach Media. All Rights Reserved. &bull; <a href="https://vijaysetu-website.vercel.app" target="_blank" rel="noopener noreferrer" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>वेबसाइट</a> &bull; <a href="/privacy" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Privacy Policy</a> &bull; <a href="/terms" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Terms of Service</a> &bull; 📞 7231077770</span>
+        {branding.showDefaultLinks ? (
+          <span>&copy; 2026 VijaySetu &bull; Roots Reach Media. All Rights Reserved. &bull; <a href="https://vijaysetu-website.vercel.app" target="_blank" rel="noopener noreferrer" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>वेबसाइट</a> &bull; <a href="/privacy" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Privacy Policy</a> &bull; <a href="/terms" style={{ color: '#27332d', fontWeight: 600, textDecoration: 'underline' }}>Terms of Service</a> &bull; 📞 7231077770</span>
+        ) : (
+          <span>&copy; 2026 VijaySetu &bull; {branding.company}. All Rights Reserved. &bull; <a href={`tel:${branding.phone}`} style={{ color: '#27332d', fontWeight: 600, textDecoration: 'none' }}>📞 {branding.phone}</a></span>
+        )}
         <PwaInstallFooterBtn />
       </footer>
 
@@ -724,16 +731,16 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 एडमिन संपर्क विवरण
               </div>
               <div style={{ fontSize: '19px', fontWeight: 900, color: '#0f172a', marginBottom: '4px' }}>
-                Roots Reach Media
+                {branding.company}
               </div>
               <div style={{ fontSize: '17px', fontWeight: 800, color: '#2563eb' }}>
-                📞 +91 72310 77770
+                📞 {formatPhone(branding.phone)}
               </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <a
-                href="tel:7231077770"
+                href={`tel:${branding.phone}`}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -749,11 +756,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                   boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
                 }}
               >
-                📞 तुरंत कॉल करें (+91 72310 77770)
+                📞 तुरंत कॉल करें ({formatPhone(branding.phone)})
               </a>
 
               <a
-                href="https://wa.me/917231077770?text=%E0%A4%A8%E0%A4%AE%E0%A4%B8%E0%A5%8D%E0%A4%A4%E0%A5%87%20Roots%20Reach%20Media%2C%20%E0%A4%AE%E0%A5%87%E0%A4%B0%E0%A4%BE%20%E0%A4%B5%E0%A4%BF%E0%A4%9C%E0%A4%AF%E0%A4%B8%E0%A5%87%E0%A4%A4%E0%A5%81%20%E0%A4%96%E0%A4%BE%E0%A4%A4%E0%A4%BE%20%E0%A4%8F%E0%A4%A1%E0%A4%AE%E0%A4%BF%E0%A4%A8%20%E0%A4%A6%E0%A5%8D%E0%A4%B5%E0%A4%BE%E0%A4%B0%E0%A4%BE%20%E0%A4%AC%E0%A4%82%E0%A4%A6%20(%E0%A4%A8%E0%A4%BF%E0%A4%B2%E0%A4%82%E0%A4%AC%E0%A4%BF%E0%A4%A4)%20%E0%A4%95%E0%A4%BF%E0%A4%AF%E0%A4%BE%20%E0%A4%97%E0%A4%AF%E0%A4%BE%20%E0%A4%B9%E0%A5%88%E0%A5%A4%20%E0%A4%95%E0%A5%83%E0%A4%AA%E0%A4%AF%E0%A4%BE%20%E0%A4%87%E0%A4%B8%E0%A5%87%20%E0%A4%AA%E0%A5%81%E0%A4%A8%E0%A4%83%20%E0%A4%9A%E0%A4%BE%E0%A4%B2%E0%A5%82%20%E0%A4%95%E0%A4%B0%E0%A5%87%E0%A4%82%E0%A5%A4"
+                href={`https://wa.me/91${branding.phone}?text=${encodeURIComponent(`नमस्ते ${branding.company}, मेरा विजयसेतु खाता एडमिन द्वारा बंद (निलंबित) किया गया है। कृपया इसे पुनः चालू करें।`)}`}
                 target="_blank"
                 rel="noreferrer"
                 style={{

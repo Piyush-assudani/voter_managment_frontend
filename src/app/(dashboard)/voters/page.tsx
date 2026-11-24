@@ -76,6 +76,7 @@ interface Voter {
   notes: string;
   voted: boolean;
   status?: string;
+  photoUrl?: string;
 }
 
 interface Household {
@@ -2307,8 +2308,9 @@ export default function VoterDirectoryPage() {
                       </span>
                     </div>
 
-                    {/* Middle Detail Rows matching reference layout */}
-                    <div className="sb-card-details">
+                    {/* Middle Detail Rows matching reference layout (+ voter photo on the right, like the printed roll card) */}
+                    <div style={voter.photoUrl ? { display: 'flex', alignItems: 'flex-start', gap: '10px' } : undefined}>
+                    <div className="sb-card-details" style={voter.photoUrl ? { flex: 1, minWidth: 0 } : undefined}>
                       {/* Name Row */}
                       <div className="sb-detail-row">
                         <span className="sb-label">नाम:</span>
@@ -2358,6 +2360,17 @@ export default function VoterDirectoryPage() {
                                 : '—'}
                         </span>
                       </div>
+                    </div>
+                    {voter.photoUrl && (
+                      <img
+                        src={voter.photoUrl}
+                        alt={voter.nameHi || voter.nameEn || 'मतदाता फोटो'}
+                        loading="lazy"
+                        className="sb-voter-photo"
+                        style={{ width: '64px', height: '80px', objectFit: 'cover', border: '1.5px solid #334155', borderRadius: '3px', flexShrink: 0, background: '#f1f5f9' }}
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    )}
                     </div>
 
                     {/* Tags Row */}

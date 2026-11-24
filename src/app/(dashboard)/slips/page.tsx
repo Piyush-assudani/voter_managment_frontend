@@ -28,6 +28,7 @@ import {
   CheckCheck,
 } from 'lucide-react';
 import { apiFetch, getApiError, decodeJwtPayload } from '@/lib/api';
+import { PRATAP_ORG_ID } from '@/lib/branding';
 import { VoterSlipTemplate, SlipConfig, SlipFormat, defaultSlipConfig } from '@/components/VoterSlipTemplate';
 import { FamilyVoterSlipTemplate } from '@/components/FamilyVoterSlipTemplate';
 import { WardPollingStationEditor } from '@/components/WardPollingStationEditor';
@@ -59,6 +60,7 @@ interface Voter {
   caste?: string;
   voted?: boolean;
   boothName?: string;
+  photoUrl?: string;
 }
 
 const partyPresets: Record<string, Partial<SlipConfig>> = {
@@ -257,6 +259,8 @@ export default function SlipsPage() {
 
   // Admin access & Client management state
   const [isAdmin, setIsAdmin] = useState(false);
+  // Clients allowed to edit their own slip design (backend already limits them to their own org).
+  const [canClientEditSlip, setCanClientEditSlip] = useState(false);
   const [clientsList, setClientsList] = useState<Array<{ id: string; name: string; slipConfig?: SlipConfig }>>([]);
   const [activeOrgId, setActiveOrgId] = useState<string>('');
 
@@ -446,8 +450,9 @@ export default function SlipsPage() {
     try {
       const token = window.localStorage.getItem('token');
       if (token) {
-        const payload = decodeJwtPayload<{ user?: { role?: string } }>(token);
+        const payload = decodeJwtPayload<{ user?: { role?: string; organizationId?: string } }>(token);
         setIsAdmin(payload?.user?.role === 'admin');
+        setCanClientEditSlip(payload?.user?.role !== 'admin' && payload?.user?.organizationId === PRATAP_ORG_ID);
       } else {
         setIsAdmin(false);
       }
@@ -1854,6 +1859,10 @@ export default function SlipsPage() {
             width: 100% !important;
           }
           .slips-per-a4-8 .voter-slip-symbol-box,
+          .slips-per-a4-8 .voter-slip-voter-photo {
+            width: 64px !important;
+            height: 80px !important;
+          }
           .slips-per-a4-8 .voter-slip-photo-box {
             width: 74px !important;
             min-width: 74px !important;
@@ -1940,6 +1949,10 @@ export default function SlipsPage() {
             gap: 6px !important;
           }
           .slips-per-a4-12 .voter-slip-symbol-box,
+          .slips-per-a4-12 .voter-slip-voter-photo {
+            width: 56px !important;
+            height: 70px !important;
+          }
           .slips-per-a4-12 .voter-slip-photo-box {
             width: 78px !important;
             min-width: 78px !important;
@@ -2120,6 +2133,10 @@ export default function SlipsPage() {
             font-size: 9.5px !important;
           }
           .slips-per-a4-16 .voter-slip-symbol-box,
+          .slips-per-a4-16 .voter-slip-voter-photo {
+            width: 46px !important;
+            height: 58px !important;
+          }
           .slips-per-a4-16 .voter-slip-photo-box {
             width: 65px !important;
             min-width: 65px !important;
@@ -3614,7 +3631,7 @@ export default function SlipsPage() {
       )}
 
       {/* ================= ADMIN SLIP BRANDING CUSTOMIZATION MODAL ================= */}
-      {isCustomizing && isAdmin && (
+      {isCustomizing && (isAdmin || canClientEditSlip) && (
         <div
           className="modal-backdrop"
           role="presentation"

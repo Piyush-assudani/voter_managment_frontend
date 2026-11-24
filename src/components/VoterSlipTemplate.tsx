@@ -87,6 +87,7 @@ export interface VoterSlipData {
   serialNo?: number | string;
   boothName?: string;
   phone?: string;
+  photoUrl?: string;
 }
 
 export interface VoterSlipTemplateProps {
@@ -1724,6 +1725,10 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
             </div>
           )}
 
+          {/* Voter rows (left) + voter photo from the electoral roll (right, only when the voter has one) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+
           {/* Row 1: Voter Name */}
           <div
             className="voter-slip-voter-row"
@@ -1802,6 +1807,17 @@ export const VoterSlipTemplate: React.FC<VoterSlipTemplateProps> = ({
           >
             <span className="voter-slip-voter-label" style={{ width: '165px', minWidth: '165px', flexShrink: 0, color: '#0f172a', fontWeight: 800, fontSize: '16.5px' }}>पहचान पत्र (EPIC):</span>
             <strong className="voter-slip-voter-value" style={{ flex: 1, color: '#1d4ed8', fontWeight: 900, fontSize: '19px', letterSpacing: '0.8px', minWidth: 0, wordBreak: 'break-word', overflowWrap: 'break-word' }}>{epic}</strong>
+          </div>
+          </div>
+          {voter.photoUrl && (
+            <img
+              src={voter.photoUrl}
+              alt="मतदाता फोटो"
+              className="voter-slip-voter-photo"
+              crossOrigin="anonymous"
+              style={{ width: '118px', height: '148px', objectFit: 'cover', border: '2px solid #0f172a', borderRadius: '4px', flexShrink: 0, background: '#f1f5f9' }}
+            />
+          )}
           </div>
         </div>
 

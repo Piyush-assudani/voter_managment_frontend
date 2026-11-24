@@ -501,6 +501,7 @@ export default function PollDeskPage() {
   const parts = useMemo(() => [...new Set(voters.map((voter) => voter.partNo).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [voters]);
   const partVoters = useMemo(() => voters.filter((voter) => !selectedPart || voter.partNo === selectedPart), [voters, selectedPart]);
   const pendingVoters = useMemo(() => partVoters.filter((voter) => !voter.voted).sort((a, b) => (Number(a.serialNo) || 0) - (Number(b.serialNo) || 0)), [partVoters]);
+  const printHasPhotos = useMemo(() => pendingVoters.some((voter) => Boolean(voter.photoUrl)), [pendingVoters]);
   const votedCount = partVoters.filter((voter) => voter.voted).length;
   const pendingCount = partVoters.length - votedCount;
   const turnout = partVoters.length ? Math.round((votedCount / partVoters.length) * 100) : 0;
@@ -1268,6 +1269,7 @@ export default function PollDeskPage() {
       </section>
 
       {/* DEDICATED OFFICIAL PRINTABLE REPORT (VISIBLE ONLY ON PRINT / PDF) */}
+      {/* Photo column appears only for rolls imported with voter photos. */}
       <div className="poll-desk-print-sheet" aria-hidden="true">
         <div className="poll-print-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -1298,6 +1300,7 @@ export default function PollDeskPage() {
           <thead>
             <tr>
               <th style={{ width: '45px', textAlign: 'center' }}>क्र.सं.</th>
+              {printHasPhotos && <th style={{ width: '46px', textAlign: 'center' }}>फोटो</th>}
               <th style={{ width: '170px' }}>मतदाता का नाम</th>
               <th style={{ width: '160px' }}>पिता / पति का नाम</th>
               <th style={{ width: '60px', textAlign: 'center' }}>मकान नं.</th>
@@ -1320,6 +1323,13 @@ export default function PollDeskPage() {
                       <div style={{ fontSize: '9px', color: '#64748b' }}>W-{voter.wardNo}</div>
                     )}
                   </td>
+                  {printHasPhotos && (
+                    <td style={{ textAlign: 'center', padding: '2px' }}>
+                      {voter.photoUrl ? (
+                        <img src={voter.photoUrl} alt="" style={{ width: '36px', height: '45px', objectFit: 'cover', border: '1px solid #334155' }} />
+                      ) : '—'}
+                    </td>
+                  )}
                   <td>
                     <div style={{ fontWeight: 700 }}>{pName.primary}</div>
                     {pName.secondary && (
