@@ -12,6 +12,7 @@ import {
 import { useEffect, useState, useRef } from 'react';
 import { apiFetch, decodeJwtPayload } from '@/lib/api';
 import { getClientBranding, formatPhone } from '@/lib/branding';
+import { enableGujarati, isGujaratiEnabled } from '@/lib/gujaratiTranslator';
 import { listPendingMutations } from '@/lib/offlineSync';
 import { PwaInstallHeaderBtn, PwaInstallFooterBtn } from '@/components/PwaInstall';
 
@@ -59,6 +60,18 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   // Branding follows the client being viewed (own org for tenants, selected client for admins).
   const branding = getClientBranding(userInfo.role === 'admin' ? selectedClientId : userInfo.organizationId);
+  const gujaratiUi = Boolean(branding.gujaratiUi) && !pathname?.startsWith('/admin');
+
+  // Gujarati panel (only for clients flagged in lib/branding.ts). Leaving it needs a reload,
+  // because already-translated text would otherwise stay in Gujarati.
+  useEffect(() => {
+    if (!userInfo.role) return;
+    if (gujaratiUi) {
+      void enableGujarati();
+    } else if (isGujaratiEnabled()) {
+      window.location.reload();
+    }
+  }, [gujaratiUi, userInfo.role]);
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [pendingOfflineCount, setPendingOfflineCount] = useState(0);
